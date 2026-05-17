@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>RelayOps — Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#0a0a0a;--bg2:#111;--bg3:#1a1a1a;--bg4:#222;
+  --line:#2a2a2a;--line2:#333;--text:#e8e8e8;--text2:#888;--text3:#555;
+  --red:#c8102e;--red-soft:rgba(200,16,46,.12);
+  --green:#22c55e;--green-soft:rgba(34,197,94,.12);
+  --yellow:#eab308;--yellow-soft:rgba(234,179,8,.12);
+  --blue:#3b82f6;--blue-soft:rgba(59,130,246,.12);
+  --purple:#a855f7;--purple-soft:rgba(168,85,247,.12);
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh}
+
+/* VIEWS */
+.view{display:none}.view.active{display:block}
+
+/* ── LOGIN ── */
+#login-view{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-card{background:var(--bg2);border:1px solid var(--line);border-radius:16px;padding:40px;width:100%;max-width:420px}
+.login-logo{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:15px;font-weight:500;margin-bottom:32px}
+.login-title{font-family:var(--mono);font-size:18px;font-weight:500;margin-bottom:6px}
+.login-sub{font-size:13px;color:var(--text2);margin-bottom:24px}
+.tabs{display:flex;background:var(--bg3);border-radius:8px;padding:3px;margin-bottom:24px}
+.tab{flex:1;padding:8px;text-align:center;font-family:var(--mono);font-size:12px;color:var(--text2);cursor:pointer;border-radius:6px;transition:all .15s;border:none;background:none}
+.tab.active{background:var(--red);color:#fff}
+.field{margin-bottom:14px}
+.flabel{font-size:11px;font-family:var(--mono);color:var(--text2);margin-bottom:5px;display:block;letter-spacing:.04em}
+.finput{width:100%;padding:11px 14px;background:var(--bg3);border:1px solid var(--line2);border-radius:8px;color:var(--text);font-family:var(--sans);font-size:14px;outline:none;transition:border-color .15s}
+.finput:focus{border-color:var(--red)}
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.role-opt{padding:10px 8px;border:1px solid var(--line2);border-radius:8px;background:var(--bg3);color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s;text-align:center;line-height:1.4}
+.role-opt.active{border-color:var(--red);color:var(--red);background:var(--red-soft)}
+.submit-btn{width:100%;padding:12px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:var(--mono);font-size:13px;cursor:pointer;transition:opacity .15s;margin-top:4px}
+.submit-btn:hover{opacity:.9}
+.submit-btn:disabled{opacity:.5;cursor:not-allowed}
+.msg{padding:10px 14px;border-radius:8px;font-size:12px;font-family:var(--mono);margin-bottom:14px;display:none}
+.msg.error{background:var(--red-soft);border:1px solid rgba(200,16,46,.3);color:#ff8898}
+.msg.success{background:var(--green-soft);border:1px solid rgba(34,197,94,.3);color:var(--green)}
+.back-link{display:block;text-align:center;font-size:12px;color:var(--text3);margin-top:18px;font-family:var(--mono)}
+.back-link a{color:var(--red);text-decoration:none}
+
+/* ── APP SHELL ── */
+#app-view{min-height:100vh;display:flex;flex-direction:column}
+.topbar{height:52px;background:var(--bg2);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:50;flex-shrink:0}
+.topbar-brand{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:13px;font-weight:500}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.role-tag{font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:4px;letter-spacing:.06em}
+.tag-admin{background:var(--red-soft);color:var(--red);border:1px solid rgba(200,16,46,.3)}
+.tag-customer{background:var(--blue-soft);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
+.tag-provider{background:var(--green-soft);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.uname{font-size:12px;color:var(--text2);font-family:var(--mono)}
+.logout-btn{font-size:11px;font-family:var(--mono);padding:5px 10px;border:1px solid var(--line2);border-radius:6px;background:none;cursor:pointer;color:var(--text2);transition:all .15s}
+.logout-btn:hover{color:var(--text)}
+
+.app-layout{display:flex;flex:1}
+.sidebar{width:190px;background:var(--bg2);border-right:1px solid var(--line);padding:16px 10px;flex-shrink:0}
+.nav-btn{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border-radius:6px;font-size:12px;color:var(--text2);cursor:pointer;border:none;background:none;text-align:left;transition:all .15s;margin-bottom:2px;font-family:var(--sans)}
+.nav-btn:hover{background:var(--bg3);color:var(--text)}
+.nav-btn.on{background:var(--red-soft);color:var(--red)}
+.nav-sep{height:1px;background:var(--line);margin:8px 0}
+
+.content{flex:1;padding:28px;overflow-y:auto}
+.panel{display:none}.panel.on{display:block}
+
+/* ── SHARED COMPONENTS ── */
+.ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+.ptitle{font-family:var(--mono);font-size:16px;font-weight:500}
+.psub{font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:2px}
+.action-btn{font-family:var(--mono);font-size:11px;padding:8px 14px;border-radius:6px;border:none;cursor:pointer;transition:all .15s}
+.btn-red{background:var(--red);color:#fff}.btn-red:hover{opacity:.9}
+.btn-ghost{background:var(--bg3);border:1px solid var(--line2);color:var(--text2)}.btn-ghost:hover{color:var(--text)}
+.btn-green{background:var(--green);color:#000}.btn-green:hover{opacity:.9}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.stat{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.stat-n{font-family:var(--mono);font-size:26px;font-weight:500;color:var(--text)}
+.stat-l{font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-top:4px}
+
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.fbtn{font-family:var(--mono);font-size:11px;padding:4px 11px;border-radius:999px;border:1px solid var(--line2);background:var(--bg2);color:var(--text2);cursor:pointer;transition:all .15s}
+.fbtn:hover{color:var(--text)}.fbtn.on{background:var(--red-soft);border-color:rgba(200,16,46,.3);color:var(--red)}
+
+.tbl{background:var(--bg2);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.tbl-head{display:grid;padding:9px 16px;border-bottom:1px solid var(--line);background:var(--bg3)}
+.th{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3)}
+.tbl-row{display:grid;padding:13px 16px;border-bottom:1px solid var(--line);align-items:center;cursor:pointer;transition:background .12s}
+.tbl-row:last-child{border-bottom:none}
+.tbl-row:hover{background:var(--bg3)}
+.rt{font-size:13px;font-weight:500;color:var(--text)}
+.rs{font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:2px}
+.rc{font-size:12px;color:var(--text2);font-family:var(--mono)}
+
+.badge{display:inline-block;font-size:10px;padding:3px 8px;border-radius:4px;font-family:var(--mono);font-weight:500;letter-spacing:.03em}
+.b-submitted{background:var(--red-soft);color:var(--red)}
+.b-priced{background:var(--blue-soft);color:var(--blue)}
+.b-assigned{background:var(--purple-soft);color:var(--purple)}
+.b-in_progress{background:var(--yellow-soft);color:var(--yellow)}
+.b-completed{background:var(--green-soft);color:var(--green)}
+.b-cancelled{background:var(--bg4);color:var(--text3)}
+.b-pending{background:var(--yellow-soft);color:var(--yellow)}
+.b-active{background:var(--green-soft);color:var(--green)}
+
+.row-action{font-family:var(--mono);font-size:10px;padding:4px 10px;border-radius:5px;background:var(--bg4);border:1px solid var(--line2);color:var(--text2);cursor:pointer;transition:all .15s}
+.row-action:hover{background:var(--red);color:#fff;border-color:var(--red)}
+
+.loading{text-align:center;padding:40px;color:var(--text3);font-family:var(--mono);font-size:12px}
+.empty{text-align:center;padding:40px;color:var(--text3);font-family:var(--mono);font-size:12px;background:var(--bg2);border:1px solid var(--line);border-radius:10px}
+
+/* ── MODAL ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+.overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--line2);border-radius:14px;width:100%;max-width:580px;max-height:88vh;overflow-y:auto}
+.modal-hd{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-family:var(--mono);font-size:14px;font-weight:500}
+.modal-x{background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;line-height:1;padding:2px}
+.modal-x:hover{color:var(--text)}
+.modal-body{padding:22px}
+.msec{margin-bottom:18px}
+.msec-title{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:10px}
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.di .dl{font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px}
+.di .dv{font-size:13px;color:var(--text);font-weight:500}
+.mfield{margin-bottom:12px}
+.ml{font-size:11px;font-family:var(--mono);color:var(--text2);margin-bottom:5px;display:block}
+.mi{width:100%;padding:9px 12px;background:var(--bg3);border:1px solid var(--line2);border-radius:7px;color:var(--text);font-family:var(--sans);font-size:13px;outline:none;transition:border-color .15s}
+.mi:focus{border-color:var(--red)}
+.mta{min-height:70px;resize:vertical}
+.modal-ft{padding:14px 22px;border-top:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap}
+
+/* ── CUSTOMER CARDS ── */
+.job-cards{display:grid;gap:10px}
+.jc{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:18px 22px;transition:border-color .15s}
+.jc:hover{border-color:var(--line2)}
+.jc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px}
+.jc-type{font-size:14px;font-weight:600;color:var(--text)}
+.jc-addr{font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:2px}
+.jc-meta{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px}
+.jcm .jcml{font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px}
+.jcm .jcmv{font-size:12px;color:var(--text);font-family:var(--mono)}
+.jc-footer{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.jc-notes{font-size:12px;color:var(--text2);font-style:italic;line-height:1.5;flex:1}
+.pay-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--green);color:#000;border:none;border-radius:7px;font-family:var(--mono);font-size:11px;cursor:pointer;text-decoration:none;transition:opacity .15s;font-weight:500}
+.pay-btn:hover{opacity:.9}
+
+/* ── VENDOR CARDS ── */
+.vc{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin-bottom:10px}
+.vc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+.vc-desc{font-size:12px;color:var(--text2);line-height:1.6;padding:10px 12px;background:var(--bg3);border-radius:7px;font-family:var(--mono);margin-bottom:12px}
+.vc-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.vc-update{display:flex;gap:8px;align-items:center;padding-top:12px;border-top:1px solid var(--line);flex-wrap:wrap}
+.vselect{padding:8px 10px;background:var(--bg3);border:1px solid var(--line2);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:11px;outline:none}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;padding:10px 16px;border-radius:8px;font-family:var(--mono);font-size:12px;display:none;z-index:300;animation:tin .2s ease}
+.toast.ok{background:var(--green);color:#000}
+.toast.err{background:var(--red);color:#fff}
+@keyframes tin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* PENDING NOTICE */
+.pnotice{background:var(--yellow-soft);border:1px solid rgba(234,179,8,.25);border-radius:10px;padding:14px 18px;font-size:13px;color:var(--yellow);font-family:var(--mono);margin-bottom:18px}
+
+@media(max-width:700px){
+  .sidebar{display:none}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .dgrid{grid-template-columns:1fr}
+  .vc-meta{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ LOGIN VIEW ═══ -->
+<div class="view active" id="login-view">
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px">
+    <div class="login-card">
+      <div class="login-logo">
+        <svg width="26" height="26" viewBox="0 0 260 260" fill="none"><rect width="260" height="260" rx="52" fill="#111"/><path d="M74 78C74 67.5 82.5 59 93 59H178C188.5 59 197 67.5 197 78V93C197 103.5 188.5 112 178 112H127V154H167C177.5 154 186 162.5 186 173V188C186 198.5 177.5 207 167 207H93C82.5 207 74 198.5 74 188V78Z" fill="#C8102E"/><path d="M134 112H202C212.5 112 221 120.5 221 131V145C221 155.5 212.5 164 202 164H134V112Z" fill="#F7F6F3"/></svg>
+        RelayOps
+      </div>
+      <div class="tabs">
+        <button class="tab active" onclick="switchAuthTab('signin')">Sign In</button>
+        <button class="tab" onclick="switchAuthTab('signup')">Create Account</button>
+      </div>
+      <div class="msg error" id="auth-error"></div>
+      <div class="msg success" id="auth-success"></div>
+
+      <!-- SIGN IN -->
+      <div id="signin-form">
+        <div class="field"><label class="flabel">Email</label><input class="finput" id="si-email" type="email" placeholder="name@company.com"/></div>
+        <div class="field"><label class="flabel">Password</label><input class="finput" id="si-pass" type="password" placeholder="Your password"/></div>
+        <button class="submit-btn" id="si-btn" onclick="doSignIn()">Sign In →</button>
+      </div>
+
+      <!-- SIGN UP -->
+      <div id="signup-form" style="display:none">
+        <div class="field"><label class="flabel">Full Name</label><input class="finput" id="su-name" type="text" placeholder="Your full name"/></div>
+        <div class="field"><label class="flabel">Email</label><input class="finput" id="su-email" type="email" placeholder="name@company.com"/></div>
+        <div class="field"><label class="flabel">Password (min 6 chars)</label><input class="finput" id="su-pass" type="password" placeholder="Create a password"/></div>
+        <div class="field">
+          <label class="flabel">I am a...</label>
+          <div class="role-grid">
+            <div class="role-opt active" id="ro-customer" onclick="pickRole('customer')">🏠 Property Manager<br/>/ Customer</div>
+            <div class="role-opt" id="ro-provider" onclick="pickRole('provider')">🔧 Vendor<br/>/ Provider</div>
+          </div>
+        </div>
+        <button class="submit-btn" id="su-btn" onclick="doSignUp()">Create Account →</button>
+      </div>
+
+      <div class="back-link">← <a href="https://relayops-co.netlify.app">Back to RelayOps</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ APP VIEW ═══ -->
+<div class="view" id="app-view">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-brand">
+      <svg width="22" height="22" viewBox="0 0 260 260" fill="none"><rect width="260" height="260" rx="52" fill="#111"/><path d="M74 78C74 67.5 82.5 59 93 59H178C188.5 59 197 67.5 197 78V93C197 103.5 188.5 112 178 112H127V154H167C177.5 154 186 162.5 186 173V188C186 198.5 177.5 207 167 207H93C82.5 207 74 198.5 74 188V78Z" fill="#C8102E"/><path d="M134 112H202C212.5 112 221 120.5 221 131V145C221 155.5 212.5 164 202 164H134V112Z" fill="#F7F6F3"/></svg>
+      RelayOps
+    </div>
+    <div class="topbar-right">
+      <span class="role-tag" id="role-tag"></span>
+      <span class="uname" id="user-display"></span>
+      <button class="logout-btn" onclick="doLogout()">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="app-layout">
+    <!-- SIDEBAR -->
+    <div class="sidebar" id="sidebar"></div>
+
+    <!-- CONTENT -->
+    <div class="content" id="content-area">
+
+      <!-- ── ADMIN: JOB QUEUE ── -->
+      <div class="panel" id="panel-admin-jobs">
+        <div class="ph">
+          <div><div class="ptitle">Job Queue</div><div class="psub">Review, price, assign and track all jobs</div></div>
+          <button class="action-btn btn-red" onclick="loadAdminJobs()">↻ Refresh</button>
+        </div>
+        <div class="stats">
+          <div class="stat"><div class="stat-n" id="s-open">—</div><div class="stat-l">Open Jobs</div></div>
+          <div class="stat"><div class="stat-n" id="s-new">—</div><div class="stat-l">New / Unreviewed</div></div>
+          <div class="stat"><div class="stat-n" id="s-pay">—</div><div class="stat-l">Pending Payment</div></div>
+          <div class="stat"><div class="stat-n" id="s-done">—</div><div class="stat-l">Completed</div></div>
+        </div>
+        <div class="filters">
+          <button class="fbtn on" onclick="filterAdminJobs('all',this)">All</button>
+          <button class="fbtn" onclick="filterAdminJobs('submitted',this)">Submitted</button>
+          <button class="fbtn" onclick="filterAdminJobs('priced',this)">Priced</button>
+          <button class="fbtn" onclick="filterAdminJobs('assigned',this)">Assigned</button>
+          <button class="fbtn" onclick="filterAdminJobs('in_progress',this)">In Progress</button>
+          <button class="fbtn" onclick="filterAdminJobs('completed',this)">Completed</button>
+        </div>
+        <div class="tbl">
+          <div class="tbl-head" style="grid-template-columns:2fr 1fr 1fr 1fr 100px">
+            <div class="th">Job</div><div class="th">Type</div><div class="th">Urgency</div><div class="th">Status</div><div class="th"></div>
+          </div>
+          <div id="admin-jobs-rows"><div class="loading">Loading...</div></div>
+        </div>
+      </div>
+
+      <!-- ── ADMIN: VENDORS ── -->
+      <div class="panel" id="panel-admin-vendors">
+        <div class="ph">
+          <div><div class="ptitle">Vendors</div><div class="psub">Manage applications and active providers</div></div>
+          <button class="action-btn btn-red" onclick="loadAdminVendors()">↻ Refresh</button>
+        </div>
+        <div class="filters">
+          <button class="fbtn on" onclick="filterAdminVendors('all',this)">All</button>
+          <button class="fbtn" onclick="filterAdminVendors('pending',this)">Pending</button>
+          <button class="fbtn" onclick="filterAdminVendors('active',this)">Active</button>
+        </div>
+        <div id="admin-vendors-rows"><div class="loading">Loading...</div></div>
+      </div>
+
+      <!-- ── ADMIN: PAYMENTS ── -->
+      <div class="panel" id="panel-admin-payments">
+        <div class="ph">
+          <div><div class="ptitle">Payments</div><div class="psub">Track payment links and status</div></div>
+          <button class="action-btn btn-red" onclick="loadAdminPayments()">↻ Refresh</button>
+        </div>
+        <div class="tbl">
+          <div class="tbl-head" style="grid-template-columns:2fr 1fr 1fr 100px">
+            <div class="th">Job ID</div><div class="th">Amount</div><div class="th">Status</div><div class="th"></div>
+          </div>
+          <div id="admin-payments-rows"><div class="loading">Loading...</div></div>
+        </div>
+      </div>
+
+      <!-- ── CUSTOMER: MY JOBS ── -->
+      <div class="panel" id="panel-customer-jobs">
+        <div class="ph">
+          <div><div class="ptitle">My Jobs</div><div class="psub">Track your submitted jobs and payments</div></div>
+          <a href="https://relayops-co.netlify.app/#request" class="action-btn btn-red" style="text-decoration:none">+ Request a Job</a>
+        </div>
+        <div class="job-cards" id="customer-jobs-rows"><div class="loading">Loading...</div></div>
+      </div>
+
+      <!-- ── VENDOR: MY JOBS ── -->
+      <div class="panel" id="panel-vendor-jobs">
+        <div class="ph">
+          <div><div class="ptitle">My Assigned Jobs</div><div class="psub">Jobs assigned to you by RelayOps</div></div>
+          <button class="action-btn btn-red" onclick="loadVendorJobs()">↻ Refresh</button>
+        </div>
+        <div id="vendor-pending-notice" class="pnotice" style="display:none">⏳ Your account is pending approval. You'll see jobs once we activate your account.</div>
+        <div id="vendor-jobs-rows"><div class="loading">Loading...</div></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ── JOB DETAIL MODAL (Admin) ── -->
+<div class="overlay" id="job-modal">
+  <div class="modal">
+    <div class="modal-hd">
+      <div class="modal-title" id="modal-job-title">Job Detail</div>
+      <button class="modal-x" onclick="closeModal('job-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="msec"><div class="msec-title">Job Info</div><div class="dgrid" id="modal-job-info"></div></div>
+      <div class="msec">
+        <div class="msec-title">Update Job</div>
+        <div class="mfield"><label class="ml">Status</label>
+          <select class="mi" id="m-status">
+            <option value="submitted">Submitted</option>
+            <option value="priced">Priced</option>
+            <option value="assigned">Assigned</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div class="mfield"><label class="ml">Quoted Price ($)</label><input class="mi" id="m-price" type="number" placeholder="e.g. 150"/></div>
+        <div class="mfield"><label class="ml">Notes to Customer</label><textarea class="mi mta" id="m-notes" placeholder="Visible to customer..."></textarea></div>
+      </div>
+      <div class="msec">
+        <div class="msec-title">Payment Link</div>
+        <div class="mfield"><label class="ml">Stripe Payment URL</label><input class="mi" id="m-stripe" type="text" placeholder="https://buy.stripe.com/..."/></div>
+        <div class="mfield"><label class="ml">Payment Amount ($)</label><input class="mi" id="m-payamt" type="number" placeholder="e.g. 150"/></div>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="action-btn btn-red" onclick="saveAdminJob()">Save Changes</button>
+      <button class="action-btn btn-green" onclick="savePaymentLink()">Send Payment Link</button>
+      <button class="action-btn btn-ghost" onclick="closeModal('job-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SB = 'https://qnufazzxoiomgqxydvnf.supabase.co';
+const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFudWZhenp4b2lvbWdxeHlkdm5mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0MjIyNjksImV4cCI6MjA5MDk5ODI2OX0.dEVE3cdJupCHhqZ4OvoSi3A2ZbNmANHoCWG4bISeDzc';
+
+let SESSION = null;
+let USER = null;
+let ROLE = null;
+let allJobs = [];
+let currentJobId = null;
+let ajFilter = 'all';
+
+function hdrs(tok) {
+  return {'Content-Type':'application/json','apikey':KEY,'Authorization':`Bearer ${tok||KEY}`};
+}
+
+// ── TOAST ──
+function toast(msg, isErr=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (isErr ? 'err' : 'ok');
+  t.style.display = 'block';
+  setTimeout(() => t.style.display='none', 3000);
+}
+
+// ── BADGE ──
+function badge(status) {
+  const cls = 'badge b-'+(status||'').replace(' ','_');
+  const label = (status||'').replace('_',' ').toUpperCase();
+  return `<span class="${cls}">${label}</span>`;
+}
+
+// ── VIEW SWITCHING ──
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function showPanel(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('on'));
+  const btn = document.querySelector(`[data-panel="${id}"]`);
+  if(btn) btn.classList.add('on');
+}
+
+// ── AUTH TAB ──
+function switchAuthTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.getElementById('signin-form').style.display = tab==='signin'?'block':'none';
+  document.getElementById('signup-form').style.display = tab==='signup'?'block':'none';
+  document.getElementById('auth-error').style.display='none';
+  document.getElementById('auth-success').style.display='none';
+}
+function pickRole(r) {
+  ROLE = r;
+  document.getElementById('ro-customer').classList.toggle('active', r==='customer');
+  document.getElementById('ro-provider').classList.toggle('active', r==='provider');
+}
+let signupRole = 'customer';
+function pickRole(r) {
+  signupRole = r;
+  document.getElementById('ro-customer').classList.toggle('active', r==='customer');
+  document.getElementById('ro-provider').classList.toggle('active', r==='provider');
+}
+function showAuthMsg(msg, isErr) {
+  const el = document.getElementById(isErr?'auth-error':'auth-success');
+  const other = document.getElementById(isErr?'auth-success':'auth-error');
+  el.textContent=msg; el.style.display='block'; other.style.display='none';
+}
+
+// ── SIGN IN ──
+async function doSignIn() {
+  const email = document.getElementById('si-email').value.trim();
+  const pass = document.getElementById('si-pass').value;
+  if(!email||!pass){showAuthMsg('Enter your email and password.',true);return;}
+  const btn = document.getElementById('si-btn');
+  btn.disabled=true; btn.textContent='Signing in...';
+  const res = await fetch(`${SB}/auth/v1/token?grant_type=password`,{
+    method:'POST',headers:{'Content-Type':'application/json','apikey':KEY},
+    body:JSON.stringify({email,password:pass})
+  });
+  const d = await res.json();
+  if(d.access_token) {
+    SESSION = d.access_token;
+    USER = d.user;
+    const role = d.user?.user_metadata?.role || 'customer';
+    localStorage.setItem('ro_token', SESSION);
+    localStorage.setItem('ro_user', JSON.stringify(USER));
+    localStorage.setItem('ro_role', role);
+    bootApp(role);
+  } else {
+    showAuthMsg(d.error_description||'Invalid email or password.',true);
+    btn.disabled=false; btn.textContent='Sign In →';
+  }
+}
+
+// ── SIGN UP ──
+async function doSignUp() {
+  const name = document.getElementById('su-name').value.trim();
+  const email = document.getElementById('su-email').value.trim();
+  const pass = document.getElementById('su-pass').value;
+  if(!name||!email||!pass){showAuthMsg('Fill in all fields.',true);return;}
+  if(pass.length<6){showAuthMsg('Password must be at least 6 characters.',true);return;}
+  const btn = document.getElementById('su-btn');
+  btn.disabled=true; btn.textContent='Creating account...';
+  const res = await fetch(`${SB}/auth/v1/signup`,{
+    method:'POST',headers:{'Content-Type':'application/json','apikey':KEY},
+    body:JSON.stringify({email,password:pass,data:{full_name:name,role:signupRole}})
+  });
+  const d = await res.json();
+  if(d.user||d.id) {
+    const uid = d.user?.id||d.id;
+    const tok = d.session?.access_token||KEY;
+    if(signupRole==='customer') {
+      await fetch(`${SB}/rest/v1/customers`,{method:'POST',headers:{...hdrs(tok),'Prefer':'return=minimal'},body:JSON.stringify({user_id:uid,full_name:name,email})});
+    } else {
+      await fetch(`${SB}/rest/v1/providers`,{method:'POST',headers:{...hdrs(tok),'Prefer':'return=minimal'},body:JSON.stringify({user_id:uid,full_name:name,email,status:'pending'})});
+    }
+    if(d.session?.access_token) {
+      SESSION=d.session.access_token; USER=d.user;
+      localStorage.setItem('ro_token',SESSION);
+      localStorage.setItem('ro_user',JSON.stringify(USER));
+      localStorage.setItem('ro_role',signupRole);
+      bootApp(signupRole);
+    } else {
+      showAuthMsg('Account created! Check your email to confirm, then sign in.',false);
+      btn.disabled=false; btn.textContent='Create Account →';
+    }
+  } else {
+    showAuthMsg(d.msg||d.error_description||'Could not create account.',true);
+    btn.disabled=false; btn.textContent='Create Account →';
+  }
+}
+
+// ── LOGOUT ──
+function doLogout() {
+  localStorage.removeItem('ro_token');
+  localStorage.removeItem('ro_user');
+  localStorage.removeItem('ro_role');
+  SESSION=null; USER=null; ROLE=null;
+  showView('login-view');
+}
+
+// ── BOOT APP ──
+function bootApp(role) {
+  ROLE = role;
+  showView('app-view');
+  const tagEl = document.getElementById('role-tag');
+  tagEl.textContent = role.toUpperCase();
+  tagEl.className = 'role-tag tag-'+role;
+  document.getElementById('user-display').textContent = USER?.user_metadata?.full_name || USER?.email || '';
+  buildSidebar(role);
+  if(role==='admin') { showPanel('panel-admin-jobs'); setTimeout(loadAdminJobs, 100); }
+  else if(role==='customer') { showPanel('panel-customer-jobs'); setTimeout(loadCustomerJobs, 100); }
+  else { showPanel('panel-vendor-jobs'); setTimeout(loadVendorJobs, 100); }
+}
+
+function buildSidebar(role) {
+  const sb = document.getElementById('sidebar');
+  if(role==='admin') {
+    sb.innerHTML = `
+      <button class="nav-btn on" data-panel="panel-admin-jobs" onclick="navTo('panel-admin-jobs',this,loadAdminJobs)">⚡ Job Queue</button>
+      <button class="nav-btn" data-panel="panel-admin-vendors" onclick="navTo('panel-admin-vendors',this,loadAdminVendors)">👥 Vendors</button>
+      <button class="nav-btn" data-panel="panel-admin-payments" onclick="navTo('panel-admin-payments',this,loadAdminPayments)">💳 Payments</button>
+      <div class="nav-sep"></div>
+      <button class="nav-btn" onclick="window.open('https://relayops-co.netlify.app','_blank')">🌐 Website</button>`;
+  } else if(role==='customer') {
+    sb.innerHTML = `
+      <button class="nav-btn on" data-panel="panel-customer-jobs" onclick="navTo('panel-customer-jobs',this,loadCustomerJobs)">📋 My Jobs</button>
+      <div class="nav-sep"></div>
+      <button class="nav-btn" onclick="window.open('https://relayops-co.netlify.app/#request','_blank')">+ Request a Job</button>`;
+  } else {
+    sb.innerHTML = `
+      <button class="nav-btn on" data-panel="panel-vendor-jobs" onclick="navTo('panel-vendor-jobs',this,loadVendorJobs)">🔧 My Jobs</button>`;
+  }
+}
+
+function navTo(panelId, btn, loader) {
+  showPanel(panelId);
+  if(loader) loader();
+}
+
+// ════ ADMIN ════
+
+async function loadAdminJobs() {
+  document.getElementById('admin-jobs-rows').innerHTML='<div class="loading">Loading...</div>';
+  try {
+    const res = await fetch(`${SB}/rest/v1/jobs?select=*&order=created_at.desc`,{headers:hdrs(SESSION)});
+    if(!res.ok){document.getElementById('admin-jobs-rows').innerHTML=`<div class="empty">Error loading jobs (${res.status}). Try refreshing.</div>`;return;}
+    allJobs = await res.json();
+    document.getElementById('s-open').textContent = allJobs.filter(j=>!['completed','cancelled'].includes(j.status)).length;
+    document.getElementById('s-new').textContent = allJobs.filter(j=>j.status==='submitted').length;
+    document.getElementById('s-pay').textContent = allJobs.filter(j=>j.status==='priced').length;
+    document.getElementById('s-done').textContent = allJobs.filter(j=>j.status==='completed').length;
+    renderAdminJobs(ajFilter);
+  } catch(e) {
+    document.getElementById('admin-jobs-rows').innerHTML='<div class="empty">Failed to load. Check your connection and refresh.</div>';
+  }
+}
+
+function filterAdminJobs(f, btn) {
+  ajFilter=f;
+  document.querySelectorAll('#panel-admin-jobs .fbtn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  renderAdminJobs(f);
+}
+
+function renderAdminJobs(f) {
+  const jobs = f==='all'?allJobs:allJobs.filter(j=>j.status===f);
+  if(!jobs.length){document.getElementById('admin-jobs-rows').innerHTML='<div class="empty">No jobs found.</div>';return;}
+  document.getElementById('admin-jobs-rows').innerHTML = jobs.map(j=>`
+    <div class="tbl-row" style="grid-template-columns:2fr 1fr 1fr 1fr 100px" onclick="openJobModal('${j.id}')">
+      <div><div class="rt">${j.job_type||'—'}</div><div class="rs">${j.property_address||'—'}</div></div>
+      <div class="rc">${j.job_type||'—'}</div>
+      <div class="rc">${j.urgency||'—'}</div>
+      <div>${badge(j.status)}</div>
+      <div><button class="row-action" onclick="event.stopPropagation();openJobModal('${j.id}')">Review</button></div>
+    </div>`).join('');
+}
+
+function openJobModal(id) {
+  const j = allJobs.find(x=>x.id===id);
+  if(!j) return;
+  currentJobId=id;
+  document.getElementById('modal-job-title').textContent=`${j.job_type||'Job'} — ${j.property_address||''}`;
+  document.getElementById('modal-job-info').innerHTML=`
+    <div class="di"><div class="dl">Job Type</div><div class="dv">${j.job_type||'—'}</div></div>
+    <div class="di"><div class="dl">Status</div><div class="dv">${badge(j.status)}</div></div>
+    <div class="di"><div class="dl">Address</div><div class="dv">${j.property_address||'—'}</div></div>
+    <div class="di"><div class="dl">Urgency</div><div class="dv">${j.urgency||'—'}</div></div>
+    <div class="di" style="grid-column:1/-1"><div class="dl">Description</div><div class="dv" style="font-size:12px;color:var(--text2);line-height:1.6">${j.description||'—'}</div></div>
+    <div class="di"><div class="dl">Submitted</div><div class="dv" style="font-size:12px">${new Date(j.created_at).toLocaleString()}</div></div>
+    <div class="di"><div class="dl">Quoted Price</div><div class="dv">${j.quoted_price?'$'+j.quoted_price:'—'}</div></div>`;
+  document.getElementById('m-status').value=j.status||'submitted';
+  document.getElementById('m-price').value=j.quoted_price||'';
+  document.getElementById('m-notes').value=j.admin_notes||'';
+  document.getElementById('m-stripe').value='';
+  document.getElementById('m-payamt').value=j.quoted_price||'';
+  document.getElementById('job-modal').classList.add('open');
+}
+
+function closeModal(id){document.getElementById(id).classList.remove('open');currentJobId=null;}
+
+async function saveAdminJob() {
+  if(!currentJobId) return;
+  const res = await fetch(`${SB}/rest/v1/jobs?id=eq.${currentJobId}`,{
+    method:'PATCH',headers:{...hdrs(SESSION),'Prefer':'return=minimal'},
+    body:JSON.stringify({status:document.getElementById('m-status').value,quoted_price:document.getElementById('m-price').value||null,admin_notes:document.getElementById('m-notes').value})
+  });
+  if(res.ok){toast('✓ Job updated');closeModal('job-modal');loadAdminJobs();}
+  else toast('Failed to update',true);
+}
+
+async function savePaymentLink() {
+  if(!currentJobId) return;
+  const link = document.getElementById('m-stripe').value.trim();
+  const amt = document.getElementById('m-payamt').value;
+  if(!link){toast('Paste a Stripe link first',true);return;}
+  const res = await fetch(`${SB}/rest/v1/payments`,{
+    method:'POST',headers:{...hdrs(SESSION),'Prefer':'return=minimal'},
+    body:JSON.stringify({job_id:currentJobId,stripe_link:link,amount:amt||null,status:'pending'})
+  });
+  if(res.ok){
+    await fetch(`${SB}/rest/v1/jobs?id=eq.${currentJobId}`,{method:'PATCH',headers:{...hdrs(SESSION),'Prefer':'return=minimal'},body:JSON.stringify({status:'priced'})});
+    toast('✓ Payment link saved');closeModal('job-modal');loadAdminJobs();
+  } else toast('Failed',true);
+}
+
+async function loadAdminVendors() {
+  document.getElementById('admin-vendors-rows').innerHTML='<div class="loading">Loading...</div>';
+  const res = await fetch(`${SB}/rest/v1/providers?select=*&order=created_at.desc`,{headers:hdrs(SESSION)});
+  const vendors = await res.json();
+  renderAdminVendors(vendors,'all');
+  document.getElementById('admin-vendors-rows').dataset.vendors = JSON.stringify(vendors);
+}
+
+function filterAdminVendors(f,btn) {
+  document.querySelectorAll('#panel-admin-vendors .fbtn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  const vendors = JSON.parse(document.getElementById('admin-vendors-rows').dataset.vendors||'[]');
+  renderAdminVendors(vendors,f);
+}
+
+function renderAdminVendors(vendors,f) {
+  const list = f==='all'?vendors:vendors.filter(v=>v.status===f);
+  if(!list.length){document.getElementById('admin-vendors-rows').innerHTML='<div class="empty">No vendors found.</div>';return;}
+  document.getElementById('admin-vendors-rows').innerHTML = list.map(v=>`
+    <div class="tbl" style="margin-bottom:8px;border-radius:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-size:14px;font-weight:500;color:var(--text)">${v.full_name||'—'}</div>
+          <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:2px">${v.email||''} · ${(v.service_types||[]).join(', ')} · ${v.coverage_zips||''}</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          ${badge(v.status)}
+          ${v.status==='pending'?`<button class="row-action" onclick="approveVendor('${v.id}')" style="background:var(--green);color:#000;border-color:var(--green)">Approve</button>`:''}
+          ${v.status==='active'?`<button class="row-action" onclick="deactivateVendor('${v.id}')">Deactivate</button>`:''}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+async function approveVendor(id) {
+  await fetch(`${SB}/rest/v1/providers?id=eq.${id}`,{method:'PATCH',headers:{...hdrs(SESSION),'Prefer':'return=minimal'},body:JSON.stringify({status:'active'})});
+  toast('✓ Vendor approved'); loadAdminVendors();
+}
+async function deactivateVendor(id) {
+  await fetch(`${SB}/rest/v1/providers?id=eq.${id}`,{method:'PATCH',headers:{...hdrs(SESSION),'Prefer':'return=minimal'},body:JSON.stringify({status:'inactive'})});
+  toast('Vendor deactivated'); loadAdminVendors();
+}
+
+async function loadAdminPayments() {
+  document.getElementById('admin-payments-rows').innerHTML='<div class="loading">Loading...</div>';
+  const res = await fetch(`${SB}/rest/v1/payments?select=*&order=created_at.desc`,{headers:hdrs(SESSION)});
+  const pays = await res.json();
+  if(!pays.length){document.getElementById('admin-payments-rows').innerHTML='<div class="empty">No payments yet.</div>';return;}
+  document.getElementById('admin-payments-rows').innerHTML = pays.map(p=>`
+    <div class="tbl-row" style="grid-template-columns:2fr 1fr 1fr 100px">
+      <div><div class="rt" style="font-size:12px">${p.job_id}</div><div class="rs">${p.stripe_link?p.stripe_link.substring(0,45)+'...':'—'}</div></div>
+      <div class="rc">${p.amount?'$'+p.amount:'—'}</div>
+      <div>${badge(p.status)}</div>
+      <div>${p.status==='pending'?`<button class="row-action" onclick="markPaid('${p.id}','${p.job_id}')" style="background:var(--green);color:#000;border-color:var(--green)">Mark Paid</button>`:'<span class="rc">Paid ✓</span>'}</div>
+    </div>`).join('');
+}
+
+async function markPaid(pid,jid) {
+  await fetch(`${SB}/rest/v1/payments?id=eq.${pid}`,{method:'PATCH',headers:{...hdrs(SESSION),'Prefer':'return=minimal'},body:JSON.stringify({status:'paid',paid_at:new Date().toISOString()})});
+  await fetch(`${SB}/rest/v1/jobs?id=eq.${jid}`,{method:'PATCH',headers:{...hdrs(SESSION),'Prefer':'return=minimal'},body:JSON.stringify({status:'completed'})});
+  toast('✓ Marked as paid'); loadAdminPayments();
+}
+
+// ════ CUSTOMER ════
+
+async function loadCustomerJobs() {
+  document.getElementById('customer-jobs-rows').innerHTML='<div class="loading">Loading your jobs...</div>';
+  const custRes = await fetch(`${SB}/rest/v1/customers?user_id=eq.${USER.id}&select=id`,{headers:hdrs(SESSION)});
+  const custs = await custRes.json();
+  if(!custs.length){
+    document.getElementById('customer-jobs-rows').innerHTML='<div class="empty">No jobs yet. <a href="https://relayops-co.netlify.app/#request" style="color:var(--red)">Submit your first job →</a></div>';
+    return;
+  }
+  const cid = custs[0].id;
+  const jobRes = await fetch(`${SB}/rest/v1/jobs?customer_id=eq.${cid}&order=created_at.desc`,{headers:hdrs(SESSION)});
+  const jobs = await jobRes.json();
+  if(!jobs.length){
+    document.getElementById('customer-jobs-rows').innerHTML='<div class="empty">No jobs yet. <a href="https://relayops-co.netlify.app/#request" style="color:var(--red)">Submit your first job →</a></div>';
+    return;
+  }
+  const jids = jobs.map(j=>j.id);
+  let pays=[];
+  if(jids.length){
+    const pr = await fetch(`${SB}/rest/v1/payments?job_id=in.(${jids.join(',')})`,{headers:hdrs(SESSION)});
+    pays = await pr.json();
+  }
+  const statusLabel={submitted:'Submitted',priced:'Quoted — check notes',assigned:'Vendor Assigned',in_progress:'In Progress',completed:'Completed',cancelled:'Cancelled'};
+  document.getElementById('customer-jobs-rows').innerHTML = jobs.map(j=>{
+    const pay = pays.find(p=>p.job_id===j.id);
+    const showPay = pay&&pay.stripe_link&&pay.status==='pending';
+    return `<div class="jc">
+      <div class="jc-top">
+        <div><div class="jc-type">${j.job_type||'—'}</div><div class="jc-addr">📍 ${j.property_address||'—'}</div></div>
+        ${badge(j.status)}
+      </div>
+      <div class="jc-meta">
+        <div class="jcm"><div class="jcml">Urgency</div><div class="jcmv">${j.urgency||'—'}</div></div>
+        <div class="jcm"><div class="jcml">Submitted</div><div class="jcmv">${new Date(j.created_at).toLocaleDateString()}</div></div>
+        ${j.quoted_price?`<div class="jcm"><div class="jcml">Quote</div><div class="jcmv">$${j.quoted_price}</div></div>`:''}
+        ${pay&&pay.status==='paid'?`<div class="jcm"><div class="jcml">Payment</div><div class="jcmv" style="color:var(--green)">✓ Paid</div></div>`:''}
+      </div>
+      ${j.admin_notes||showPay?`<div class="jc-footer">
+        ${j.admin_notes?`<div class="jc-notes">"${j.admin_notes}"</div>`:'<div></div>'}
+        ${showPay?`<a href="${pay.stripe_link}" target="_blank" class="pay-btn">💳 Pay Now${pay.amount?' — $'+pay.amount:''}</a>`:''}
+      </div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ════ VENDOR ════
+
+async function loadVendorJobs() {
+  document.getElementById('vendor-jobs-rows').innerHTML='<div class="loading">Loading...</div>';
+  document.getElementById('vendor-pending-notice').style.display='none';
+  const provRes = await fetch(`${SB}/rest/v1/providers?user_id=eq.${USER.id}&select=id,status,full_name`,{headers:hdrs(SESSION)});
+  const provs = await provRes.json();
+  if(!provs.length){
+    document.getElementById('vendor-jobs-rows').innerHTML='<div class="empty">No provider profile found. Contact contactrelayops@gmail.com</div>';
+    return;
+  }
+  const prov = provs[0];
+  if(prov.status==='pending'){
+    document.getElementById('vendor-pending-notice').style.display='block';
+    document.getElementById('vendor-jobs-rows').innerHTML='<div class="empty">Pending activation — we\'ll be in touch soon.</div>';
+    return;
+  }
+  const aRes = await fetch(`${SB}/rest/v1/provider_assignments?provider_id=eq.${prov.id}&select=*`,{headers:hdrs(SESSION)});
+  const assignments = await aRes.json();
+  if(!assignments.length){
+    document.getElementById('vendor-jobs-rows').innerHTML='<div class="empty">No jobs assigned yet. You\'ll be notified when jobs are available.</div>';
+    return;
+  }
+  const jids = assignments.map(a=>a.job_id);
+  const jRes = await fetch(`${SB}/rest/v1/jobs?id=in.(${jids.join(',')})&order=created_at.desc`,{headers:hdrs(SESSION)});
+  const jobs = await jRes.json();
+  document.getElementById('vendor-jobs-rows').innerHTML = jobs.map(j=>{
+    const asgn = assignments.find(a=>a.job_id===j.id);
+    return `<div class="vc">
+      <div class="vc-top">
+        <div><div class="jc-type">${j.job_type||'—'}</div><div class="jc-addr">📍 ${j.property_address||'—'}</div></div>
+        ${badge(asgn?.status||j.status)}
+      </div>
+      <div class="vc-desc">${j.description||'No description provided.'}</div>
+      <div class="vc-meta">
+        <div class="jcm"><div class="jcml">Urgency</div><div class="jcmv">${j.urgency||'—'}</div></div>
+        <div class="jcm"><div class="jcml">Date</div><div class="jcmv">${j.scheduled_date?new Date(j.scheduled_date).toLocaleDateString():'Flexible'}</div></div>
+        <div class="jcm"><div class="jcml">Assigned</div><div class="jcmv">${new Date(asgn?.assigned_at||j.created_at).toLocaleDateString()}</div></div>
+      </div>
+      ${asgn?.status!=='completed'?`<div class="vc-update">
+        <select class="vselect" id="vs-${j.id}">
+          <option value="assigned" ${asgn?.status==='assigned'?'selected':''}>Assigned</option>
+          <option value="in_progress" ${asgn?.status==='in_progress'?'selected':''}>In Progress</option>
+          <option value="completed" ${asgn?.status==='completed'?'selected':''}>Completed</option>
+        </select>
+        <button class="action-btn btn-green" onclick="updateVendorStatus('${asgn?.id}','${j.id}')">Update Status</button>
+      </div>`:`<div class="vc-update"><span style="font-size:12px;color:var(--green);font-family:var(--mono)">✓ Completed</span></div>`}
+    </div>`;
+  }).join('');
+}
+
+async function updateVendorStatus(aid, jid) {
+  const status = document.getElementById('vs-'+jid).value;
+  await fetch(`${SB}/rest/v1/provider_assignments?id=eq.${aid}`,{method:'PATCH',headers:{...hdrs(SESSION),'Prefer':'return=minimal'},body:JSON.stringify({status})});
+  await fetch(`${SB}/rest/v1/jobs?id=eq.${jid}`,{method:'PATCH',headers:{...hdrs(SESSION),'Prefer':'return=minimal'},body:JSON.stringify({status:status==='completed'?'completed':status==='in_progress'?'in_progress':'assigned'})});
+  toast('✓ Status updated');
+  setTimeout(loadVendorJobs, 800);
+}
+
+// ── INIT ──
+const savedToken = localStorage.getItem('ro_token');
+const savedUser = localStorage.getItem('ro_user');
+const savedRole = localStorage.getItem('ro_role');
+if(savedToken && savedUser && savedRole) {
+  SESSION = savedToken;
+  USER = JSON.parse(savedUser);
+  bootApp(savedRole);
+}
+
+// Close modal on overlay click
+document.getElementById('job-modal').addEventListener('click', function(e){if(e.target===this)closeModal('job-modal');});
+
+// Enter key on login
+document.addEventListener('keydown', e=>{
+  if(e.key==='Enter'&&document.getElementById('login-view').classList.contains('active')){
+    if(document.getElementById('signin-form').style.display!=='none') doSignIn();
+    else doSignUp();
+  }
+});
+</script>
+</body>
+</html>
