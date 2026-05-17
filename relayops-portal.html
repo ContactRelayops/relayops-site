@@ -20,8 +20,8 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh}
 
-/* VIEWS */
-.view{display:none}.view.active{display:block}
+#login-view{display:flex}
+#app-view{display:none}
 
 /* ── LOGIN ── */
 #login-view{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
@@ -394,8 +394,14 @@ function badge(status) {
 
 // ── VIEW SWITCHING ──
 function showView(id) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.view').forEach(v => {
+    v.classList.remove('active');
+    v.style.display = 'none';
+  });
+  const target = document.getElementById(id);
+  target.classList.add('active');
+  target.style.display = id === 'login-view' ? 'block' : 'flex';
+  target.style.flexDirection = 'column';
 }
 function showPanel(id) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('on'));
