@@ -215,7 +215,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
         <button class="submit-btn" id="su-btn" onclick="doSignUp()">Create Account →</button>
       </div>
 
-      <div class="back-link">← <a href="https://relayops-co.netlify.app">Back to RelayOps</a></div>
+      <div class="back-link">← <a href="https://contactrelayops.github.io/relayops-site">Back to RelayOps</a></div>
     </div>
   </div>
 </div>
@@ -302,7 +302,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
       <div class="panel" id="panel-customer-jobs">
         <div class="ph">
           <div><div class="ptitle">My Jobs</div><div class="psub">Track your submitted jobs and payments</div></div>
-          <a href="https://relayops-co.netlify.app/#request" class="action-btn btn-red" style="text-decoration:none">+ Request a Job</a>
+          <a href="https://contactrelayops.github.io/relayops-site/#request" class="action-btn btn-red" style="text-decoration:none">+ Request a Job</a>
         </div>
         <div class="job-cards" id="customer-jobs-rows"><div class="loading">Loading...</div></div>
       </div>
@@ -532,12 +532,12 @@ function buildSidebar(role) {
       <button class="nav-btn" data-panel="panel-admin-vendors" onclick="navTo('panel-admin-vendors',this,loadAdminVendors)">👥 Vendors</button>
       <button class="nav-btn" data-panel="panel-admin-payments" onclick="navTo('panel-admin-payments',this,loadAdminPayments)">💳 Payments</button>
       <div class="nav-sep"></div>
-      <button class="nav-btn" onclick="window.open('https://relayops-co.netlify.app','_blank')">🌐 Website</button>`;
+      <button class="nav-btn" onclick="window.open('https://contactrelayops.github.io/relayops-site','_blank')">🌐 Website</button>`;
   } else if(role==='customer') {
     sb.innerHTML = `
       <button class="nav-btn on" data-panel="panel-customer-jobs" onclick="navTo('panel-customer-jobs',this,loadCustomerJobs)">📋 My Jobs</button>
       <div class="nav-sep"></div>
-      <button class="nav-btn" onclick="window.open('https://relayops-co.netlify.app/#request','_blank')">+ Request a Job</button>`;
+      <button class="nav-btn" onclick="window.open('https://contactrelayops.github.io/relayops-site/#request','_blank')">+ Request a Job</button>`;
   } else {
     sb.innerHTML = `
       <button class="nav-btn on" data-panel="panel-vendor-jobs" onclick="navTo('panel-vendor-jobs',this,loadVendorJobs)">🔧 My Jobs</button>`;
@@ -705,14 +705,14 @@ async function loadCustomerJobs() {
   const custRes = await fetch(`${SB}/rest/v1/customers?user_id=eq.${USER.id}&select=id`,{headers:hdrs(SESSION)});
   const custs = await custRes.json();
   if(!custs.length){
-    document.getElementById('customer-jobs-rows').innerHTML='<div class="empty">No jobs yet. <a href="https://relayops-co.netlify.app/#request" style="color:var(--red)">Submit your first job →</a></div>';
+    document.getElementById('customer-jobs-rows').innerHTML='<div class="empty">No jobs yet. <a href="https://contactrelayops.github.io/relayops-site/#request" style="color:var(--red)">Submit your first job →</a></div>';
     return;
   }
   const cid = custs[0].id;
   const jobRes = await fetch(`${SB}/rest/v1/jobs?customer_id=eq.${cid}&order=created_at.desc`,{headers:hdrs(SESSION)});
   const jobs = await jobRes.json();
   if(!jobs.length){
-    document.getElementById('customer-jobs-rows').innerHTML='<div class="empty">No jobs yet. <a href="https://relayops-co.netlify.app/#request" style="color:var(--red)">Submit your first job →</a></div>';
+    document.getElementById('customer-jobs-rows').innerHTML='<div class="empty">No jobs yet. <a href="https://contactrelayops.github.io/relayops-site/#request" style="color:var(--red)">Submit your first job →</a></div>';
     return;
   }
   const jids = jobs.map(j=>j.id);
