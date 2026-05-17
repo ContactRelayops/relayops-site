@@ -915,8 +915,8 @@ footer{background:#080808;padding:40px 0 28px;border-top:1px solid rgba(255,255,
         <div class="info-block">
           <h3>Contact us directly</h3>
           <p>Prefer to talk first? Reach out and we'll walk you through the process.</p>
-          <div class="contact-item"><div class="contact-item-label">Email</div><div class="contact-item-val">contactrelayops@gmail.com</div></div>
-          <div class="contact-item"><div class="contact-item-label">Phone</div><div class="contact-item-val">(267) 875-9111</div></div>
+          <div class="contact-item"><div class="contact-item-label">Email</div><div class="contact-item-val"><a href="mailto:contactrelayops@gmail.com" style="color:var(--ink);text-decoration:none">contactrelayops@gmail.com</a></div></div>
+          <div class="contact-item"><div class="contact-item-label">Phone</div><div class="contact-item-val"><a href="tel:+12678759111" style="color:var(--ink);text-decoration:none">(267) 875-9111</a></div></div>
           <div class="contact-item"><div class="contact-item-label">Service area</div><div class="contact-item-val">Pittsburgh, PA &amp; Philadelphia, PA</div></div>
           <div style="margin-top:20px"><a href="mailto:contactrelayops@gmail.com" class="btn btn-ghost" style="font-size:13px">Email RelayOps</a></div>
         </div>
@@ -1087,6 +1087,21 @@ async function submitJob() {
     document.getElementById('job-form-fields').style.display = 'none';
     document.getElementById('job-success').style.display = 'block';
     btn.style.display = 'none';
+    // Send email notification
+    fetch('https://formsubmit.co/ajax/contactrelayops@gmail.com', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+      body: JSON.stringify({
+        _subject: '🚨 New RelayOps Job Request',
+        name: name || 'Unknown',
+        email: email || 'Not provided',
+        phone: phone || 'Not provided',
+        address: address,
+        job_type: jobType,
+        urgency: urgency,
+        description: description
+      })
+    }).catch(()=>{});
   } else {
     btn.textContent = 'Submit Job Request →';
     btn.disabled = false;
@@ -1141,6 +1156,21 @@ async function submitVendor() {
     document.getElementById('vendor-form-fields').style.display = 'none';
     document.getElementById('vendor-success').style.display = 'block';
     btn.style.display = 'none';
+    // Send email notification
+    fetch('https://formsubmit.co/ajax/contactrelayops@gmail.com', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+      body: JSON.stringify({
+        _subject: '🔧 New RelayOps Vendor Application',
+        name: name,
+        email: email,
+        phone: phone || 'Not provided',
+        service: service,
+        city: city || 'Not provided',
+        emergency: emergency,
+        notes: notes || 'None'
+      })
+    }).catch(()=>{});
   } else {
     btn.textContent = 'Apply to Join Network →';
     btn.disabled = false;
