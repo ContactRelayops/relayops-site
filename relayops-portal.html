@@ -298,7 +298,88 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:1
         </div>
       </div>
 
-      <!-- ── CUSTOMER: MY JOBS ── -->
+      <!-- ── ADMIN: CUSTOMERS ── -->
+      <div class="panel" id="panel-admin-customers">
+        <div class="ph">
+          <div><div class="ptitle">Customers</div><div class="psub">All registered customers and their job history</div></div>
+          <button class="action-btn btn-red" onclick="loadAdminCustomers()">↻ Refresh</button>
+        </div>
+        <div class="tbl">
+          <div class="tbl-head" style="grid-template-columns:2fr 1fr 1fr 1fr">
+            <div class="th">Customer</div><div class="th">Email</div><div class="th">Phone</div><div class="th">Joined</div>
+          </div>
+          <div id="admin-customers-rows"><div class="loading">Loading...</div></div>
+        </div>
+      </div>
+
+      <!-- ── ADMIN: ANALYTICS ── -->
+      <div class="panel" id="panel-admin-analytics">
+        <div class="ph">
+          <div><div class="ptitle">Analytics</div><div class="psub">Job and revenue overview</div></div>
+          <button class="action-btn btn-red" onclick="loadAnalytics()">↻ Refresh</button>
+        </div>
+        <div class="stats" id="analytics-stats">
+          <div class="stat"><div class="stat-n" id="a-total">—</div><div class="stat-l">Total Jobs</div></div>
+          <div class="stat"><div class="stat-n" id="a-completed">—</div><div class="stat-l">Completed</div></div>
+          <div class="stat"><div class="stat-n" id="a-revenue">—</div><div class="stat-l">Total Revenue</div></div>
+          <div class="stat"><div class="stat-n" id="a-vendors">—</div><div class="stat-l">Active Vendors</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:4px">
+          <div class="tbl" style="border-radius:10px;overflow:hidden">
+            <div style="padding:14px 16px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3)">Jobs by Type</div>
+            <div id="analytics-by-type"><div class="loading">Loading...</div></div>
+          </div>
+          <div class="tbl" style="border-radius:10px;overflow:hidden">
+            <div style="padding:14px 16px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3)">Jobs by Status</div>
+            <div id="analytics-by-status"><div class="loading">Loading...</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ADMIN: SETTINGS ── -->
+      <div class="panel" id="panel-admin-settings">
+        <div class="ph">
+          <div><div class="ptitle">Settings</div><div class="psub">RelayOps system configuration</div></div>
+        </div>
+        <div style="display:grid;gap:14px;max-width:600px">
+          <div class="tbl" style="border-radius:10px;overflow:hidden">
+            <div style="padding:16px 20px;border-bottom:1px solid var(--line)">
+              <div style="font-family:var(--mono);font-size:12px;font-weight:500;color:var(--text);margin-bottom:4px">Contact Email</div>
+              <div style="font-size:13px;color:var(--text2)">contactrelayops@gmail.com</div>
+            </div>
+            <div style="padding:16px 20px;border-bottom:1px solid var(--line)">
+              <div style="font-family:var(--mono);font-size:12px;font-weight:500;color:var(--text);margin-bottom:4px">Phone</div>
+              <div style="font-size:13px;color:var(--text2)">(267) 875-9111</div>
+            </div>
+            <div style="padding:16px 20px;border-bottom:1px solid var(--line)">
+              <div style="font-family:var(--mono);font-size:12px;font-weight:500;color:var(--text);margin-bottom:4px">Service Area</div>
+              <div style="font-size:13px;color:var(--text2)">Pittsburgh, PA & Philadelphia, PA</div>
+            </div>
+            <div style="padding:16px 20px;border-bottom:1px solid var(--line)">
+              <div style="font-family:var(--mono);font-size:12px;font-weight:500;color:var(--text);margin-bottom:4px">Marketing Site</div>
+              <div style="font-size:13px;color:var(--text2)"><a href="https://contactrelayops.github.io/relayops-site" target="_blank" style="color:var(--red)">contactrelayops.github.io/relayops-site</a></div>
+            </div>
+            <div style="padding:16px 20px;border-bottom:1px solid var(--line)">
+              <div style="font-family:var(--mono);font-size:12px;font-weight:500;color:var(--text);margin-bottom:4px">Database</div>
+              <div style="font-size:13px;color:var(--text2)">Supabase — qnufazzxoiomgqxydvnf</div>
+            </div>
+            <div style="padding:16px 20px">
+              <div style="font-family:var(--mono);font-size:12px;font-weight:500;color:var(--text);margin-bottom:4px">Version</div>
+              <div style="font-size:13px;color:var(--text2)">RelayOps MVP v1.0 — May 2026</div>
+            </div>
+          </div>
+          <div class="tbl" style="border-radius:10px;overflow:hidden">
+            <div style="padding:16px 20px;border-bottom:1px solid var(--line)">
+              <div style="font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:12px">Quick Links</div>
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <a href="https://supabase.com/dashboard" target="_blank" class="action-btn btn-ghost" style="text-align:center;text-decoration:none">🗄️ Open Supabase</a>
+                <a href="https://dashboard.stripe.com" target="_blank" class="action-btn btn-ghost" style="text-align:center;text-decoration:none">💳 Open Stripe</a>
+                <a href="https://contactrelayops.github.io/relayops-site" target="_blank" class="action-btn btn-ghost" style="text-align:center;text-decoration:none">🌐 Open Website</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="panel" id="panel-customer-jobs">
         <div class="ph">
           <div><div class="ptitle">My Jobs</div><div class="psub">Track your submitted jobs and payments</div></div>
@@ -531,7 +612,10 @@ function buildSidebar(role) {
       <button class="nav-btn on" data-panel="panel-admin-jobs" onclick="navTo('panel-admin-jobs',this,loadAdminJobs)">⚡ Job Queue</button>
       <button class="nav-btn" data-panel="panel-admin-vendors" onclick="navTo('panel-admin-vendors',this,loadAdminVendors)">👥 Vendors</button>
       <button class="nav-btn" data-panel="panel-admin-payments" onclick="navTo('panel-admin-payments',this,loadAdminPayments)">💳 Payments</button>
+      <button class="nav-btn" data-panel="panel-admin-customers" onclick="navTo('panel-admin-customers',this,loadAdminCustomers)">🏠 Customers</button>
+      <button class="nav-btn" data-panel="panel-admin-analytics" onclick="navTo('panel-admin-analytics',this,loadAnalytics)">📊 Analytics</button>
       <div class="nav-sep"></div>
+      <button class="nav-btn" data-panel="panel-admin-settings" onclick="navTo('panel-admin-settings',this,null)">⚙️ Settings</button>
       <button class="nav-btn" onclick="window.open('https://contactrelayops.github.io/relayops-site','_blank')">🌐 Website</button>`;
   } else if(role==='customer') {
     sb.innerHTML = `
@@ -698,7 +782,72 @@ async function markPaid(pid,jid) {
   toast('✓ Marked as paid'); loadAdminPayments();
 }
 
-// ════ CUSTOMER ════
+// ════ CUSTOMERS ════
+
+async function loadAdminCustomers() {
+  document.getElementById('admin-customers-rows').innerHTML='<div class="loading">Loading...</div>';
+  try {
+    const res = await fetch(`${SB}/rest/v1/customers?select=*&order=created_at.desc`,{headers:hdrs(SESSION)});
+    const customers = await res.json();
+    if(!customers.length){document.getElementById('admin-customers-rows').innerHTML='<div class="empty">No customers yet.</div>';return;}
+    document.getElementById('admin-customers-rows').innerHTML = customers.map(c=>`
+      <div class="tbl-row" style="grid-template-columns:2fr 1fr 1fr 1fr">
+        <div><div class="rt">${c.full_name||'—'}</div></div>
+        <div class="rc">${c.email||'—'}</div>
+        <div class="rc">${c.phone||'—'}</div>
+        <div class="rc">${new Date(c.created_at).toLocaleDateString()}</div>
+      </div>`).join('');
+  } catch(e) {
+    document.getElementById('admin-customers-rows').innerHTML='<div class="empty">Failed to load customers.</div>';
+  }
+}
+
+// ════ ANALYTICS ════
+
+async function loadAnalytics() {
+  try {
+    const [jobsRes, vendorsRes, paymentsRes] = await Promise.all([
+      fetch(`${SB}/rest/v1/jobs?select=*`,{headers:hdrs(SESSION)}),
+      fetch(`${SB}/rest/v1/providers?select=*&status=eq.active`,{headers:hdrs(SESSION)}),
+      fetch(`${SB}/rest/v1/payments?select=*&status=eq.paid`,{headers:hdrs(SESSION)})
+    ]);
+    const jobs = await jobsRes.json();
+    const vendors = await vendorsRes.json();
+    const payments = await paymentsRes.json();
+
+    document.getElementById('a-total').textContent = jobs.length;
+    document.getElementById('a-completed').textContent = jobs.filter(j=>j.status==='completed').length;
+    document.getElementById('a-vendors').textContent = vendors.length;
+    const revenue = payments.reduce((sum,p)=>sum+(parseFloat(p.amount)||0),0);
+    document.getElementById('a-revenue').textContent = '$'+revenue.toFixed(0);
+
+    // By type
+    const byType = {};
+    jobs.forEach(j=>{byType[j.job_type]=(byType[j.job_type]||0)+1;});
+    document.getElementById('analytics-by-type').innerHTML = Object.entries(byType).length ?
+      Object.entries(byType).sort((a,b)=>b[1]-a[1]).map(([type,count])=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--line)">
+          <span class="rc">${type||'Unknown'}</span>
+          <span style="font-family:var(--mono);font-size:12px;color:var(--text)">${count}</span>
+        </div>`).join('') :
+      '<div class="empty">No data yet.</div>';
+
+    // By status
+    const byStatus = {};
+    jobs.forEach(j=>{byStatus[j.status]=(byStatus[j.status]||0)+1;});
+    document.getElementById('analytics-by-status').innerHTML = Object.entries(byStatus).length ?
+      Object.entries(byStatus).sort((a,b)=>b[1]-a[1]).map(([status,count])=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--line)">
+          <span>${badge(status)}</span>
+          <span style="font-family:var(--mono);font-size:12px;color:var(--text)">${count}</span>
+        </div>`).join('') :
+      '<div class="empty">No data yet.</div>';
+  } catch(e) {
+    document.getElementById('a-total').textContent = 'Err';
+  }
+}
+
+
 
 async function loadCustomerJobs() {
   document.getElementById('customer-jobs-rows').innerHTML='<div class="loading">Loading your jobs...</div>';
