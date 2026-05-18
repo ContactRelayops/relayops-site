@@ -1696,6 +1696,62 @@ function showTyping() {
 }
 function hideTyping() { const el = document.getElementById('chat-typing'); if (el) el.remove(); }
 
+// ── AI PROXY via hidden iframe (avoids CORS on api.anthropic.com) ──
+let _aiIframe = null;
+let _aiPending = null; // { resolve, reject, timeoutId }
+
+function getAiIframe() {
+  if (_aiIframe) return _aiIframe;
+  _aiIframe = document.createElement('iframe');
+  _aiIframe.style.cssText = 'display:none;position:fixed;width:0;height:0;border:none';
+  // Inline srcdoc so no external file needed
+  _aiIframe.srcdoc = `<!DOCTYPE html><html><head></head><body><script>
+    window.addEventListener('message', async function(e) {
+      if (e.data?.type !== 'AI_REQUEST') return;
+      try {
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(e.data.payload)
+        });
+        const data = await res.json();
+        e.source.postMessage({ type: 'AI_RESPONSE', id: e.data.id, data }, '*');
+      } catch(err) {
+        e.source.postMessage({ type: 'AI_ERROR', id: e.data.id, error: err.message }, '*');
+      }
+    });
+  <\/script></body></html>`;
+  document.body.appendChild(_aiIframe);
+  return _aiIframe;
+}
+
+function callAI(payload) {
+  return new Promise((resolve, reject) => {
+    const id = Math.random().toString(36).slice(2);
+    const iframe = getAiIframe();
+
+    const timeoutId = setTimeout(() => {
+      window.removeEventListener('message', handler);
+      reject(new Error('AI request timed out'));
+    }, 30000);
+
+    function handler(e) {
+      if ((e.data?.type === 'AI_RESPONSE' || e.data?.type === 'AI_ERROR') && e.data.id === id) {
+        window.removeEventListener('message', handler);
+        clearTimeout(timeoutId);
+        if (e.data.type === 'AI_ERROR') reject(new Error(e.data.error));
+        else resolve(e.data.data);
+      }
+    }
+    window.addEventListener('message', handler);
+
+    // Wait for iframe to be ready then post
+    const send = () => iframe.contentWindow?.postMessage({ type: 'AI_REQUEST', id, payload }, '*');
+    if (iframe.contentDocument?.readyState === 'complete') send();
+    else iframe.onload = send;
+  });
+}
+
 async function sendChatMessage() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim(); if (!text) return;
@@ -1705,15 +1761,17 @@ async function sendChatMessage() {
   chatHistory.push({ role: 'user', content: text });
   showTyping();
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, system: getChatSystemPrompt(), messages: chatHistory })
+    const data = await callAI({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system: getChatSystemPrompt(),
+      messages: chatHistory
     });
-    const data = await res.json();
     hideTyping();
-    if (data.error) { appendBubble('ai', '⚠️ ' + (data.error.message||'Error — please try again.')); chatHistory.pop(); }
-    else {
+    if (data.error) {
+      appendBubble('ai', '⚠️ ' + (data.error.message||'Error — please try again.'));
+      chatHistory.pop();
+    } else {
       const reply = data.content?.map(b=>b.text||'').join('') || 'No response.';
       appendBubble('ai', reply);
       chatHistory.push({ role: 'assistant', content: reply });
@@ -1721,7 +1779,7 @@ async function sendChatMessage() {
     }
   } catch(e) {
     hideTyping();
-    appendBubble('ai', '⚠️ Could not reach the AI. Check your connection and try again.');
+    appendBubble('ai', '⚠️ ' + (e.message || 'Could not reach the AI. Please try again.'));
     chatHistory.pop();
   }
   btn.disabled = false; input.focus();
