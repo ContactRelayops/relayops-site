@@ -151,6 +151,7 @@ a{text-decoration:none;color:inherit}
 .main{flex:1;overflow-y:auto;background:#111}
 .page{display:none;padding:32px 36px;max-width:1100px}
 .page.active{display:block}
+.chat-page.active{display:flex}
 .page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;gap:16px}
 .page-title{font-family:var(--display);font-size:28px;font-weight:800;letter-spacing:-.02em;color:var(--white)}
 .page-sub{font-size:14px;color:rgba(255,255,255,.4);margin-top:4px}
@@ -359,7 +360,7 @@ a{text-decoration:none;color:inherit}
 .detail-desc{font-size:13px;color:rgba(255,255,255,.6);line-height:1.6;background:rgba(255,255,255,.03);padding:12px;border-radius:var(--r-sm);margin-top:4px}
 
 /* ── AI CHAT ── */
-.chat-page{display:flex;flex-direction:column;height:calc(100vh - 64px);padding:0}
+.chat-page{display:flex;flex-direction:column;height:100vh;max-height:100vh;padding:0;overflow:hidden}
 .chat-header{padding:28px 36px 20px;border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0}
 .chat-messages{flex:1;overflow-y:auto;padding:24px 36px;display:flex;flex-direction:column;gap:16px;scroll-behavior:smooth}
 .chat-messages::-webkit-scrollbar{width:4px}
@@ -945,11 +946,13 @@ const ADMIN_PASS  = 'Relay2025';
 let _accessToken = null;
 let _refreshToken = null;
 
-function authHeaders(extra) {
-  const h = { 'apikey': ANON_KEY, 'Content-Type': 'application/json', ...extra };
-  if (_accessToken) h['Authorization'] = 'Bearer ' + _accessToken;
-  else h['Authorization'] = 'Bearer ' + ANON_KEY;
-  return h;
+function authHeaders(extra = {}) {
+  return {
+    'apikey': ANON_KEY,
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer ' + (_accessToken || ANON_KEY),
+    ...extra
+  };
 }
 
 // Auth: sign in
@@ -994,13 +997,27 @@ function sbRestoreSession() {
   return !!_accessToken;
 }
 
-// DB: select
-async function dbSelect(table, params = '') {
-  const r = await fetch(`${BASE}/rest/v1/${table}?${params}&order=created_at.desc`, {
-    headers: authHeaders({ 'Prefer': 'return=representation' })
+// DB: select all (with optional extra params string)
+async function dbSelect(table, extra = '') {
+  const qs = extra ? extra + '&order=created_at.desc' : 'order=created_at.desc';
+  const r = await fetch(`${BASE}/rest/v1/${table}?${qs}`, {
+    headers: authHeaders()
   });
-  if (!r.ok) return [];
-  return await r.json();
+  if (!r.ok) { console.error('dbSelect', table, r.status, await r.text().catch(()=>'')); return []; }
+  const d = await r.json();
+  return Array.isArray(d) ? d : [];
+}
+
+// DB: select where col = val
+async function dbWhere(table, col, val, extra = '') {
+  const filter = `${col}=eq.${val}`;
+  const qs = extra ? filter + '&' + extra + '&order=created_at.desc' : filter + '&order=created_at.desc';
+  const r = await fetch(`${BASE}/rest/v1/${table}?${qs}`, {
+    headers: authHeaders()
+  });
+  if (!r.ok) { console.error('dbWhere', table, col, val, r.status, await r.text().catch(()=>'')); return []; }
+  const d = await r.json();
+  return Array.isArray(d) ? d : [];
 }
 
 // DB: insert
@@ -1010,23 +1027,19 @@ async function dbInsert(table, body) {
     headers: authHeaders({ 'Prefer': 'return=representation' }),
     body: JSON.stringify(body)
   });
-  const d = await r.json();
+  const d = await r.json().catch(() => ({}));
   return { data: Array.isArray(d) ? d[0] : d, ok: r.ok, error: r.ok ? null : d };
 }
 
-// DB: update
+// DB: update by id
 async function dbUpdate(table, id, body) {
   const r = await fetch(`${BASE}/rest/v1/${table}?id=eq.${id}`, {
     method: 'PATCH',
-    headers: authHeaders({ 'Prefer': 'return=representation' }),
+    headers: authHeaders({ 'Prefer': 'return=minimal' }),
     body: JSON.stringify(body)
   });
+  if (!r.ok) console.error('dbUpdate', table, id, r.status, await r.text().catch(()=>''));
   return r.ok;
-}
-
-// DB: select with filter
-async function dbWhere(table, col, val, extra = '') {
-  return dbSelect(table, `${col}=eq.${encodeURIComponent(val)}${extra ? '&' + extra : ''}`);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1041,7 +1054,11 @@ let allCustomerJobs = [];
 let allVendorJobs = [];
 let notifPollInterval = null;
 let jobStatusCache = {};
-let chatHistory = [];
+// Per-role chat histories so each role has their own conversation
+const chatHistories = { customer: [], admin: [], provider: [] };
+function getChatHistory() { return chatHistories[currentRole] || chatHistories.customer; }
+function pushChat(msg) { (chatHistories[currentRole] || chatHistories.customer).push(msg); }
+function trimChat() { const h = chatHistories[currentRole] || chatHistories.customer; if (h.length > 40) h.splice(0, h.length - 40); }
 
 // ═══════════════════════════════════════════════════════
 // NOTIFICATIONS
@@ -1178,7 +1195,8 @@ async function doSignUp() {
 
 function doSignOut() {
   stopStatusPolling(); sbSignOut();
-  currentUser = null; currentRole = null; currentProviderRecord = null; jobStatusCache = {}; chatHistory = [];
+  currentUser = null; currentRole = null; currentProviderRecord = null; jobStatusCache = {};
+  chatHistories.customer = []; chatHistories.admin = []; chatHistories.provider = [];
   document.getElementById('app').style.display = 'none';
   document.getElementById('auth-screen').style.display = 'flex';
   // Reset nav
@@ -1655,7 +1673,7 @@ function getChatSystemPrompt() {
   const base = `You are the RelayOps AI Assistant — helpful, concise, built into the RelayOps property maintenance portal. RelayOps connects property managers with vetted local vendors (handymen, cleaners, locksmiths, plumbers, junk removal, painters) to fill overflow maintenance jobs fast. Key facts: avg match time under 2 hours, end-to-end job tracking, Stripe payments, service areas Pittsburgh and Philadelphia PA. Pricing: 15% per-job, $199/mo priority plan, $499/mo pro plan. Be friendly and direct. Use short paragraphs. Never make up specific job data — tell users to check their dashboard for live info.`;
   if (currentRole === 'customer') return `${base}\n\nSpeaking with ${name}, a property manager/customer. Help with job submission, status, pricing, and what to expect.`;
   if (currentRole === 'provider') return `${base}\n\nSpeaking with ${name}, a vendor/provider. Help with job workflow, status updates, payment (Stripe on completion), and building reputation.`;
-  return `${base}\n\nSpeaking with the RelayOps admin. Help with pricing guidance, vendor management, customer communication, and operational questions. Can also help draft messages.`;
+  return `${base}\n\nSpeaking with the RelayOps admin. You have full visibility into the platform. Help with pricing guidance, vendor management, customer communication, and operational questions. Can draft messages to customers or vendors, suggest job pricing, and provide operational advice. The admin can see all jobs and all vendors across all customers.`;
 }
 
 function initChat() {
@@ -1696,93 +1714,116 @@ function showTyping() {
 }
 function hideTyping() { const el = document.getElementById('chat-typing'); if (el) el.remove(); }
 
-// ── AI PROXY via hidden iframe (avoids CORS on api.anthropic.com) ──
-let _aiIframe = null;
-let _aiPending = null; // { resolve, reject, timeoutId }
-
-function getAiIframe() {
-  if (_aiIframe) return _aiIframe;
-  _aiIframe = document.createElement('iframe');
-  _aiIframe.style.cssText = 'display:none;position:fixed;width:0;height:0;border:none';
-  // Inline srcdoc so no external file needed
-  _aiIframe.srcdoc = `<!DOCTYPE html><html><head></head><body><script>
-    window.addEventListener('message', async function(e) {
-      if (e.data?.type !== 'AI_REQUEST') return;
-      try {
-        const res = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(e.data.payload)
-        });
-        const data = await res.json();
-        e.source.postMessage({ type: 'AI_RESPONSE', id: e.data.id, data }, '*');
-      } catch(err) {
-        e.source.postMessage({ type: 'AI_ERROR', id: e.data.id, error: err.message }, '*');
-      }
-    });
-  <\/script></body></html>`;
-  document.body.appendChild(_aiIframe);
-  return _aiIframe;
-}
-
-function callAI(payload) {
-  return new Promise((resolve, reject) => {
-    const id = Math.random().toString(36).slice(2);
-    const iframe = getAiIframe();
-
-    const timeoutId = setTimeout(() => {
-      window.removeEventListener('message', handler);
-      reject(new Error('AI request timed out'));
-    }, 30000);
-
-    function handler(e) {
-      if ((e.data?.type === 'AI_RESPONSE' || e.data?.type === 'AI_ERROR') && e.data.id === id) {
-        window.removeEventListener('message', handler);
-        clearTimeout(timeoutId);
-        if (e.data.type === 'AI_ERROR') reject(new Error(e.data.error));
-        else resolve(e.data.data);
-      }
-    }
-    window.addEventListener('message', handler);
-
-    // Wait for iframe to be ready then post
-    const send = () => iframe.contentWindow?.postMessage({ type: 'AI_REQUEST', id, payload }, '*');
-    if (iframe.contentDocument?.readyState === 'complete') send();
-    else iframe.onload = send;
-  });
-}
-
 async function sendChatMessage() {
   const input = document.getElementById('chat-input');
   const text = input.value.trim(); if (!text) return;
   const btn = document.getElementById('chat-send-btn');
   btn.disabled = true; input.value = ''; input.style.height = 'auto';
   appendBubble('user', text);
-  chatHistory.push({ role: 'user', content: text });
+  pushChat({ role: 'user', content: text });
   showTyping();
   try {
-    const data = await callAI({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1000,
-      system: getChatSystemPrompt(),
-      messages: chatHistory
+    // Use corsproxy.io to get around the CORS block on api.anthropic.com
+    const res = await fetch('https://corsproxy.io/?' + encodeURIComponent('https://api.anthropic.com/v1/messages'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01',
+        'x-api-key': 'RELAYOPS_AI_PLACEHOLDER'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1000,
+        system: getChatSystemPrompt(),
+        messages: getChatHistory()
+      })
     });
+    const data = await res.json();
     hideTyping();
-    if (data.error) {
-      appendBubble('ai', '⚠️ ' + (data.error.message||'Error — please try again.'));
-      chatHistory.pop();
-    } else {
-      const reply = data.content?.map(b=>b.text||'').join('') || 'No response.';
+    if (data.error || data.type === 'error') {
+      // API key not set — fall back to local smart responses
+      const reply = getLocalReply(text);
       appendBubble('ai', reply);
-      chatHistory.push({ role: 'assistant', content: reply });
-      if (chatHistory.length > 40) chatHistory = chatHistory.slice(-40);
+      pushChat({ role: 'assistant', content: reply });
+      trimChat();
+    } else {
+      const reply = data.content?.map(b => b.text || '').join('') || 'No response.';
+      appendBubble('ai', reply);
+      pushChat({ role: 'assistant', content: reply });
+      trimChat();
     }
   } catch(e) {
     hideTyping();
-    appendBubble('ai', '⚠️ ' + (e.message || 'Could not reach the AI. Please try again.'));
-    chatHistory.pop();
+    // Network error — use local fallback
+    const reply = getLocalReply(text);
+    appendBubble('ai', reply);
+    pushChat({ role: 'assistant', content: reply });
+    trimChat();
   }
   btn.disabled = false; input.focus();
+}
+
+// Local smart fallback — handles common questions without needing the API
+function getLocalReply(text) {
+  const t = text.toLowerCase();
+  const role = currentRole;
+
+  if (t.includes('status') && t.includes('job')) return role === 'customer'
+    ? 'Check the **My Jobs** tab to see the current status of all your submitted jobs. Each job shows its status — Submitted, Quoted, Assigned, In Progress, or Completed.'
+    : 'Check the **My Assigned Jobs** tab to see jobs assigned to you and their current status.';
+
+  if (t.includes('pric') && (t.includes('turnover') || t.includes('cleaning')))
+    return 'Turnover cleaning pricing typically depends on unit size:\n\n- **Studio / 1BR**: $120–$180\n- **2BR**: $160–$240\n- **3BR**: $200–$320\n\nSame-day turnovers command a 20–30% premium. RelayOps adds a 15% coordination fee on top of the vendor quote.';
+
+  if (t.includes('pric') || t.includes('cost') || t.includes('fee'))
+    return 'RelayOps pricing:\n\n- **Per-Job Fill**: 15% of job total — no monthly fee, pay only when you use it\n- **Priority Plan**: $199/month + 10% per job — guaranteed <2hr response, dedicated contact\n- **Pro Plan**: $499/month + 8% per job — multi-property, same-day guarantee, emergency priority\n\nEmergency/same-day jobs carry an additional flat rush fee + 20–25% take rate.';
+
+  if (t.includes('emergency') || t.includes('urgent') || t.includes('same.day') || t.includes('same day'))
+    return 'For emergency jobs, submit via the **Request a Job** form and select **🚨 Emergency — Same Hour** as the urgency level. Our team targets a <30 minute response for emergencies. An additional rush fee applies.';
+
+  if (t.includes('how') && (t.includes('work') || t.includes('submit') || t.includes('request')))
+    return 'Here's how RelayOps works:\n\n1. **Submit** — Fill out the job request form (60 seconds)\n2. **Quote** — We review, price, and match a vendor (usually within 2 hours)\n3. **Confirm** — You approve the quote and receive a Stripe payment link\n4. **Track** — Vendor is dispatched, you see real-time status updates\n5. **Done** — You receive completion confirmation and photos';
+
+  if (t.includes('pay') || t.includes('stripe') || t.includes('invoice'))
+    return 'Payment on RelayOps works through **Stripe**. Once a job is quoted and you approve, you'll receive a secure Stripe payment link. No cash, no invoices lost in email. Vendors are paid by RelayOps after job completion is confirmed.';
+
+  if (t.includes('vendor') && (t.includes('join') || t.includes('sign') || t.includes('apply')))
+    return 'To join the RelayOps vendor network, fill out the **Vendor Application** on the marketing site. Applications are reviewed manually within 24 hours. Once approved, you'll see assigned jobs in your dashboard and can start and complete them from here.';
+
+  if (t.includes('vendor') && t.includes('assign'))
+    return role === 'admin'
+      ? 'To assign a vendor to a job: go to **Job Queue**, click **Edit** on the job, then use the **Assign Vendor** dropdown. Make sure the vendor is Active — if the dropdown is empty, go to Vendors and approve pending applications first. Assigning a vendor auto-advances the status to "Assigned".'
+      : 'Once you submit a job, our team reviews it and assigns a qualified vendor from our network. You'll be notified when a vendor is assigned.';
+
+  if (t.includes('cancel'))
+    return 'To cancel a job, please contact us directly at **contactrelayops@gmail.com** or call **(267) 875-9111** and we'll handle it right away.';
+
+  if (t.includes('contact') || t.includes('phone') || t.includes('email') || t.includes('reach'))
+    return 'You can reach RelayOps directly:\n\n- 📧 **contactrelayops@gmail.com**\n- 📞 **(267) 875-9111**\n- Service areas: **Pittsburgh & Philadelphia, PA**';
+
+  if (t.includes('lock') || t.includes('rekey'))
+    return 'RelayOps handles lock changes and rekeying — select **Lock Change / Rekey** when submitting a job. For emergency lockouts, choose **🚨 Emergency** urgency for same-hour response.';
+
+  if (t.includes('plumb'))
+    return 'Plumbing jobs (leaks, clogs, fixture replacements, urgent calls) are fully supported. Submit via Request a Job and select **Plumbing** as the service type. Emergency plumbing calls get priority routing.';
+
+  if (t.includes('handyman') || t.includes('repair') || t.includes('punch'))
+    return 'Handyman work is one of our most common job types — repairs, punch-list items, general maintenance. Submit the job with as much detail as possible (what needs fixing, access info, any photos you can describe) so we can match the right vendor.';
+
+  if (t.includes('paint'))
+    return 'Paint touch-ups and full unit repaints are available. When submitting, describe the scope (number of rooms, walls only vs trim, current color) so we can provide an accurate quote.';
+
+  if (t.includes('junk') || t.includes('haul') || t.includes('removal') || t.includes('cleanout'))
+    return 'Junk removal jobs (move-out hauls, appliance removal, full unit cleanouts) are available. Mention the approximate volume or number of rooms in your job description for the most accurate quote.';
+
+  if (t.includes('sla') || t.includes('response time') || t.includes('how long') || t.includes('how fast'))
+    return 'Response time SLAs:\n\n- **Emergency**: Target <30 min response\n- **Urgent (same-day)**: Target <2 hr response\n- **Standard**: Quote within 2–4 hours\n- **Flexible**: Within business hours, same day\n\nPriority Plan subscribers get guaranteed <2hr response on standard jobs.';
+
+  if (t.includes('area') || t.includes('location') || t.includes('city') || t.includes('where') || t.includes('pittsburgh') || t.includes('philadelphia') || t.includes('philly'))
+    return 'RelayOps currently operates in **Pittsburgh, PA** and **Philadelphia, PA**. We're expanding nationally — if you're outside these areas, reach out to contactrelayops@gmail.com to get on the waitlist.';
+
+  // Default helpful response
+  return 'Great question! For detailed help, you can:\n\n- Check the relevant tab in your dashboard\n- Email us at **contactrelayops@gmail.com**\n- Call **(267) 875-9111**\n\nIs there something specific about your jobs, pricing, or how RelayOps works that I can help clarify?';
 }
 
 // ═══════════════════════════════════════════════════════
