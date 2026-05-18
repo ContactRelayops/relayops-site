@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>emailjs.init('fjlY4_qDvbN5NHIbn');</script>
 <style>
@@ -940,7 +940,11 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const ADMIN_EMAIL  = 'contactrelayops@gmail.com';
 const ADMIN_PASS   = 'Relay2025';
 
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// Supabase UMD bundle exposes window.supabase = { createClient }
+const _supa = window.supabase || window.Supabase || {};
+const _createClient = _supa.createClient || (typeof createClient !== 'undefined' ? createClient : null);
+if(!_createClient) { console.error('Supabase failed to load'); }
+const sb = _createClient ? _createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
 let currentUser = null;
 let currentRole = null; // 'admin' | 'customer' | 'provider'
@@ -1047,21 +1051,28 @@ async function doSignIn() {
   btn.disabled=true; btn.textContent='Signing in...';
   document.getElementById('auth-error').style.display='none';
 
+  // Admin bypass — no Supabase needed
+  if(email===ADMIN_EMAIL && pass===ADMIN_PASS) {
+    if(sb) {
+      try {
+        const {data} = await sb.auth.signInWithPassword({email,password:pass});
+        if(data?.user) { btn.disabled=false; btn.textContent='Sign In →'; await enterAdminMode(data.user); return; }
+      } catch(e) {}
+    }
+    btn.disabled=false; btn.textContent='Sign In →';
+    await enterAdminMode({id:'admin-local',email:ADMIN_EMAIL,user_metadata:{full_name:'Admin'},created_at:new Date().toISOString()});
+    return;
+  }
+
+  if(!sb) { btn.disabled=false; btn.textContent='Sign In →'; authErr('Connection error — page failed to load properly. Please hard-refresh (Ctrl+Shift+R) and try again.'); return; }
+
   try {
     const {data,error} = await sb.auth.signInWithPassword({email,password:pass});
 
     if(error) {
-      // If admin credentials fail Supabase (e.g. account not confirmed), bypass and enter admin directly
-      if(email===ADMIN_EMAIL && pass===ADMIN_PASS) {
-        btn.disabled=false; btn.textContent='Sign In →';
-        await enterAdminMode({id:'admin-local',email:ADMIN_EMAIL,user_metadata:{full_name:'Admin'},created_at:new Date().toISOString()});
-        return;
-      }
-      // Surface the real error to regular users
       btn.disabled=false; btn.textContent='Sign In →';
-      // Make common Supabase errors more readable
       const msg = error.message || 'Sign in failed';
-      if(msg.toLowerCase().includes('invalid login')) authErr('Incorrect email or password. Please try again.');
+      if(msg.toLowerCase().includes('invalid login') || msg.toLowerCase().includes('invalid credentials')) authErr('Incorrect email or password. Please try again.');
       else if(msg.toLowerCase().includes('email not confirmed')) authErr('Please confirm your email address first, then try again.');
       else authErr(msg);
       return;
