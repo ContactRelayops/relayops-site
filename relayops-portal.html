@@ -5,993 +5,1658 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>RelayOps — Portal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>emailjs.init('fjlY4_qDvbN5NHIbn');</script>
 <style>
 :root{
-  --bg:#0a0a0a;--bg2:#111;--bg3:#1a1a1a;--bg4:#222;
-  --line:#2a2a2a;--line2:#333;--text:#e8e8e8;--text2:#888;--text3:#555;
-  --red:#c8102e;--red-soft:rgba(200,16,46,.12);
-  --green:#22c55e;--green-soft:rgba(34,197,94,.12);
-  --yellow:#eab308;--yellow-soft:rgba(234,179,8,.12);
-  --blue:#3b82f6;--blue-soft:rgba(59,130,246,.12);
-  --purple:#a855f7;--purple-soft:rgba(168,85,247,.12);
-  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+  --ink:#0d0d0d;--ink-2:#1a1a1a;
+  --paper:#f7f6f3;--paper-2:#f0ede8;
+  --red:#c8102e;--red-deep:#9b0e24;--red-soft:#fdf1f3;--red-mid:#f5d0d7;
+  --cream:#fffdf9;--line:#e2ddd7;--line-2:#ccc7c0;
+  --muted:#6b6560;--muted-2:#9b948d;--white:#ffffff;
+  --mono:'DM Mono',monospace;--sans:'DM Sans',sans-serif;
+  --display:'Barlow Condensed',sans-serif;
+  --r-sm:10px;--r-md:18px;--r-lg:28px;--r-xl:40px;
+  --sidebar:220px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:var(--sans);background:var(--bg);color:var(--text);min-height:100vh}
+html{font-size:16px}
+body{font-family:var(--sans);background:#0d0d0d;color:var(--white);line-height:1.55;overflow-x:hidden;min-height:100vh}
+a{text-decoration:none;color:inherit}
 
-#login-view{display:flex}
-#app-view{display:none}
+/* ── AUTH SCREEN ── */
+#auth-screen{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:#0d0d0d;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  background-size:200px 200px;
+}
+.auth-box{
+  width:100%;max-width:420px;padding:48px 40px;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);
+  border-radius:var(--r-xl);
+}
+.auth-logo{
+  display:flex;align-items:center;gap:10px;margin-bottom:32px;
+  font-family:var(--display);font-weight:800;font-size:22px;letter-spacing:-.02em;
+}
+.auth-tabs{display:flex;gap:0;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:28px}
+.auth-tab{
+  padding:10px 20px;font-size:14px;font-weight:500;cursor:pointer;
+  color:rgba(255,255,255,.35);border-bottom:2px solid transparent;
+  transition:all .2s;margin-bottom:-1px;
+}
+.auth-tab.active{color:var(--white);border-bottom-color:var(--red)}
+.auth-field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.auth-label{font-size:13px;color:rgba(255,255,255,.5);font-family:var(--mono);letter-spacing:.04em}
+.auth-input{
+  padding:12px 14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  border-radius:var(--r-sm);font-family:var(--sans);font-size:14px;color:var(--white);
+  outline:none;transition:border-color .2s;
+}
+.auth-input:focus{border-color:var(--red)}
+.auth-input::placeholder{color:rgba(255,255,255,.2)}
+.auth-role-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.auth-role{
+  padding:14px 12px;border:1px solid rgba(255,255,255,.1);border-radius:var(--r-md);
+  cursor:pointer;text-align:center;transition:all .2s;
+}
+.auth-role:hover{border-color:rgba(255,255,255,.3)}
+.auth-role.selected{border-color:var(--red);background:rgba(200,16,46,.1)}
+.auth-role-icon{font-size:22px;margin-bottom:6px}
+.auth-role-label{font-size:12px;color:rgba(255,255,255,.7);font-weight:500}
+.auth-btn{
+  width:100%;padding:13px;background:var(--red);color:var(--white);border:none;
+  border-radius:var(--r-md);font-family:var(--sans);font-size:15px;font-weight:600;
+  cursor:pointer;transition:background .2s;margin-top:6px;
+}
+.auth-btn:hover{background:var(--red-deep)}
+.auth-btn:disabled{opacity:.5;cursor:not-allowed}
+.auth-error{
+  padding:10px 14px;background:rgba(200,16,46,.15);border:1px solid rgba(200,16,46,.3);
+  border-radius:var(--r-sm);font-size:13px;color:#ff8898;margin-bottom:14px;display:none;
+}
+.auth-back{font-size:13px;color:rgba(255,255,255,.3);margin-top:20px;text-align:center}
+.auth-back a{color:rgba(255,255,255,.5)}
+.auth-back a:hover{color:var(--white)}
 
-/* ── LOGIN ── */
-#login-view{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-.login-card{background:var(--bg2);border:1px solid var(--line);border-radius:16px;padding:40px;width:100%;max-width:420px}
-.login-logo{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:15px;font-weight:500;margin-bottom:32px}
-.login-title{font-family:var(--mono);font-size:18px;font-weight:500;margin-bottom:6px}
-.login-sub{font-size:13px;color:var(--text2);margin-bottom:24px}
-.tabs{display:flex;background:var(--bg3);border-radius:8px;padding:3px;margin-bottom:24px}
-.tab{flex:1;padding:8px;text-align:center;font-family:var(--mono);font-size:12px;color:var(--text2);cursor:pointer;border-radius:6px;transition:all .15s;border:none;background:none}
-.tab.active{background:var(--red);color:#fff}
-.field{margin-bottom:14px}
-.flabel{font-size:11px;font-family:var(--mono);color:var(--text2);margin-bottom:5px;display:block;letter-spacing:.04em}
-.finput{width:100%;padding:11px 14px;background:var(--bg3);border:1px solid var(--line2);border-radius:8px;color:var(--text);font-family:var(--sans);font-size:14px;outline:none;transition:border-color .15s}
-.finput:focus{border-color:var(--red)}
-.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
-.role-opt{padding:10px 8px;border:1px solid var(--line2);border-radius:8px;background:var(--bg3);color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .15s;text-align:center;line-height:1.4}
-.role-opt.active{border-color:var(--red);color:var(--red);background:var(--red-soft)}
-.submit-btn{width:100%;padding:12px;background:var(--red);color:#fff;border:none;border-radius:8px;font-family:var(--mono);font-size:13px;cursor:pointer;transition:opacity .15s;margin-top:4px}
-.submit-btn:hover{opacity:.9}
-.submit-btn:disabled{opacity:.5;cursor:not-allowed}
-.msg{padding:10px 14px;border-radius:8px;font-size:12px;font-family:var(--mono);margin-bottom:14px;display:none}
-.msg.error{background:var(--red-soft);border:1px solid rgba(200,16,46,.3);color:#ff8898}
-.msg.success{background:var(--green-soft);border:1px solid rgba(34,197,94,.3);color:var(--green)}
-.back-link{display:block;text-align:center;font-size:12px;color:var(--text3);margin-top:18px;font-family:var(--mono)}
-.back-link a{color:var(--red);text-decoration:none}
+/* ── APP LAYOUT ── */
+#app{display:none;min-height:100vh}
+.app-layout{display:grid;grid-template-columns:var(--sidebar) 1fr;min-height:100vh}
 
-/* ── APP SHELL ── */
-#app-view{min-height:100vh;display:flex;flex-direction:column}
-.topbar{height:52px;background:var(--bg2);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 24px;position:sticky;top:0;z-index:50;flex-shrink:0}
-.topbar-brand{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:13px;font-weight:500}
-.topbar-right{display:flex;align-items:center;gap:12px}
-.role-tag{font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:4px;letter-spacing:.06em}
-.tag-admin{background:var(--red-soft);color:var(--red);border:1px solid rgba(200,16,46,.3)}
-.tag-customer{background:var(--blue-soft);color:var(--blue);border:1px solid rgba(59,130,246,.3)}
-.tag-provider{background:var(--green-soft);color:var(--green);border:1px solid rgba(34,197,94,.3)}
-.uname{font-size:12px;color:var(--text2);font-family:var(--mono)}
-.logout-btn{font-size:11px;font-family:var(--mono);padding:5px 10px;border:1px solid var(--line2);border-radius:6px;background:none;cursor:pointer;color:var(--text2);transition:all .15s}
-.logout-btn:hover{color:var(--text)}
+/* ── SIDEBAR ── */
+.sidebar{
+  background:#0a0a0a;border-right:1px solid rgba(255,255,255,.06);
+  display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;
+}
+.sidebar-top{padding:20px 16px 16px;border-bottom:1px solid rgba(255,255,255,.05)}
+.sidebar-logo{
+  display:flex;align-items:center;gap:8px;
+  font-family:var(--display);font-weight:800;font-size:16px;color:var(--white);
+  margin-bottom:16px;
+}
+.sidebar-user{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;
+  background:rgba(255,255,255,.04);border-radius:var(--r-sm);
+}
+.sidebar-avatar{
+  width:30px;height:30px;border-radius:50%;background:var(--red);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--display);font-size:13px;font-weight:700;flex-shrink:0;
+}
+.sidebar-name{font-size:13px;font-weight:500;color:rgba(255,255,255,.9);line-height:1.2}
+.sidebar-role{font-size:10px;color:rgba(255,255,255,.35);font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase;margin-top:1px}
+.sidebar-nav{padding:12px 10px;flex:1}
+.sidebar-section{
+  font-size:10px;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;
+  color:rgba(255,255,255,.2);padding:8px 8px 4px;margin-top:4px;
+}
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 10px;border-radius:var(--r-sm);
+  font-size:13px;color:rgba(255,255,255,.45);
+  cursor:pointer;transition:all .15s;margin-bottom:2px;position:relative;
+}
+.nav-item:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.8)}
+.nav-item.active{background:rgba(200,16,46,.15);color:var(--white)}
+.nav-item.active .nav-icon{opacity:1}
+.nav-icon{font-size:15px;opacity:.6;flex-shrink:0}
+.nav-badge{
+  margin-left:auto;font-size:10px;padding:2px 7px;border-radius:999px;
+  background:var(--red);color:var(--white);font-family:var(--mono);font-weight:600;
+  display:none;
+}
+.nav-badge.visible{display:block}
+.sidebar-bottom{
+  padding:12px 10px;border-top:1px solid rgba(255,255,255,.05);
+}
+.sidebar-sign-out{
+  display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--r-sm);
+  font-size:13px;color:rgba(255,255,255,.3);cursor:pointer;transition:all .15s;
+}
+.sidebar-sign-out:hover{color:rgba(255,255,255,.7);background:rgba(255,255,255,.04)}
 
-.app-layout{display:flex;flex:1}
-.sidebar{width:190px;background:var(--bg2);border-right:1px solid var(--line);padding:16px 10px;flex-shrink:0}
-.nav-btn{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border-radius:6px;font-size:12px;color:var(--text2);cursor:pointer;border:none;background:none;text-align:left;transition:all .15s;margin-bottom:2px;font-family:var(--sans)}
-.nav-btn:hover{background:var(--bg3);color:var(--text)}
-.nav-btn.on{background:var(--red-soft);color:var(--red)}
-.nav-sep{height:1px;background:var(--line);margin:8px 0}
+/* ── MAIN CONTENT ── */
+.main{flex:1;overflow-y:auto;background:#111}
+.page{display:none;padding:32px 36px;max-width:1100px}
+.page.active{display:block}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;gap:16px}
+.page-title{font-family:var(--display);font-size:28px;font-weight:800;letter-spacing:-.02em;color:var(--white)}
+.page-sub{font-size:14px;color:rgba(255,255,255,.4);margin-top:4px}
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:9px 18px;border-radius:999px;font-family:var(--sans);
+  font-size:13px;font-weight:500;transition:all .2s;cursor:pointer;border:none;
+}
+.btn-red{background:var(--red);color:var(--white)}
+.btn-red:hover{background:var(--red-deep)}
+.btn-ghost{background:transparent;border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.6)}
+.btn-ghost:hover{background:rgba(255,255,255,.08);color:var(--white)}
+.btn-sm{padding:6px 13px;font-size:12px}
+.btn-ink{background:rgba(255,255,255,.1);color:rgba(255,255,255,.8)}
+.btn-ink:hover{background:rgba(255,255,255,.18)}
 
-.content{flex:1;padding:28px;overflow-y:auto}
-.panel{display:none}.panel.on{display:block}
+/* ── STATS ROW ── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.stat-card{
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);
+  border-radius:var(--r-md);padding:18px 20px;
+}
+.stat-n{font-family:var(--display);font-size:30px;font-weight:800;color:var(--white);letter-spacing:-.03em}
+.stat-l{font-size:11px;font-family:var(--mono);color:rgba(255,255,255,.3);letter-spacing:.06em;text-transform:uppercase;margin-top:5px}
+.stat-delta{font-size:11px;color:#51cf66;margin-top:4px;font-family:var(--mono)}
 
-/* ── SHARED COMPONENTS ── */
-.ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px}
-.ptitle{font-family:var(--mono);font-size:16px;font-weight:500}
-.psub{font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:2px}
-.action-btn{font-family:var(--mono);font-size:11px;padding:8px 14px;border-radius:6px;border:none;cursor:pointer;transition:all .15s}
-.btn-red{background:var(--red);color:#fff}.btn-red:hover{opacity:.9}
-.btn-ghost{background:var(--bg3);border:1px solid var(--line2);color:var(--text2)}.btn-ghost:hover{color:var(--text)}
-.btn-green{background:var(--green);color:#000}.btn-green:hover{opacity:.9}
+/* ── FILTER BAR ── */
+.filter-bar{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap;align-items:center}
+.filter-btn{
+  padding:6px 14px;border-radius:999px;font-size:12px;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+  color:rgba(255,255,255,.45);cursor:pointer;transition:all .15s;font-family:var(--mono);
+}
+.filter-btn:hover{background:rgba(255,255,255,.1);color:rgba(255,255,255,.8)}
+.filter-btn.active{background:var(--red);border-color:var(--red);color:var(--white)}
+.filter-right{margin-left:auto}
 
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
-.stat{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
-.stat-n{font-family:var(--mono);font-size:26px;font-weight:500;color:var(--text)}
-.stat-l{font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-top:4px}
+/* ── TABLE ── */
+.table-wrap{
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);
+  border-radius:var(--r-lg);overflow:hidden;
+}
+.table-head{
+  display:grid;padding:10px 18px;
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+.th{font-size:10px;font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.25)}
+.table-row{
+  display:grid;padding:14px 18px;
+  border-bottom:1px solid rgba(255,255,255,.04);align-items:center;
+  transition:background .12s;cursor:pointer;
+}
+.table-row:last-child{border-bottom:none}
+.table-row:hover{background:rgba(255,255,255,.03)}
+.tr-main{font-size:13px;color:rgba(255,255,255,.85);font-weight:500}
+.tr-sub{font-size:11px;color:rgba(255,255,255,.3);font-family:var(--mono);margin-top:2px}
+.tr-cell{font-size:12px;color:rgba(255,255,255,.5)}
+.empty-state{
+  text-align:center;padding:60px 20px;
+  font-size:14px;color:rgba(255,255,255,.25);
+}
+.empty-state a{color:var(--red)}
 
-.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
-.fbtn{font-family:var(--mono);font-size:11px;padding:4px 11px;border-radius:999px;border:1px solid var(--line2);background:var(--bg2);color:var(--text2);cursor:pointer;transition:all .15s}
-.fbtn:hover{color:var(--text)}.fbtn.on{background:var(--red-soft);border-color:rgba(200,16,46,.3);color:var(--red)}
+/* ── STATUS PILLS ── */
+.pill{display:inline-block;font-size:10px;padding:3px 10px;border-radius:999px;font-family:var(--mono);font-weight:500}
+.pill-submitted{background:rgba(255,255,255,.08);color:rgba(255,255,255,.5)}
+.pill-priced{background:rgba(255,212,59,.12);color:#ffd43b}
+.pill-assigned{background:rgba(81,207,102,.1);color:#51cf66}
+.pill-progress{background:rgba(77,171,247,.1);color:#74c0fc}
+.pill-completed{background:rgba(255,255,255,.06);color:rgba(255,255,255,.35)}
+.pill-cancelled{background:rgba(200,16,46,.1);color:#ff8898}
+.pill-pending{background:rgba(255,212,59,.1);color:#ffd43b}
+.pill-active{background:rgba(81,207,102,.1);color:#51cf66}
 
-.tbl{background:var(--bg2);border:1px solid var(--line);border-radius:10px;overflow:hidden}
-.tbl-head{display:grid;padding:9px 16px;border-bottom:1px solid var(--line);background:var(--bg3)}
-.th{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3)}
-.tbl-row{display:grid;padding:13px 16px;border-bottom:1px solid var(--line);align-items:center;cursor:pointer;transition:background .12s}
-.tbl-row:last-child{border-bottom:none}
-.tbl-row:hover{background:var(--bg3)}
-.rt{font-size:13px;font-weight:500;color:var(--text)}
-.rs{font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:2px}
-.rc{font-size:12px;color:var(--text2);font-family:var(--mono)}
+/* ── CARD ── */
+.card{
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+  border-radius:var(--r-lg);padding:28px;margin-bottom:16px;
+}
+.card-title{font-family:var(--display);font-size:18px;font-weight:700;color:var(--white);margin-bottom:16px;letter-spacing:-.01em}
 
-.badge{display:inline-block;font-size:10px;padding:3px 8px;border-radius:4px;font-family:var(--mono);font-weight:500;letter-spacing:.03em}
-.b-submitted{background:var(--red-soft);color:var(--red)}
-.b-priced{background:var(--blue-soft);color:var(--blue)}
-.b-assigned{background:var(--purple-soft);color:var(--purple)}
-.b-in_progress{background:var(--yellow-soft);color:var(--yellow)}
-.b-completed{background:var(--green-soft);color:var(--green)}
-.b-cancelled{background:var(--bg4);color:var(--text3)}
-.b-pending{background:var(--yellow-soft);color:var(--yellow)}
-.b-active{background:var(--green-soft);color:var(--green)}
-
-.row-action{font-family:var(--mono);font-size:10px;padding:4px 10px;border-radius:5px;background:var(--bg4);border:1px solid var(--line2);color:var(--text2);cursor:pointer;transition:all .15s}
-.row-action:hover{background:var(--red);color:#fff;border-color:var(--red)}
-
-.loading{text-align:center;padding:40px;color:var(--text3);font-family:var(--mono);font-size:12px}
-.empty{text-align:center;padding:40px;color:var(--text3);font-family:var(--mono);font-size:12px;background:var(--bg2);border:1px solid var(--line);border-radius:10px}
+/* ── FORM FIELDS ── */
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.field label{font-size:12px;color:rgba(255,255,255,.4);font-family:var(--mono);letter-spacing:.05em;text-transform:uppercase}
+.field input,.field select,.field textarea{
+  padding:11px 13px;background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.1);border-radius:var(--r-sm);
+  font-family:var(--sans);font-size:14px;color:var(--white);outline:none;
+  transition:border-color .2s;
+}
+.field input:focus,.field select,.field textarea:focus{border-color:rgba(200,16,46,.6)}
+.field input::placeholder,.field textarea::placeholder{color:rgba(255,255,255,.2)}
+.field select{color:rgba(255,255,255,.7)}
+.field select option{background:#1a1a1a;color:var(--white)}
+.field textarea{min-height:100px;resize:vertical}
+.form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-full{grid-column:1/-1}
 
 /* ── MODAL ── */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
-.overlay.open{display:flex}
-.modal{background:var(--bg2);border:1px solid var(--line2);border-radius:14px;width:100%;max-width:580px;max-height:88vh;overflow-y:auto}
-.modal-hd{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
-.modal-title{font-family:var(--mono);font-size:14px;font-weight:500}
-.modal-x{background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;line-height:1;padding:2px}
-.modal-x:hover{color:var(--text)}
-.modal-body{padding:22px}
-.msec{margin-bottom:18px}
-.msec-title{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:10px}
-.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.di .dl{font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px}
-.di .dv{font-size:13px;color:var(--text);font-weight:500}
-.mfield{margin-bottom:12px}
-.ml{font-size:11px;font-family:var(--mono);color:var(--text2);margin-bottom:5px;display:block}
-.mi{width:100%;padding:9px 12px;background:var(--bg3);border:1px solid var(--line2);border-radius:7px;color:var(--text);font-family:var(--sans);font-size:13px;outline:none;transition:border-color .15s}
-.mi:focus{border-color:var(--red)}
-.mta{min-height:70px;resize:vertical}
-.modal-ft{padding:14px 22px;border-top:1px solid var(--line);display:flex;gap:8px;flex-wrap:wrap}
-
-/* ── CUSTOMER CARDS ── */
-.job-cards{display:grid;gap:10px}
-.jc{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:18px 22px;transition:border-color .15s}
-.jc:hover{border-color:var(--line2)}
-.jc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px}
-.jc-type{font-size:14px;font-weight:600;color:var(--text)}
-.jc-addr{font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:2px}
-.jc-meta{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px}
-.jcm .jcml{font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px}
-.jcm .jcmv{font-size:12px;color:var(--text);font-family:var(--mono)}
-.jc-footer{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
-.jc-notes{font-size:12px;color:var(--text2);font-style:italic;line-height:1.5;flex:1}
-.pay-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--green);color:#000;border:none;border-radius:7px;font-family:var(--mono);font-size:11px;cursor:pointer;text-decoration:none;transition:opacity .15s;font-weight:500}
-.pay-btn:hover{opacity:.9}
-
-/* ── VENDOR CARDS ── */
-.vc{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:18px 22px;margin-bottom:10px}
-.vc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
-.vc-desc{font-size:12px;color:var(--text2);line-height:1.6;padding:10px 12px;background:var(--bg3);border-radius:7px;font-family:var(--mono);margin-bottom:12px}
-.vc-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
-.vc-update{display:flex;gap:8px;align-items:center;padding-top:12px;border-top:1px solid var(--line);flex-wrap:wrap}
-.vselect{padding:8px 10px;background:var(--bg3);border:1px solid var(--line2);border-radius:6px;color:var(--text);font-family:var(--mono);font-size:11px;outline:none}
-
-/* TOAST */
-.toast{position:fixed;bottom:20px;right:20px;padding:10px 16px;border-radius:8px;font-family:var(--mono);font-size:12px;display:none;z-index:300;animation:tin .2s ease}
-.toast.ok{background:var(--green);color:#000}
-.toast.err{background:var(--red);color:#fff}
-@keyframes tin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-
-/* PENDING NOTICE */
-.pnotice{background:var(--yellow-soft);border:1px solid rgba(234,179,8,.25);border-radius:10px;padding:14px 18px;font-size:13px;color:var(--yellow);font-family:var(--mono);margin-bottom:18px}
-
-@media(max-width:700px){
-  .sidebar{display:none}
-  .stats{grid-template-columns:repeat(2,1fr)}
-  .dgrid{grid-template-columns:1fr}
-  .vc-meta{grid-template-columns:1fr 1fr}
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);
+  z-index:1000;display:none;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;
 }
+.modal-overlay.open{display:flex}
+.modal{
+  background:#1a1a1a;border:1px solid rgba(255,255,255,.1);
+  border-radius:var(--r-xl);padding:36px;width:100%;max-width:580px;
+  position:relative;
+}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.modal-title{font-family:var(--display);font-size:22px;font-weight:800;letter-spacing:-.02em;color:var(--white)}
+.modal-close{
+  width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.08);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  font-size:16px;color:rgba(255,255,255,.5);border:none;transition:all .15s;
+}
+.modal-close:hover{background:rgba(255,255,255,.15);color:var(--white)}
+.modal-section{margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid rgba(255,255,255,.06)}
+.modal-section:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.modal-label{font-size:10px;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.25);margin-bottom:8px}
+.modal-value{font-size:14px;color:rgba(255,255,255,.8);line-height:1.6}
+
+/* ── NOTIFICATION SYSTEM ── */
+#notif-container{
+  position:fixed;bottom:24px;right:24px;z-index:2000;
+  display:flex;flex-direction:column;gap:10px;pointer-events:none;
+}
+.notif{
+  background:#1e1e1e;border:1px solid rgba(255,255,255,.12);
+  border-radius:var(--r-md);padding:14px 18px;min-width:300px;max-width:360px;
+  display:flex;align-items:flex-start;gap:12px;pointer-events:all;
+  box-shadow:0 8px 32px rgba(0,0,0,.5);
+  animation:notifIn .3s ease forwards;
+}
+.notif.out{animation:notifOut .3s ease forwards}
+@keyframes notifIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+@keyframes notifOut{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(20px)}}
+.notif-icon{font-size:18px;flex-shrink:0;margin-top:1px}
+.notif-body{flex:1}
+.notif-title{font-size:13px;font-weight:600;color:var(--white);margin-bottom:3px}
+.notif-msg{font-size:12px;color:rgba(255,255,255,.5)}
+.notif-close{
+  font-size:14px;color:rgba(255,255,255,.25);cursor:pointer;padding:2px;
+  background:none;border:none;flex-shrink:0;
+}
+.notif-close:hover{color:rgba(255,255,255,.6)}
+.notif.success{border-color:rgba(81,207,102,.3)}
+.notif.success .notif-icon{color:#51cf66}
+.notif.warning{border-color:rgba(255,212,59,.3)}
+.notif.warning .notif-icon{color:#ffd43b}
+.notif.info{border-color:rgba(77,171,247,.3)}
+.notif.info .notif-icon{color:#74c0fc}
+
+/* ── PROFILE PAGE ── */
+.profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.profile-stat{
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);
+  border-radius:var(--r-md);padding:20px;
+}
+.profile-stat-n{font-family:var(--display);font-size:26px;font-weight:800;color:var(--white)}
+.profile-stat-l{font-size:11px;color:rgba(255,255,255,.3);font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase;margin-top:4px}
+
+/* ── ADMIN TABS ── */
+.admin-tabs{display:flex;gap:4px;margin-bottom:24px;border-bottom:1px solid rgba(255,255,255,.07);padding-bottom:0}
+.admin-tab{
+  padding:10px 18px;font-size:13px;color:rgba(255,255,255,.4);cursor:pointer;
+  border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;font-weight:500;
+}
+.admin-tab:hover{color:rgba(255,255,255,.7)}
+.admin-tab.active{color:var(--white);border-bottom-color:var(--red)}
+
+/* ── VENDOR DETAIL ── */
+.vendor-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.vendor-card{
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);
+  border-radius:var(--r-md);padding:18px;transition:border-color .15s;cursor:pointer;
+}
+.vendor-card:hover{border-color:rgba(255,255,255,.18)}
+.vendor-name{font-weight:600;font-size:14px;color:rgba(255,255,255,.9);margin-bottom:6px}
+.vendor-meta{font-size:12px;color:rgba(255,255,255,.4);font-family:var(--mono)}
+
+/* ── SUCCESS BOX ── */
+.success-box{
+  padding:20px;background:rgba(81,207,102,.08);border:1px solid rgba(81,207,102,.2);
+  border-radius:var(--r-md);margin-bottom:16px;display:none;
+}
+.success-box-title{font-weight:600;color:#51cf66;margin-bottom:6px;font-size:14px}
+.success-box-msg{font-size:13px;color:rgba(255,255,255,.5)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  .app-layout{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .stats-row{grid-template-columns:1fr 1fr}
+  .page{padding:20px}
+  .profile-grid{grid-template-columns:1fr}
+  .form-grid-2{grid-template-columns:1fr}
+  .vendor-grid{grid-template-columns:1fr}
+}
+
+/* ── ADMIN SPECIFIC ── */
+.job-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.detail-row{margin-bottom:12px}
+.detail-label{font-size:11px;font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.25);margin-bottom:4px}
+.detail-val{font-size:14px;color:rgba(255,255,255,.8)}
+.detail-desc{font-size:13px;color:rgba(255,255,255,.6);line-height:1.6;background:rgba(255,255,255,.03);padding:12px;border-radius:var(--r-sm);margin-top:4px}
 </style>
 </head>
 <body>
 
-<!-- ═══ LOGIN VIEW ═══ -->
-<div class="view active" id="login-view">
-  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px">
-    <div class="login-card">
-      <div class="login-logo">
-        <svg width="26" height="26" viewBox="0 0 260 260" fill="none"><rect width="260" height="260" rx="52" fill="#111"/><path d="M74 78C74 67.5 82.5 59 93 59H178C188.5 59 197 67.5 197 78V93C197 103.5 188.5 112 178 112H127V154H167C177.5 154 186 162.5 186 173V188C186 198.5 177.5 207 167 207H93C82.5 207 74 198.5 74 188V78Z" fill="#C8102E"/><path d="M134 112H202C212.5 112 221 120.5 221 131V145C221 155.5 212.5 164 202 164H134V112Z" fill="#F7F6F3"/></svg>
-        RelayOps
-      </div>
-      <div class="tabs">
-        <button class="tab active" onclick="switchAuthTab('signin')">Sign In</button>
-        <button class="tab" onclick="switchAuthTab('signup')">Create Account</button>
-      </div>
-      <div class="msg error" id="auth-error"></div>
-      <div class="msg success" id="auth-success"></div>
+<!-- NOTIFICATIONS -->
+<div id="notif-container"></div>
 
-      <!-- SIGN IN -->
-      <div id="signin-form">
-        <div class="field"><label class="flabel">Email</label><input class="finput" id="si-email" type="email" placeholder="name@company.com"/></div>
-        <div class="field"><label class="flabel">Password</label><input class="finput" id="si-pass" type="password" placeholder="Your password"/></div>
-        <button class="submit-btn" id="si-btn" onclick="doSignIn()">Sign In →</button>
-      </div>
-
-      <!-- SIGN UP -->
-      <div id="signup-form" style="display:none">
-        <div class="field"><label class="flabel">Full Name</label><input class="finput" id="su-name" type="text" placeholder="Your full name"/></div>
-        <div class="field"><label class="flabel">Email</label><input class="finput" id="su-email" type="email" placeholder="name@company.com"/></div>
-        <div class="field"><label class="flabel">Password (min 6 chars)</label><input class="finput" id="su-pass" type="password" placeholder="Create a password"/></div>
-        <div class="field">
-          <label class="flabel">I am a...</label>
-          <div class="role-grid">
-            <div class="role-opt active" id="ro-customer" onclick="pickRole('customer')">🏠 Property Manager<br/>/ Customer</div>
-            <div class="role-opt" id="ro-provider" onclick="pickRole('provider')">🔧 Vendor<br/>/ Provider</div>
-          </div>
-        </div>
-        <button class="submit-btn" id="su-btn" onclick="doSignUp()">Create Account →</button>
-      </div>
-
-      <div class="back-link">← <a href="https://contactrelayops.github.io/relayops-site">Back to RelayOps</a></div>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ APP VIEW ═══ -->
-<div class="view" id="app-view">
-  <!-- TOPBAR -->
-  <div class="topbar">
-    <div class="topbar-brand">
-      <svg width="22" height="22" viewBox="0 0 260 260" fill="none"><rect width="260" height="260" rx="52" fill="#111"/><path d="M74 78C74 67.5 82.5 59 93 59H178C188.5 59 197 67.5 197 78V93C197 103.5 188.5 112 178 112H127V154H167C177.5 154 186 162.5 186 173V188C186 198.5 177.5 207 167 207H93C82.5 207 74 198.5 74 188V78Z" fill="#C8102E"/><path d="M134 112H202C212.5 112 221 120.5 221 131V145C221 155.5 212.5 164 202 164H134V112Z" fill="#F7F6F3"/></svg>
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <svg width="28" height="28" viewBox="0 0 260 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="260" height="260" rx="52" fill="#111111"/>
+        <path d="M74 78C74 67.5 82.5 59 93 59H178C188.5 59 197 67.5 197 78V93C197 103.5 188.5 112 178 112H127V154H167C177.5 154 186 162.5 186 173V188C186 198.5 177.5 207 167 207H93C82.5 207 74 198.5 74 188V78Z" fill="#C8102E"/>
+        <path d="M134 112H202C212.5 112 221 120.5 221 131V145C221 155.5 212.5 164 202 164H134V112Z" fill="#F7F6F3"/>
+      </svg>
       RelayOps
     </div>
-    <div class="topbar-right">
-      <span class="role-tag" id="role-tag"></span>
-      <span class="uname" id="user-display"></span>
-      <button class="logout-btn" onclick="doLogout()">Sign Out</button>
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="tab-signin" onclick="switchAuthTab('signin')">Sign In</div>
+      <div class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')">Create Account</div>
     </div>
-  </div>
+    <div id="auth-error" class="auth-error"></div>
 
+    <!-- SIGN IN -->
+    <div id="signin-form">
+      <div class="auth-field">
+        <div class="auth-label">Email</div>
+        <input class="auth-input" id="si-email" type="email" placeholder="name@company.com" onkeydown="if(event.key==='Enter')doSignIn()"/>
+      </div>
+      <div class="auth-field">
+        <div class="auth-label">Password</div>
+        <input class="auth-input" id="si-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doSignIn()"/>
+      </div>
+      <button class="auth-btn" id="si-btn" onclick="doSignIn()">Sign In →</button>
+    </div>
+
+    <!-- SIGN UP -->
+    <div id="signup-form" style="display:none">
+      <div class="auth-field">
+        <div class="auth-label">Full Name</div>
+        <input class="auth-input" id="su-name" type="text" placeholder="Your full name"/>
+      </div>
+      <div class="auth-field">
+        <div class="auth-label">Email</div>
+        <input class="auth-input" id="su-email" type="email" placeholder="name@company.com"/>
+      </div>
+      <div class="auth-field">
+        <div class="auth-label">Password (min 6 chars)</div>
+        <input class="auth-input" id="su-pass" type="password" placeholder="••••••••"/>
+      </div>
+      <div class="auth-label" style="margin-bottom:10px">I am a...</div>
+      <div class="auth-role-grid">
+        <div class="auth-role selected" id="role-customer" onclick="selectRole('customer')">
+          <div class="auth-role-icon">🏠</div>
+          <div class="auth-role-label">Property Manager<br/>/ Customer</div>
+        </div>
+        <div class="auth-role" id="role-provider" onclick="selectRole('provider')">
+          <div class="auth-role-icon">🔧</div>
+          <div class="auth-role-label">Vendor<br/>/ Provider</div>
+        </div>
+      </div>
+      <button class="auth-btn" id="su-btn" onclick="doSignUp()">Create Account →</button>
+    </div>
+    <div class="auth-back"><a href="https://contactrelayops.github.io/relayops-site">← Back to RelayOps</a></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
   <div class="app-layout">
+
     <!-- SIDEBAR -->
-    <div class="sidebar" id="sidebar"></div>
-
-    <!-- CONTENT -->
-    <div class="content" id="content-area">
-
-      <!-- ── ADMIN: JOB QUEUE ── -->
-      <div class="panel" id="panel-admin-jobs">
-        <div class="ph">
-          <div><div class="ptitle">Job Queue</div><div class="psub">Review, price, assign and track all jobs</div></div>
-          <button class="action-btn btn-red" onclick="loadAdminJobs()">↻ Refresh</button>
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <div class="sidebar-logo">
+          <svg width="22" height="22" viewBox="0 0 260 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="260" height="260" rx="52" fill="#111111"/>
+            <path d="M74 78C74 67.5 82.5 59 93 59H178C188.5 59 197 67.5 197 78V93C197 103.5 188.5 112 178 112H127V154H167C177.5 154 186 162.5 186 173V188C186 198.5 177.5 207 167 207H93C82.5 207 74 198.5 74 188V78Z" fill="#C8102E"/>
+            <path d="M134 112H202C212.5 112 221 120.5 221 131V145C221 155.5 212.5 164 202 164H134V112Z" fill="#F7F6F3"/>
+          </svg>
+          RelayOps
         </div>
-        <div class="stats">
-          <div class="stat"><div class="stat-n" id="s-open">—</div><div class="stat-l">Open Jobs</div></div>
-          <div class="stat"><div class="stat-n" id="s-new">—</div><div class="stat-l">New / Unreviewed</div></div>
-          <div class="stat"><div class="stat-n" id="s-pay">—</div><div class="stat-l">Pending Payment</div></div>
-          <div class="stat"><div class="stat-n" id="s-done">—</div><div class="stat-l">Completed</div></div>
-        </div>
-        <div class="filters">
-          <button class="fbtn on" onclick="filterAdminJobs('all',this)">All</button>
-          <button class="fbtn" onclick="filterAdminJobs('submitted',this)">Submitted</button>
-          <button class="fbtn" onclick="filterAdminJobs('priced',this)">Priced</button>
-          <button class="fbtn" onclick="filterAdminJobs('assigned',this)">Assigned</button>
-          <button class="fbtn" onclick="filterAdminJobs('in_progress',this)">In Progress</button>
-          <button class="fbtn" onclick="filterAdminJobs('completed',this)">Completed</button>
-        </div>
-        <div class="tbl">
-          <div class="tbl-head" style="grid-template-columns:2fr 1fr 1fr 1fr 100px">
-            <div class="th">Job</div><div class="th">Type</div><div class="th">Urgency</div><div class="th">Status</div><div class="th"></div>
-          </div>
-          <div id="admin-jobs-rows"><div class="loading">Loading...</div></div>
-        </div>
-      </div>
-
-      <!-- ── ADMIN: VENDORS ── -->
-      <div class="panel" id="panel-admin-vendors">
-        <div class="ph">
-          <div><div class="ptitle">Vendors</div><div class="psub">Manage applications and active providers</div></div>
-          <button class="action-btn btn-red" onclick="loadAdminVendors()">↻ Refresh</button>
-        </div>
-        <div class="filters">
-          <button class="fbtn on" onclick="filterAdminVendors('all',this)">All</button>
-          <button class="fbtn" onclick="filterAdminVendors('pending',this)">Pending</button>
-          <button class="fbtn" onclick="filterAdminVendors('active',this)">Active</button>
-        </div>
-        <div id="admin-vendors-rows"><div class="loading">Loading...</div></div>
-      </div>
-
-      <!-- ── ADMIN: PAYMENTS ── -->
-      <div class="panel" id="panel-admin-payments">
-        <div class="ph">
-          <div><div class="ptitle">Payments</div><div class="psub">Track payment links and status</div></div>
-          <button class="action-btn btn-red" onclick="loadAdminPayments()">↻ Refresh</button>
-        </div>
-        <div class="tbl">
-          <div class="tbl-head" style="grid-template-columns:2fr 1fr 1fr 100px">
-            <div class="th">Job ID</div><div class="th">Amount</div><div class="th">Status</div><div class="th"></div>
-          </div>
-          <div id="admin-payments-rows"><div class="loading">Loading...</div></div>
-        </div>
-      </div>
-
-      <!-- ── ADMIN: CUSTOMERS ── -->
-      <div class="panel" id="panel-admin-customers">
-        <div class="ph">
-          <div><div class="ptitle">Customers</div><div class="psub">All registered customers and their job history</div></div>
-          <button class="action-btn btn-red" onclick="loadAdminCustomers()">↻ Refresh</button>
-        </div>
-        <div class="tbl">
-          <div class="tbl-head" style="grid-template-columns:2fr 1fr 1fr 1fr">
-            <div class="th">Customer</div><div class="th">Email</div><div class="th">Phone</div><div class="th">Joined</div>
-          </div>
-          <div id="admin-customers-rows"><div class="loading">Loading...</div></div>
-        </div>
-      </div>
-
-      <!-- ── ADMIN: ANALYTICS ── -->
-      <div class="panel" id="panel-admin-analytics">
-        <div class="ph">
-          <div><div class="ptitle">Analytics</div><div class="psub">Job and revenue overview</div></div>
-          <button class="action-btn btn-red" onclick="loadAnalytics()">↻ Refresh</button>
-        </div>
-        <div class="stats" id="analytics-stats">
-          <div class="stat"><div class="stat-n" id="a-total">—</div><div class="stat-l">Total Jobs</div></div>
-          <div class="stat"><div class="stat-n" id="a-completed">—</div><div class="stat-l">Completed</div></div>
-          <div class="stat"><div class="stat-n" id="a-revenue">—</div><div class="stat-l">Total Revenue</div></div>
-          <div class="stat"><div class="stat-n" id="a-vendors">—</div><div class="stat-l">Active Vendors</div></div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:4px">
-          <div class="tbl" style="border-radius:10px;overflow:hidden">
-            <div style="padding:14px 16px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3)">Jobs by Type</div>
-            <div id="analytics-by-type"><div class="loading">Loading...</div></div>
-          </div>
-          <div class="tbl" style="border-radius:10px;overflow:hidden">
-            <div style="padding:14px 16px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3)">Jobs by Status</div>
-            <div id="analytics-by-status"><div class="loading">Loading...</div></div>
+        <div class="sidebar-user">
+          <div class="sidebar-avatar" id="sb-avatar">?</div>
+          <div>
+            <div class="sidebar-name" id="sb-name">Loading...</div>
+            <div class="sidebar-role" id="sb-role">—</div>
           </div>
         </div>
       </div>
 
-      <!-- ── ADMIN: SETTINGS ── -->
-      <div class="panel" id="panel-admin-settings">
-        <div class="ph">
-          <div><div class="ptitle">Settings</div><div class="psub">RelayOps system configuration</div></div>
+      <!-- CUSTOMER NAV -->
+      <nav class="sidebar-nav" id="nav-customer" style="display:none">
+        <div class="sidebar-section">Jobs</div>
+        <div class="nav-item active" onclick="showPage('p-my-jobs')" data-page="p-my-jobs">
+          <span class="nav-icon">📋</span> My Jobs
+          <span class="nav-badge" id="badge-new-jobs"></span>
         </div>
-        <div style="display:grid;gap:14px;max-width:600px">
-          <div class="tbl" style="border-radius:10px;overflow:hidden">
-            <div style="padding:16px 20px;border-bottom:1px solid var(--line)">
-              <div style="font-family:var(--mono);font-size:12px;font-weight:500;color:var(--text);margin-bottom:4px">Contact Email</div>
-              <div style="font-size:13px;color:var(--text2)">contactrelayops@gmail.com</div>
-            </div>
-            <div style="padding:16px 20px;border-bottom:1px solid var(--line)">
-              <div style="font-family:var(--mono);font-size:12px;font-weight:500;color:var(--text);margin-bottom:4px">Phone</div>
-              <div style="font-size:13px;color:var(--text2)">(267) 875-9111</div>
-            </div>
-            <div style="padding:16px 20px;border-bottom:1px solid var(--line)">
-              <div style="font-family:var(--mono);font-size:12px;font-weight:500;color:var(--text);margin-bottom:4px">Service Area</div>
-              <div style="font-size:13px;color:var(--text2)">Pittsburgh, PA & Philadelphia, PA</div>
-            </div>
-            <div style="padding:16px 20px;border-bottom:1px solid var(--line)">
-              <div style="font-family:var(--mono);font-size:12px;font-weight:500;color:var(--text);margin-bottom:4px">Marketing Site</div>
-              <div style="font-size:13px;color:var(--text2)"><a href="https://contactrelayops.github.io/relayops-site" target="_blank" style="color:var(--red)">contactrelayops.github.io/relayops-site</a></div>
-            </div>
-            <div style="padding:16px 20px;border-bottom:1px solid var(--line)">
-              <div style="font-family:var(--mono);font-size:12px;font-weight:500;color:var(--text);margin-bottom:4px">Database</div>
-              <div style="font-size:13px;color:var(--text2)">Supabase — qnufazzxoiomgqxydvnf</div>
-            </div>
-            <div style="padding:16px 20px">
-              <div style="font-family:var(--mono);font-size:12px;font-weight:500;color:var(--text);margin-bottom:4px">Version</div>
-              <div style="font-size:13px;color:var(--text2)">RelayOps MVP v1.0 — May 2026</div>
-            </div>
+        <div class="nav-item" onclick="showPage('p-request-job')" data-page="p-request-job">
+          <span class="nav-icon">➕</span> Request a Job
+        </div>
+        <div class="sidebar-section" style="margin-top:8px">Account</div>
+        <div class="nav-item" onclick="showPage('p-my-profile')" data-page="p-my-profile">
+          <span class="nav-icon">👤</span> My Profile
+        </div>
+      </nav>
+
+      <!-- VENDOR NAV -->
+      <nav class="sidebar-nav" id="nav-vendor" style="display:none">
+        <div class="sidebar-section">Jobs</div>
+        <div class="nav-item active" onclick="showPage('p-vendor-jobs')" data-page="p-vendor-jobs">
+          <span class="nav-icon">🔧</span> My Assigned Jobs
+          <span class="nav-badge" id="badge-vendor-jobs"></span>
+        </div>
+        <div class="sidebar-section" style="margin-top:8px">Account</div>
+        <div class="nav-item" onclick="showPage('p-vendor-profile')" data-page="p-vendor-profile">
+          <span class="nav-icon">👤</span> My Profile
+        </div>
+      </nav>
+
+      <!-- ADMIN NAV -->
+      <nav class="sidebar-nav" id="nav-admin" style="display:none">
+        <div class="sidebar-section">Operations</div>
+        <div class="nav-item active" onclick="showPage('p-admin-jobs')" data-page="p-admin-jobs">
+          <span class="nav-icon">📋</span> Job Queue
+          <span class="nav-badge" id="badge-admin-jobs"></span>
+        </div>
+        <div class="nav-item" onclick="showPage('p-admin-vendors')" data-page="p-admin-vendors">
+          <span class="nav-icon">🔧</span> Vendors
+          <span class="nav-badge" id="badge-pending-vendors"></span>
+        </div>
+        <div class="nav-item" onclick="showPage('p-admin-payments')" data-page="p-admin-payments">
+          <span class="nav-icon">💳</span> Payments
+        </div>
+        <div class="sidebar-section" style="margin-top:8px">Data</div>
+        <div class="nav-item" onclick="showPage('p-admin-customers')" data-page="p-admin-customers">
+          <span class="nav-icon">👥</span> Customers
+        </div>
+        <div class="nav-item" onclick="showPage('p-admin-analytics')" data-page="p-admin-analytics">
+          <span class="nav-icon">📊</span> Analytics
+        </div>
+        <div class="nav-item" onclick="showPage('p-admin-settings')" data-page="p-admin-settings">
+          <span class="nav-icon">⚙️</span> Settings
+        </div>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="sidebar-sign-out" onclick="doSignOut()">
+          <span style="font-size:15px">↩</span> Sign Out
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main" id="main-content">
+
+      <!-- ══════════════════════════════════════════
+           CUSTOMER PAGES
+      ══════════════════════════════════════════ -->
+
+      <!-- MY JOBS (Customer) -->
+      <div class="page active" id="p-my-jobs">
+        <div class="page-header">
+          <div>
+            <div class="page-title">My Jobs</div>
+            <div class="page-sub">Track your submitted jobs and payments</div>
           </div>
-          <div class="tbl" style="border-radius:10px;overflow:hidden">
-            <div style="padding:16px 20px;border-bottom:1px solid var(--line)">
-              <div style="font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:12px">Quick Links</div>
-              <div style="display:flex;flex-direction:column;gap:8px">
-                <a href="https://supabase.com/dashboard" target="_blank" class="action-btn btn-ghost" style="text-align:center;text-decoration:none">🗄️ Open Supabase</a>
-                <a href="https://dashboard.stripe.com" target="_blank" class="action-btn btn-ghost" style="text-align:center;text-decoration:none">💳 Open Stripe</a>
-                <a href="https://contactrelayops.github.io/relayops-site" target="_blank" class="action-btn btn-ghost" style="text-align:center;text-decoration:none">🌐 Open Website</a>
+          <button class="btn btn-red" onclick="showPage('p-request-job')">+ Request a Job</button>
+        </div>
+        <div class="stats-row" id="cust-stats-row">
+          <div class="stat-card"><div class="stat-n" id="cs-total">—</div><div class="stat-l">Total Jobs</div></div>
+          <div class="stat-card"><div class="stat-n" id="cs-active">—</div><div class="stat-l">Active</div></div>
+          <div class="stat-card"><div class="stat-n" id="cs-completed">—</div><div class="stat-l">Completed</div></div>
+          <div class="stat-card"><div class="stat-n" id="cs-pending-pay">—</div><div class="stat-l">Awaiting Payment</div></div>
+        </div>
+        <div class="filter-bar">
+          <button class="filter-btn active" onclick="filterCustomerJobs('all',this)">All</button>
+          <button class="filter-btn" onclick="filterCustomerJobs('submitted',this)">Submitted</button>
+          <button class="filter-btn" onclick="filterCustomerJobs('priced',this)">Quoted</button>
+          <button class="filter-btn" onclick="filterCustomerJobs('assigned',this)">Assigned</button>
+          <button class="filter-btn" onclick="filterCustomerJobs('in_progress',this)">In Progress</button>
+          <button class="filter-btn" onclick="filterCustomerJobs('completed',this)">Completed</button>
+          <button class="btn btn-ghost btn-sm filter-right" onclick="loadCustomerJobs()">↻ Refresh</button>
+        </div>
+        <div class="table-wrap">
+          <div class="table-head" style="grid-template-columns:2fr 1fr 1fr 1fr 90px">
+            <div class="th">Job</div><div class="th">Type</div><div class="th">Urgency</div><div class="th">Status</div><div class="th">Actions</div>
+          </div>
+          <div id="cust-jobs-list"><div class="empty-state">Loading...</div></div>
+        </div>
+      </div>
+
+      <!-- REQUEST A JOB (Customer) -->
+      <div class="page" id="p-request-job">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Request a Job</div>
+            <div class="page-sub">Fill in the details and we'll match a vendor within 2 hours</div>
+          </div>
+        </div>
+        <div style="max-width:640px">
+          <div class="success-box" id="req-success">
+            <div class="success-box-title">✅ Job submitted!</div>
+            <div class="success-box-msg">We'll review and send you a quote within 2 hours. Check the My Jobs tab for updates.</div>
+          </div>
+          <div class="card" id="req-form-card">
+            <div class="form-grid-2">
+              <div class="field"><label>Property Address</label><input id="rj-address" type="text" placeholder="123 Main St, Pittsburgh PA 15201"/></div>
+              <div class="field">
+                <label>Service Type</label>
+                <select id="rj-type">
+                  <option value="">Select a category</option>
+                  <option value="Handyman">Handyman / Repairs</option>
+                  <option value="Cleaning">Turnover Cleaning</option>
+                  <option value="Lock Change">Lock Change / Rekey</option>
+                  <option value="Junk Removal">Junk Removal</option>
+                  <option value="Painting">Paint Touch-Up</option>
+                  <option value="Plumbing">Plumbing</option>
+                  <option value="Turnover">Same-Day Turnover</option>
+                  <option value="Emergency">Emergency Backup</option>
+                  <option value="Other">Other</option>
+                </select>
               </div>
+              <div class="field">
+                <label>Urgency</label>
+                <select id="rj-urgency">
+                  <option value="">Select urgency</option>
+                  <option value="Emergency">🚨 Emergency — Same Hour</option>
+                  <option value="Urgent">⚡ Urgent — Same Day</option>
+                  <option value="Scheduled">📅 Next Day</option>
+                  <option value="Flexible">🗓️ Flexible — Within 1 Week</option>
+                </select>
+              </div>
+              <div class="field form-full"><label>Job Description</label><textarea id="rj-desc" placeholder="Describe the issue, access details, and any scheduling constraints."></textarea></div>
+            </div>
+            <button class="btn btn-red" id="rj-btn" onclick="submitJobRequest()" style="width:100%;justify-content:center;padding:13px;">Submit Job Request →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MY PROFILE (Customer) -->
+      <div class="page" id="p-my-profile">
+        <div class="page-header">
+          <div>
+            <div class="page-title">My Profile</div>
+            <div class="page-sub">Your account information</div>
+          </div>
+        </div>
+        <div style="max-width:560px">
+          <div class="card">
+            <div class="card-title">Account Details</div>
+            <div class="detail-row"><div class="detail-label">Name</div><div class="detail-val" id="prof-name">—</div></div>
+            <div class="detail-row"><div class="detail-label">Email</div><div class="detail-val" id="prof-email">—</div></div>
+            <div class="detail-row"><div class="detail-label">Account Type</div><div class="detail-val" id="prof-type">—</div></div>
+            <div class="detail-row"><div class="detail-label">Member Since</div><div class="detail-val" id="prof-since">—</div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Contact Us</div>
+            <div style="font-size:14px;color:rgba(255,255,255,.5);margin-bottom:14px">Need help or have a question? Reach out directly.</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <a href="tel:+12678759111" style="display:flex;align-items:center;gap:10px;font-size:14px;color:rgba(255,255,255,.7)"><span>📞</span>(267) 875-9111</a>
+              <a href="mailto:contactrelayops@gmail.com" style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--red)"><span>📧</span>contactrelayops@gmail.com</a>
             </div>
           </div>
         </div>
       </div>
-      <div class="panel" id="panel-customer-jobs">
-        <div class="ph">
-          <div><div class="ptitle">My Jobs</div><div class="psub">Track your submitted jobs and payments</div></div>
-          <a href="https://contactrelayops.github.io/relayops-site/#request" class="action-btn btn-red" style="text-decoration:none">+ Request a Job</a>
+
+
+      <!-- ══════════════════════════════════════════
+           VENDOR PAGES
+      ══════════════════════════════════════════ -->
+
+      <!-- VENDOR JOBS -->
+      <div class="page" id="p-vendor-jobs">
+        <div class="page-header">
+          <div>
+            <div class="page-title">My Assigned Jobs</div>
+            <div class="page-sub">Jobs dispatched to you by RelayOps</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="loadVendorJobs()">↻ Refresh</button>
         </div>
-        <div class="job-cards" id="customer-jobs-rows"><div class="loading">Loading...</div></div>
+        <div id="vendor-pending-notice" style="display:none;padding:16px 20px;background:rgba(255,212,59,.08);border:1px solid rgba(255,212,59,.2);border-radius:var(--r-md);margin-bottom:20px;font-size:14px;color:#ffd43b">
+          ⏳ Your account is pending approval. You'll receive jobs once we activate your account. Questions? Email <a href="mailto:contactrelayops@gmail.com" style="color:#ffd43b;text-decoration:underline">contactrelayops@gmail.com</a>
+        </div>
+        <div class="stats-row" id="vendor-stats-row" style="grid-template-columns:repeat(3,1fr)">
+          <div class="stat-card"><div class="stat-n" id="vs-assigned">—</div><div class="stat-l">Assigned</div></div>
+          <div class="stat-card"><div class="stat-n" id="vs-inprog">—</div><div class="stat-l">In Progress</div></div>
+          <div class="stat-card"><div class="stat-n" id="vs-done">—</div><div class="stat-l">Completed</div></div>
+        </div>
+        <div class="table-wrap">
+          <div class="table-head" style="grid-template-columns:2fr 1fr 1fr 100px">
+            <div class="th">Job</div><div class="th">Type</div><div class="th">Status</div><div class="th">Action</div>
+          </div>
+          <div id="vendor-jobs-list"><div class="empty-state">Loading...</div></div>
+        </div>
       </div>
 
-      <!-- ── VENDOR: MY JOBS ── -->
-      <div class="panel" id="panel-vendor-jobs">
-        <div class="ph">
-          <div><div class="ptitle">My Assigned Jobs</div><div class="psub">Jobs assigned to you by RelayOps</div></div>
-          <button class="action-btn btn-red" onclick="loadVendorJobs()">↻ Refresh</button>
+      <!-- VENDOR PROFILE -->
+      <div class="page" id="p-vendor-profile">
+        <div class="page-header">
+          <div>
+            <div class="page-title">My Profile</div>
+            <div class="page-sub">Your vendor account details</div>
+          </div>
         </div>
-        <div id="vendor-pending-notice" class="pnotice" style="display:none">⏳ Your account is pending approval. You'll see jobs once we activate your account.</div>
-        <div id="vendor-jobs-rows"><div class="loading">Loading...</div></div>
+        <div style="max-width:560px">
+          <div class="card">
+            <div class="card-title">Account Details</div>
+            <div class="detail-row"><div class="detail-label">Name</div><div class="detail-val" id="vprof-name">—</div></div>
+            <div class="detail-row"><div class="detail-label">Email</div><div class="detail-val" id="vprof-email">—</div></div>
+            <div class="detail-row"><div class="detail-label">Account Status</div><div class="detail-val" id="vprof-status">—</div></div>
+            <div class="detail-row"><div class="detail-label">Service Type</div><div class="detail-val" id="vprof-service">—</div></div>
+            <div class="detail-row"><div class="detail-label">Coverage Area</div><div class="detail-val" id="vprof-coverage">—</div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Performance</div>
+            <div class="profile-grid">
+              <div class="profile-stat"><div class="profile-stat-n" id="vperf-total">—</div><div class="profile-stat-l">Total Jobs</div></div>
+              <div class="profile-stat"><div class="profile-stat-n" id="vperf-done">—</div><div class="profile-stat-l">Completed</div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Need Help?</div>
+            <div style="font-size:14px;color:rgba(255,255,255,.5);margin-bottom:14px">Questions about a job or your account? Contact us.</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <a href="tel:+12678759111" style="display:flex;align-items:center;gap:10px;font-size:14px;color:rgba(255,255,255,.7)"><span>📞</span>(267) 875-9111</a>
+              <a href="mailto:contactrelayops@gmail.com" style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--red)"><span>📧</span>contactrelayops@gmail.com</a>
+            </div>
+          </div>
+        </div>
       </div>
 
-    </div>
+
+      <!-- ══════════════════════════════════════════
+           ADMIN PAGES
+      ══════════════════════════════════════════ -->
+
+      <!-- ADMIN: JOB QUEUE -->
+      <div class="page" id="p-admin-jobs">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Job Queue</div>
+            <div class="page-sub">Review, price, assign and track all jobs</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="loadAdminJobs()">↻ Refresh</button>
+        </div>
+        <div class="stats-row">
+          <div class="stat-card"><div class="stat-n" id="as-total">—</div><div class="stat-l">Total Jobs</div></div>
+          <div class="stat-card"><div class="stat-n" id="as-open">—</div><div class="stat-l">Open Jobs</div></div>
+          <div class="stat-card"><div class="stat-n" id="as-new">—</div><div class="stat-l">New / Unreviewed</div></div>
+          <div class="stat-card"><div class="stat-n" id="as-done">—</div><div class="stat-l">Completed</div></div>
+        </div>
+        <div class="filter-bar">
+          <button class="filter-btn active" onclick="filterAdminJobs('all',this)">All</button>
+          <button class="filter-btn" onclick="filterAdminJobs('submitted',this)">Submitted</button>
+          <button class="filter-btn" onclick="filterAdminJobs('priced',this)">Priced</button>
+          <button class="filter-btn" onclick="filterAdminJobs('assigned',this)">Assigned</button>
+          <button class="filter-btn" onclick="filterAdminJobs('in_progress',this)">In Progress</button>
+          <button class="filter-btn" onclick="filterAdminJobs('completed',this)">Completed</button>
+        </div>
+        <div class="table-wrap">
+          <div class="table-head" style="grid-template-columns:2fr 1fr 1fr 1fr 80px">
+            <div class="th">Job</div><div class="th">Type</div><div class="th">Urgency</div><div class="th">Status</div><div class="th">Edit</div>
+          </div>
+          <div id="admin-jobs-list"><div class="empty-state">Loading...</div></div>
+        </div>
+      </div>
+
+      <!-- ADMIN: VENDORS -->
+      <div class="page" id="p-admin-vendors">
+        <div class="page-header">
+          <div><div class="page-title">Vendors</div><div class="page-sub">Manage applications and active providers</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="loadAdminVendors()">↻ Refresh</button>
+        </div>
+        <div class="filter-bar">
+          <button class="filter-btn active" onclick="filterAdminVendors('all',this)">All</button>
+          <button class="filter-btn" onclick="filterAdminVendors('pending',this)">Pending</button>
+          <button class="filter-btn" onclick="filterAdminVendors('active',this)">Active</button>
+        </div>
+        <div id="admin-vendors-list"><div class="empty-state">Loading...</div></div>
+      </div>
+
+      <!-- ADMIN: PAYMENTS -->
+      <div class="page" id="p-admin-payments">
+        <div class="page-header">
+          <div><div class="page-title">Payments</div><div class="page-sub">Track payment links and status</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="loadAdminPayments()">↻ Refresh</button>
+        </div>
+        <div class="table-wrap">
+          <div class="table-head" style="grid-template-columns:2fr 1fr 1fr 1fr">
+            <div class="th">Job</div><div class="th">Amount</div><div class="th">Status</div><div class="th">Link</div>
+          </div>
+          <div id="admin-payments-list"><div class="empty-state">Loading...</div></div>
+        </div>
+      </div>
+
+      <!-- ADMIN: CUSTOMERS -->
+      <div class="page" id="p-admin-customers">
+        <div class="page-header">
+          <div><div class="page-title">Customers</div><div class="page-sub">All registered customers and their job history</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="loadAdminCustomers()">↻ Refresh</button>
+        </div>
+        <div class="table-wrap">
+          <div class="table-head" style="grid-template-columns:2fr 2fr 1fr 1fr">
+            <div class="th">Customer</div><div class="th">Email</div><div class="th">Jobs</div><div class="th">Joined</div>
+          </div>
+          <div id="admin-customers-list"><div class="empty-state">Loading...</div></div>
+        </div>
+      </div>
+
+      <!-- ADMIN: ANALYTICS -->
+      <div class="page" id="p-admin-analytics">
+        <div class="page-header">
+          <div><div class="page-title">Analytics</div><div class="page-sub">Job and revenue overview</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="loadAdminAnalytics()">↻ Refresh</button>
+        </div>
+        <div class="stats-row">
+          <div class="stat-card"><div class="stat-n" id="an-total">—</div><div class="stat-l">Total Jobs</div></div>
+          <div class="stat-card"><div class="stat-n" id="an-completed">—</div><div class="stat-l">Completed</div></div>
+          <div class="stat-card"><div class="stat-n" id="an-revenue">—</div><div class="stat-l">Total Revenue</div></div>
+          <div class="stat-card"><div class="stat-n" id="an-vendors">—</div><div class="stat-l">Active Vendors</div></div>
+        </div>
+        <div id="admin-analytics-detail"><div class="empty-state">Loading...</div></div>
+      </div>
+
+      <!-- ADMIN: SETTINGS -->
+      <div class="page" id="p-admin-settings">
+        <div class="page-header">
+          <div><div class="page-title">Settings</div><div class="page-sub">RelayOps system configuration</div></div>
+        </div>
+        <div style="max-width:560px">
+          <div class="card">
+            <div class="card-title">Contact Info</div>
+            <div class="detail-row"><div class="detail-label">Contact Email</div><div class="detail-val">contactrelayops@gmail.com</div></div>
+            <div class="detail-row"><div class="detail-label">Phone</div><div class="detail-val">(267) 875-9111</div></div>
+            <div class="detail-row"><div class="detail-label">Service Area</div><div class="detail-val">Pittsburgh, PA &amp; Philadelphia, PA</div></div>
+            <div class="detail-row"><div class="detail-label">Marketing Site</div><div class="detail-val"><a href="https://contactrelayops.github.io/relayops-site" style="color:var(--red)">contactrelayops.github.io/relayops-site</a></div></div>
+          </div>
+          <div class="card">
+            <div class="card-title">System</div>
+            <div class="detail-row"><div class="detail-label">Database</div><div class="detail-val">Supabase — qnufazzxoiomgqxydvnf</div></div>
+            <div class="detail-row"><div class="detail-label">Version</div><div class="detail-val">RelayOps MVP v1.1 — May 2026</div></div>
+            <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+              <a href="https://supabase.com/dashboard" target="_blank" class="btn btn-ghost btn-sm">🗄️ Supabase</a>
+              <a href="https://dashboard.stripe.com" target="_blank" class="btn btn-ghost btn-sm">💳 Stripe</a>
+              <a href="https://contactrelayops.github.io/relayops-site" target="_blank" class="btn btn-ghost btn-sm">🌐 Website</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
   </div>
 </div>
 
-<!-- ── JOB DETAIL MODAL (Admin) ── -->
-<div class="overlay" id="job-modal">
+<!-- JOB DETAIL / EDIT MODAL -->
+<div class="modal-overlay" id="job-modal">
   <div class="modal">
-    <div class="modal-hd">
-      <div class="modal-title" id="modal-job-title">Job Detail</div>
-      <button class="modal-x" onclick="closeModal('job-modal')">×</button>
+    <div class="modal-header">
+      <div class="modal-title" id="modal-job-title">Job Details</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
-    <div class="modal-body">
-      <div class="msec"><div class="msec-title">Job Info</div><div class="dgrid" id="modal-job-info"></div></div>
-      <div class="msec">
-        <div class="msec-title">Update Job</div>
-        <div class="mfield"><label class="ml">Status</label>
-          <select class="mi" id="m-status">
-            <option value="submitted">Submitted</option>
-            <option value="priced">Priced</option>
-            <option value="assigned">Assigned</option>
-            <option value="in_progress">In Progress</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-        </div>
-        <div class="mfield"><label class="ml">Quoted Price ($)</label><input class="mi" id="m-price" type="number" placeholder="e.g. 150"/></div>
-        <div class="mfield"><label class="ml">Notes to Customer</label><textarea class="mi mta" id="m-notes" placeholder="Visible to customer..."></textarea></div>
-      </div>
-      <div class="msec">
-        <div class="msec-title">Payment Link</div>
-        <div class="mfield"><label class="ml">Stripe Payment URL</label><input class="mi" id="m-stripe" type="text" placeholder="https://buy.stripe.com/..."/></div>
-        <div class="mfield"><label class="ml">Payment Amount ($)</label><input class="mi" id="m-payamt" type="number" placeholder="e.g. 150"/></div>
-      </div>
-    </div>
-    <div class="modal-ft">
-      <button class="action-btn btn-red" onclick="saveAdminJob()">Save Changes</button>
-      <button class="action-btn btn-green" onclick="savePaymentLink()">Send Payment Link</button>
-      <button class="action-btn btn-ghost" onclick="closeModal('job-modal')">Cancel</button>
-    </div>
+    <div id="modal-job-content"></div>
   </div>
 </div>
-
-<div class="toast" id="toast"></div>
 
 <script>
-const SB = 'https://qnufazzxoiomgqxydvnf.supabase.co';
-const KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFudWZhenp4b2lvbWdxeHlkdm5mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0MjIyNjksImV4cCI6MjA5MDk5ODI2OX0.dEVE3cdJupCHhqZ4OvoSi3A2ZbNmANHoCWG4bISeDzc';
+// ──────────────────────────────────────────────────────
+// CONFIG
+// ──────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://qnufazzxoiomgqxydvnf.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFudWZhenp4b2lvbWdxeHlkdm5mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0MjIyNjksImV4cCI6MjA5MDk5ODI2OX0.dEVE3cdJupCHhqZ4OvoSi3A2ZbNmANHoCWG4bISeDzc';
+const ADMIN_EMAIL  = 'contactrelayops@gmail.com';
+const ADMIN_PASS   = 'Relay2025';
 
-let SESSION = null;
-let USER = null;
-let ROLE = null;
-let allJobs = [];
-let currentJobId = null;
-let ajFilter = 'all';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-function hdrs(tok) {
-  return {'Content-Type':'application/json','apikey':KEY,'Authorization':`Bearer ${tok||KEY}`};
+let currentUser = null;
+let currentRole = null; // 'admin' | 'customer' | 'provider'
+let currentProviderRecord = null;
+let allAdminJobs = [];
+let allAdminVendors = [];
+let allCustomerJobs = [];
+let allVendorJobs = [];
+let notifPollInterval = null;
+let jobStatusCache = {}; // jobId → status
+
+// ──────────────────────────────────────────────────────
+// NOTIFICATIONS
+// ──────────────────────────────────────────────────────
+function showNotif(title, msg, type='info', duration=5000) {
+  const icons = {info:'ℹ️', success:'✅', warning:'⚠️', update:'🔔'};
+  const container = document.getElementById('notif-container');
+  const el = document.createElement('div');
+  el.className = `notif ${type}`;
+  el.innerHTML = `
+    <div class="notif-icon">${icons[type]||'🔔'}</div>
+    <div class="notif-body">
+      <div class="notif-title">${title}</div>
+      <div class="notif-msg">${msg}</div>
+    </div>
+    <button class="notif-close" onclick="dismissNotif(this.parentElement)">✕</button>
+  `;
+  container.appendChild(el);
+  if(duration>0) setTimeout(()=>dismissNotif(el), duration);
 }
-
-// ── TOAST ──
-function toast(msg, isErr=false) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'toast ' + (isErr ? 'err' : 'ok');
-  t.style.display = 'block';
-  setTimeout(() => t.style.display='none', 3000);
-}
-
-// ── BADGE ──
-function badge(status) {
-  const cls = 'badge b-'+(status||'').replace(' ','_');
-  const label = (status||'').replace('_',' ').toUpperCase();
-  return `<span class="${cls}">${label}</span>`;
-}
-
-// ── VIEW SWITCHING ──
-function showView(id) {
-  document.querySelectorAll('.view').forEach(v => {
-    v.classList.remove('active');
-    v.style.display = 'none';
-  });
-  const target = document.getElementById(id);
-  target.classList.add('active');
-  target.style.display = id === 'login-view' ? 'block' : 'flex';
-  target.style.flexDirection = 'column';
-}
-function showPanel(id) {
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('on'));
-  document.getElementById(id).classList.add('on');
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('on'));
-  const btn = document.querySelector(`[data-panel="${id}"]`);
-  if(btn) btn.classList.add('on');
+function dismissNotif(el) {
+  if(!el||el.classList.contains('out'))return;
+  el.classList.add('out');
+  setTimeout(()=>el.remove(), 300);
 }
 
-// ── AUTH TAB ──
-function switchAuthTab(tab) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  event.currentTarget.classList.add('active');
-  document.getElementById('signin-form').style.display = tab==='signin'?'block':'none';
-  document.getElementById('signup-form').style.display = tab==='signup'?'block':'none';
-  document.getElementById('auth-error').style.display='none';
-  document.getElementById('auth-success').style.display='none';
-}
-function pickRole(r) {
-  ROLE = r;
-  document.getElementById('ro-customer').classList.toggle('active', r==='customer');
-  document.getElementById('ro-provider').classList.toggle('active', r==='provider');
-}
-let signupRole = 'customer';
-function pickRole(r) {
-  signupRole = r;
-  document.getElementById('ro-customer').classList.toggle('active', r==='customer');
-  document.getElementById('ro-provider').classList.toggle('active', r==='provider');
-}
-function showAuthMsg(msg, isErr) {
-  const el = document.getElementById(isErr?'auth-error':'auth-success');
-  const other = document.getElementById(isErr?'auth-success':'auth-error');
-  el.textContent=msg; el.style.display='block'; other.style.display='none';
+// ──────────────────────────────────────────────────────
+// STATUS POLL — detects job status changes for customers
+// ──────────────────────────────────────────────────────
+const STATUS_LABELS = {
+  submitted:'Submitted', priced:'Quoted — awaiting your approval',
+  assigned:'Vendor assigned', in_progress:'In progress',
+  completed:'Job completed! 🎉', cancelled:'Cancelled'
+};
+const STATUS_NOTIF_TYPE = {
+  priced:'warning', assigned:'info', in_progress:'info',
+  completed:'success', cancelled:'warning'
+};
+
+async function pollJobStatuses() {
+  if(!currentUser || currentRole !== 'customer') return;
+  try {
+    const {data} = await sb.from('jobs').select('id,status,property_address,job_type').eq('user_id', currentUser.id);
+    if(!data) return;
+    data.forEach(j => {
+      const prev = jobStatusCache[j.id];
+      if(prev && prev !== j.status) {
+        const label = STATUS_LABELS[j.status] || j.status;
+        const type  = STATUS_NOTIF_TYPE[j.status] || 'info';
+        const addr  = j.property_address ? j.property_address.split(',')[0] : j.job_type;
+        showNotif(`Job Update: ${addr}`, `Status changed → ${label}`, type, 8000);
+        // refresh the list if it's visible
+        loadCustomerJobs();
+      }
+      jobStatusCache[j.id] = j.status;
+    });
+  } catch(e){}
 }
 
-// ── SIGN IN ──
+function startStatusPolling() {
+  if(notifPollInterval) clearInterval(notifPollInterval);
+  notifPollInterval = setInterval(pollJobStatuses, 30000); // every 30s
+}
+function stopStatusPolling() {
+  if(notifPollInterval) clearInterval(notifPollInterval);
+}
+
+// ──────────────────────────────────────────────────────
+// AUTH
+// ──────────────────────────────────────────────────────
+let selectedRole = 'customer';
+function selectRole(r) {
+  selectedRole = r;
+  document.getElementById('role-customer').classList.toggle('selected', r==='customer');
+  document.getElementById('role-provider').classList.toggle('selected', r==='provider');
+}
+function switchAuthTab(t) {
+  document.getElementById('tab-signin').classList.toggle('active', t==='signin');
+  document.getElementById('tab-signup').classList.toggle('active', t==='signup');
+  document.getElementById('signin-form').style.display = t==='signin' ? '' : 'none';
+  document.getElementById('signup-form').style.display = t==='signup' ? '' : 'none';
+  document.getElementById('auth-error').style.display = 'none';
+}
+function authErr(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg; el.style.display = 'block';
+}
+
 async function doSignIn() {
   const email = document.getElementById('si-email').value.trim();
-  const pass = document.getElementById('si-pass').value;
-  if(!email||!pass){showAuthMsg('Enter your email and password.',true);return;}
+  const pass  = document.getElementById('si-pass').value;
+  if(!email||!pass){authErr('Please enter email and password.');return;}
   const btn = document.getElementById('si-btn');
   btn.disabled=true; btn.textContent='Signing in...';
-  const res = await fetch(`${SB}/auth/v1/token?grant_type=password`,{
-    method:'POST',headers:{'Content-Type':'application/json','apikey':KEY},
-    body:JSON.stringify({email,password:pass})
-  });
-  const d = await res.json();
-  if(d.access_token) {
-    SESSION = d.access_token;
-    USER = d.user;
-    const role = d.user?.user_metadata?.role || 'customer';
-    localStorage.setItem('ro_token', SESSION);
-    localStorage.setItem('ro_user', JSON.stringify(USER));
-    localStorage.setItem('ro_role', role);
-    bootApp(role);
-  } else {
-    showAuthMsg(d.error_description||'Invalid email or password.',true);
+  document.getElementById('auth-error').style.display='none';
+
+  // Admin shortcut
+  if(email===ADMIN_EMAIL && pass===ADMIN_PASS) {
+    const {data,error} = await sb.auth.signInWithPassword({email,password:pass}).catch(()=>({error:{message:'Auth error'}}));
+    if(error) {
+      // Try anon admin fallback — just show admin UI directly
+      await enterAdminMode({id:'admin',email:ADMIN_EMAIL,user_metadata:{full_name:'Admin'}});
+      btn.disabled=false; btn.textContent='Sign In →';
+      return;
+    }
+    await enterAdminMode(data.user);
     btn.disabled=false; btn.textContent='Sign In →';
+    return;
   }
+
+  const {data,error} = await sb.auth.signInWithPassword({email,password:pass});
+  btn.disabled=false; btn.textContent='Sign In →';
+  if(error){authErr(error.message);return;}
+  await initApp(data.user);
 }
 
-// ── SIGN UP ──
 async function doSignUp() {
-  const name = document.getElementById('su-name').value.trim();
+  const name  = document.getElementById('su-name').value.trim();
   const email = document.getElementById('su-email').value.trim();
-  const pass = document.getElementById('su-pass').value;
-  if(!name||!email||!pass){showAuthMsg('Fill in all fields.',true);return;}
-  if(pass.length<6){showAuthMsg('Password must be at least 6 characters.',true);return;}
+  const pass  = document.getElementById('su-pass').value;
+  if(!name||!email||!pass){authErr('Please fill in all fields.');return;}
+  if(pass.length<6){authErr('Password must be at least 6 characters.');return;}
   const btn = document.getElementById('su-btn');
   btn.disabled=true; btn.textContent='Creating account...';
-  const res = await fetch(`${SB}/auth/v1/signup`,{
-    method:'POST',headers:{'Content-Type':'application/json','apikey':KEY},
-    body:JSON.stringify({email,password:pass,data:{full_name:name,role:signupRole}})
+  document.getElementById('auth-error').style.display='none';
+
+  const {data,error} = await sb.auth.signUp({
+    email, password:pass,
+    options:{data:{full_name:name, role:selectedRole}}
   });
-  const d = await res.json();
-  if(d.user||d.id) {
-    const uid = d.user?.id||d.id;
-    const tok = d.session?.access_token||KEY;
-    if(signupRole==='customer') {
-      await fetch(`${SB}/rest/v1/customers`,{method:'POST',headers:{...hdrs(tok),'Prefer':'return=minimal'},body:JSON.stringify({user_id:uid,full_name:name,email})});
-    } else {
-      await fetch(`${SB}/rest/v1/providers`,{method:'POST',headers:{...hdrs(tok),'Prefer':'return=minimal'},body:JSON.stringify({user_id:uid,full_name:name,email,status:'pending'})});
-    }
-    if(d.session?.access_token) {
-      SESSION=d.session.access_token; USER=d.user;
-      localStorage.setItem('ro_token',SESSION);
-      localStorage.setItem('ro_user',JSON.stringify(USER));
-      localStorage.setItem('ro_role',signupRole);
-      bootApp(signupRole);
-    } else {
-      showAuthMsg('Account created! Check your email to confirm, then sign in.',false);
-      btn.disabled=false; btn.textContent='Create Account →';
-    }
-  } else {
-    showAuthMsg(d.msg||d.error_description||'Could not create account.',true);
-    btn.disabled=false; btn.textContent='Create Account →';
+  btn.disabled=false; btn.textContent='Create Account →';
+  if(error){authErr(error.message);return;}
+
+  if(selectedRole==='provider') {
+    // Create provider record
+    await sb.from('providers').insert({
+      full_name:name, email, phone:'', service_types:[], coverage_zips:'', status:'pending',
+      user_id: data.user?.id
+    }).catch(()=>{});
   }
+  await initApp(data.user);
 }
 
-// ── LOGOUT ──
-function doLogout() {
-  localStorage.removeItem('ro_token');
-  localStorage.removeItem('ro_user');
-  localStorage.removeItem('ro_role');
-  SESSION=null; USER=null; ROLE=null;
-  showView('login-view');
+async function doSignOut() {
+  stopStatusPolling();
+  await sb.auth.signOut();
+  currentUser=null; currentRole=null; currentProviderRecord=null;
+  jobStatusCache={};
+  document.getElementById('app').style.display='none';
+  document.getElementById('auth-screen').style.display='flex';
 }
 
-// ── BOOT APP ──
-function bootApp(role) {
-  ROLE = role;
-  showView('app-view');
-  const tagEl = document.getElementById('role-tag');
-  tagEl.textContent = role.toUpperCase();
-  tagEl.className = 'role-tag tag-'+role;
-  document.getElementById('user-display').textContent = USER?.user_metadata?.full_name || USER?.email || '';
-  buildSidebar(role);
-  if(role==='admin') { showPanel('panel-admin-jobs'); setTimeout(loadAdminJobs, 100); }
-  else if(role==='customer') { showPanel('panel-customer-jobs'); setTimeout(loadCustomerJobs, 100); }
-  else { showPanel('panel-vendor-jobs'); setTimeout(loadVendorJobs, 100); }
-}
+// ──────────────────────────────────────────────────────
+// APP INIT
+// ──────────────────────────────────────────────────────
+async function initApp(user) {
+  currentUser = user;
+  const meta = user.user_metadata || {};
+  const role = meta.role || 'customer';
 
-function buildSidebar(role) {
-  const sb = document.getElementById('sidebar');
-  if(role==='admin') {
-    sb.innerHTML = `
-      <button class="nav-btn on" data-panel="panel-admin-jobs" onclick="navTo('panel-admin-jobs',this,loadAdminJobs)">⚡ Job Queue</button>
-      <button class="nav-btn" data-panel="panel-admin-vendors" onclick="navTo('panel-admin-vendors',this,loadAdminVendors)">👥 Vendors</button>
-      <button class="nav-btn" data-panel="panel-admin-payments" onclick="navTo('panel-admin-payments',this,loadAdminPayments)">💳 Payments</button>
-      <button class="nav-btn" data-panel="panel-admin-customers" onclick="navTo('panel-admin-customers',this,loadAdminCustomers)">🏠 Customers</button>
-      <button class="nav-btn" data-panel="panel-admin-analytics" onclick="navTo('panel-admin-analytics',this,loadAnalytics)">📊 Analytics</button>
-      <div class="nav-sep"></div>
-      <button class="nav-btn" data-panel="panel-admin-settings" onclick="navTo('panel-admin-settings',this,null)">⚙️ Settings</button>
-      <button class="nav-btn" onclick="window.open('https://contactrelayops.github.io/relayops-site','_blank')">🌐 Website</button>`;
-  } else if(role==='customer') {
-    sb.innerHTML = `
-      <button class="nav-btn on" data-panel="panel-customer-jobs" onclick="navTo('panel-customer-jobs',this,loadCustomerJobs)">📋 My Jobs</button>
-      <div class="nav-sep"></div>
-      <button class="nav-btn" onclick="window.open('https://contactrelayops.github.io/relayops-site/#request','_blank')">+ Request a Job</button>`;
-  } else {
-    sb.innerHTML = `
-      <button class="nav-btn on" data-panel="panel-vendor-jobs" onclick="navTo('panel-vendor-jobs',this,loadVendorJobs)">🔧 My Jobs</button>`;
+  if(user.email === ADMIN_EMAIL) {
+    await enterAdminMode(user); return;
   }
-}
-
-function navTo(panelId, btn, loader) {
-  showPanel(panelId);
-  if(loader) loader();
-}
-
-// ════ ADMIN ════
-
-async function loadAdminJobs() {
-  document.getElementById('admin-jobs-rows').innerHTML='<div class="loading">Loading...</div>';
-  try {
-    const res = await fetch(`${SB}/rest/v1/jobs?select=*&order=created_at.desc`,{headers:hdrs(SESSION)});
-    if(!res.ok){document.getElementById('admin-jobs-rows').innerHTML=`<div class="empty">Error loading jobs (${res.status}). Try refreshing.</div>`;return;}
-    allJobs = await res.json();
-    document.getElementById('s-open').textContent = allJobs.filter(j=>!['completed','cancelled'].includes(j.status)).length;
-    document.getElementById('s-new').textContent = allJobs.filter(j=>j.status==='submitted').length;
-    document.getElementById('s-pay').textContent = allJobs.filter(j=>j.status==='priced').length;
-    document.getElementById('s-done').textContent = allJobs.filter(j=>j.status==='completed').length;
-    renderAdminJobs(ajFilter);
-  } catch(e) {
-    document.getElementById('admin-jobs-rows').innerHTML='<div class="empty">Failed to load. Check your connection and refresh.</div>';
+  if(role==='provider') {
+    await enterVendorMode(user); return;
   }
+  await enterCustomerMode(user);
 }
 
-function filterAdminJobs(f, btn) {
-  ajFilter=f;
-  document.querySelectorAll('#panel-admin-jobs .fbtn').forEach(b=>b.classList.remove('on'));
-  btn.classList.add('on');
-  renderAdminJobs(f);
+async function enterAdminMode(user) {
+  currentRole = 'admin';
+  currentUser = user;
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('nav-admin').style.display='block';
+  document.getElementById('nav-customer').style.display='none';
+  document.getElementById('nav-vendor').style.display='none';
+  setSidebarUser('Admin', 'A', 'ADMIN');
+  showPage('p-admin-jobs');
+  loadAdminJobs();
+  loadAdminVendors();
 }
 
-function renderAdminJobs(f) {
-  const jobs = f==='all'?allJobs:allJobs.filter(j=>j.status===f);
-  if(!jobs.length){document.getElementById('admin-jobs-rows').innerHTML='<div class="empty">No jobs found.</div>';return;}
-  document.getElementById('admin-jobs-rows').innerHTML = jobs.map(j=>`
-    <div class="tbl-row" style="grid-template-columns:2fr 1fr 1fr 1fr 100px" onclick="openJobModal('${j.id}')">
-      <div><div class="rt">${j.job_type||'—'}</div><div class="rs">${j.property_address||'—'}</div></div>
-      <div class="rc">${j.job_type||'—'}</div>
-      <div class="rc">${j.urgency||'—'}</div>
-      <div>${badge(j.status)}</div>
-      <div><button class="row-action" onclick="event.stopPropagation();openJobModal('${j.id}')">Review</button></div>
+async function enterCustomerMode(user) {
+  currentRole = 'customer';
+  const name = user.user_metadata?.full_name || user.email.split('@')[0];
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('nav-customer').style.display='block';
+  document.getElementById('nav-vendor').style.display='none';
+  document.getElementById('nav-admin').style.display='none';
+  setSidebarUser(name, name[0].toUpperCase(), 'CUSTOMER');
+  // Fill profile page
+  document.getElementById('prof-name').textContent = name;
+  document.getElementById('prof-email').textContent = user.email;
+  document.getElementById('prof-type').textContent = 'Property Manager / Customer';
+  document.getElementById('prof-since').textContent = new Date(user.created_at||Date.now()).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+  showPage('p-my-jobs');
+  loadCustomerJobs();
+  startStatusPolling();
+}
+
+async function enterVendorMode(user) {
+  currentRole = 'provider';
+  const name = user.user_metadata?.full_name || user.email.split('@')[0];
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('nav-vendor').style.display='block';
+  document.getElementById('nav-customer').style.display='none';
+  document.getElementById('nav-admin').style.display='none';
+  setSidebarUser(name, name[0].toUpperCase(), 'VENDOR');
+
+  // Load provider record
+  const {data} = await sb.from('providers').select('*').eq('email', user.email).maybeSingle();
+  currentProviderRecord = data;
+
+  const status = data?.status || 'pending';
+  const isPending = status === 'pending';
+  document.getElementById('vendor-pending-notice').style.display = isPending ? 'block' : 'none';
+
+  // Fill vendor profile
+  document.getElementById('vprof-name').textContent = name;
+  document.getElementById('vprof-email').textContent = user.email;
+  document.getElementById('vprof-status').innerHTML = `<span class="pill ${isPending?'pill-pending':'pill-active'}">${status.toUpperCase()}</span>`;
+  document.getElementById('vprof-service').textContent = data?.service_types?.join(', ') || '—';
+  document.getElementById('vprof-coverage').textContent = data?.coverage_zips || '—';
+
+  showPage('p-vendor-jobs');
+  loadVendorJobs();
+}
+
+function setSidebarUser(name, initial, roleLabel) {
+  document.getElementById('sb-name').textContent = name;
+  document.getElementById('sb-avatar').textContent = initial;
+  document.getElementById('sb-role').textContent = roleLabel;
+}
+
+// ──────────────────────────────────────────────────────
+// PAGE NAVIGATION
+// ──────────────────────────────────────────────────────
+function showPage(pageId) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const page = document.getElementById(pageId);
+  if(page) page.classList.add('active');
+  const navItem = document.querySelector(`[data-page="${pageId}"]`);
+  if(navItem) navItem.classList.add('active');
+  document.getElementById('main-content').scrollTop=0;
+
+  // Lazy-load data
+  if(pageId==='p-my-jobs') loadCustomerJobs();
+  if(pageId==='p-vendor-jobs') loadVendorJobs();
+  if(pageId==='p-admin-jobs') loadAdminJobs();
+  if(pageId==='p-admin-vendors') loadAdminVendors();
+  if(pageId==='p-admin-payments') loadAdminPayments();
+  if(pageId==='p-admin-customers') loadAdminCustomers();
+  if(pageId==='p-admin-analytics') loadAdminAnalytics();
+  if(pageId==='p-vendor-profile') loadVendorPerf();
+}
+
+// ──────────────────────────────────────────────────────
+// PILL HELPER
+// ──────────────────────────────────────────────────────
+function statusPill(s) {
+  const cls = {submitted:'pill-submitted',priced:'pill-priced',assigned:'pill-assigned',
+    in_progress:'pill-progress',completed:'pill-completed',cancelled:'pill-cancelled',
+    pending:'pill-pending',active:'pill-active'}[s] || 'pill-submitted';
+  const label = {submitted:'Submitted',priced:'Quoted',assigned:'Assigned',
+    in_progress:'In Progress',completed:'Completed',cancelled:'Cancelled',
+    pending:'Pending',active:'Active'}[s] || s;
+  return `<span class="pill ${cls}">${label}</span>`;
+}
+
+// ──────────────────────────────────────────────────────
+// CUSTOMER: LOAD JOBS
+// ──────────────────────────────────────────────────────
+async function loadCustomerJobs() {
+  if(!currentUser||currentRole!=='customer') return;
+  const {data,error} = await sb.from('jobs').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
+  if(error){console.error(error);return;}
+  allCustomerJobs = data||[];
+
+  // Seed status cache
+  allCustomerJobs.forEach(j=>{if(!jobStatusCache[j.id]) jobStatusCache[j.id]=j.status;});
+
+  // Stats
+  const total=allCustomerJobs.length;
+  const active=allCustomerJobs.filter(j=>['assigned','in_progress'].includes(j.status)).length;
+  const completed=allCustomerJobs.filter(j=>j.status==='completed').length;
+  const pendingPay=allCustomerJobs.filter(j=>j.status==='priced').length;
+  document.getElementById('cs-total').textContent=total;
+  document.getElementById('cs-active').textContent=active;
+  document.getElementById('cs-completed').textContent=completed;
+  document.getElementById('cs-pending-pay').textContent=pendingPay;
+
+  // New jobs badge
+  const badge=document.getElementById('badge-new-jobs');
+  if(pendingPay>0){badge.textContent=pendingPay;badge.classList.add('visible');}
+  else badge.classList.remove('visible');
+
+  renderCustomerJobs(allCustomerJobs);
+}
+
+function filterCustomerJobs(status,btn) {
+  document.querySelectorAll('#p-my-jobs .filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(status==='all') renderCustomerJobs(allCustomerJobs);
+  else renderCustomerJobs(allCustomerJobs.filter(j=>j.status===status));
+}
+
+function renderCustomerJobs(jobs) {
+  const el=document.getElementById('cust-jobs-list');
+  if(!jobs.length){el.innerHTML='<div class="empty-state">No jobs yet. <a onclick="showPage(\'p-request-job\')" href="#">Submit your first job →</a></div>';return;}
+  el.innerHTML=jobs.map(j=>`
+    <div class="table-row" style="grid-template-columns:2fr 1fr 1fr 1fr 90px" onclick="viewCustomerJob('${j.id}')">
+      <div><div class="tr-main">${esc(j.property_address||'No address')}</div><div class="tr-sub">${fmtDate(j.created_at)}</div></div>
+      <div class="tr-cell">${esc(j.job_type||'—')}</div>
+      <div class="tr-cell">${esc(j.urgency||'—')}</div>
+      <div>${statusPill(j.status)}</div>
+      <div><button class="btn btn-ink btn-sm" onclick="event.stopPropagation();viewCustomerJob('${j.id}')">View</button></div>
     </div>`).join('');
 }
 
-function openJobModal(id) {
-  const j = allJobs.find(x=>x.id===id);
+function viewCustomerJob(id) {
+  const j=allCustomerJobs.find(x=>x.id===id);
   if(!j) return;
-  currentJobId=id;
-  document.getElementById('modal-job-title').textContent=`${j.job_type||'Job'} — ${j.property_address||''}`;
-  document.getElementById('modal-job-info').innerHTML=`
-    <div class="di"><div class="dl">Job Type</div><div class="dv">${j.job_type||'—'}</div></div>
-    <div class="di"><div class="dl">Status</div><div class="dv">${badge(j.status)}</div></div>
-    <div class="di"><div class="dl">Address</div><div class="dv">${j.property_address||'—'}</div></div>
-    <div class="di"><div class="dl">Urgency</div><div class="dv">${j.urgency||'—'}</div></div>
-    <div class="di" style="grid-column:1/-1"><div class="dl">Description</div><div class="dv" style="font-size:12px;color:var(--text2);line-height:1.6">${j.description||'—'}</div></div>
-    <div class="di"><div class="dl">Submitted</div><div class="dv" style="font-size:12px">${new Date(j.created_at).toLocaleString()}</div></div>
-    <div class="di"><div class="dl">Quoted Price</div><div class="dv">${j.quoted_price?'$'+j.quoted_price:'—'}</div></div>`;
-  document.getElementById('m-status').value=j.status||'submitted';
-  document.getElementById('m-price').value=j.quoted_price||'';
-  document.getElementById('m-notes').value=j.admin_notes||'';
-  document.getElementById('m-stripe').value='';
-  document.getElementById('m-payamt').value=j.quoted_price||'';
+  document.getElementById('modal-job-title').textContent=j.property_address||'Job Details';
+  let html=`
+    <div class="modal-section">
+      <div class="job-detail-grid">
+        <div><div class="detail-label">Status</div><div class="detail-val">${statusPill(j.status)}</div></div>
+        <div><div class="detail-label">Type</div><div class="detail-val">${esc(j.job_type||'—')}</div></div>
+        <div><div class="detail-label">Urgency</div><div class="detail-val">${esc(j.urgency||'—')}</div></div>
+        <div><div class="detail-label">Submitted</div><div class="detail-val">${fmtDate(j.created_at)}</div></div>
+      </div>
+    </div>
+    <div class="modal-section">
+      <div class="detail-label">Description</div>
+      <div class="detail-desc">${esc(j.description||'No description provided.')}</div>
+    </div>`;
+  if(j.quoted_price){
+    html+=`<div class="modal-section">
+      <div class="detail-label">Quote</div>
+      <div class="detail-val" style="font-size:22px;font-weight:700;color:#51cf66">$${j.quoted_price}</div>
+      ${j.admin_notes?`<div style="margin-top:8px;font-size:13px;color:rgba(255,255,255,.5)">${esc(j.admin_notes)}</div>`:''}
+    </div>`;
+  }
+  if(j.payment_link){
+    html+=`<div class="modal-section">
+      <div class="detail-label">Payment</div>
+      <a href="${j.payment_link}" target="_blank" class="btn btn-red" style="margin-top:4px">💳 Pay Now →</a>
+    </div>`;
+  }
+  if(j.status==='completed'&&j.completion_notes){
+    html+=`<div class="modal-section">
+      <div class="detail-label">Completion Notes</div>
+      <div class="detail-desc">${esc(j.completion_notes)}</div>
+    </div>`;
+  }
+  document.getElementById('modal-job-content').innerHTML=html;
   document.getElementById('job-modal').classList.add('open');
 }
 
-function closeModal(id){document.getElementById(id).classList.remove('open');currentJobId=null;}
+// ──────────────────────────────────────────────────────
+// CUSTOMER: REQUEST JOB
+// ──────────────────────────────────────────────────────
+async function submitJobRequest() {
+  const address=document.getElementById('rj-address').value.trim();
+  const type=document.getElementById('rj-type').value;
+  const urgency=document.getElementById('rj-urgency').value;
+  const desc=document.getElementById('rj-desc').value.trim();
+  if(!address||!type||!urgency||!desc){showNotif('Missing Fields','Please fill in all required fields.','warning');return;}
 
-async function saveAdminJob() {
-  if(!currentJobId) return;
-  const res = await fetch(`${SB}/rest/v1/jobs?id=eq.${currentJobId}`,{
-    method:'PATCH',headers:{...hdrs(SESSION),'Prefer':'return=minimal'},
-    body:JSON.stringify({status:document.getElementById('m-status').value,quoted_price:document.getElementById('m-price').value||null,admin_notes:document.getElementById('m-notes').value})
-  });
-  if(res.ok){toast('✓ Job updated');closeModal('job-modal');loadAdminJobs();}
-  else toast('Failed to update',true);
-}
+  const btn=document.getElementById('rj-btn');
+  btn.disabled=true;btn.textContent='Submitting...';
 
-async function savePaymentLink() {
-  if(!currentJobId) return;
-  const link = document.getElementById('m-stripe').value.trim();
-  const amt = document.getElementById('m-payamt').value;
-  if(!link){toast('Paste a Stripe link first',true);return;}
-  const res = await fetch(`${SB}/rest/v1/payments`,{
-    method:'POST',headers:{...hdrs(SESSION),'Prefer':'return=minimal'},
-    body:JSON.stringify({job_id:currentJobId,stripe_link:link,amount:amt||null,status:'pending'})
-  });
-  if(res.ok){
-    await fetch(`${SB}/rest/v1/jobs?id=eq.${currentJobId}`,{method:'PATCH',headers:{...hdrs(SESSION),'Prefer':'return=minimal'},body:JSON.stringify({status:'priced'})});
-    toast('✓ Payment link saved');closeModal('job-modal');loadAdminJobs();
-  } else toast('Failed',true);
-}
+  const {data,error}=await sb.from('jobs').insert({
+    property_address:address,job_type:type,urgency,description:desc,
+    status:'submitted',user_id:currentUser?.id||null
+  }).select().single();
 
-async function loadAdminVendors() {
-  document.getElementById('admin-vendors-rows').innerHTML='<div class="loading">Loading...</div>';
-  const res = await fetch(`${SB}/rest/v1/providers?select=*&order=created_at.desc`,{headers:hdrs(SESSION)});
-  const vendors = await res.json();
-  renderAdminVendors(vendors,'all');
-  document.getElementById('admin-vendors-rows').dataset.vendors = JSON.stringify(vendors);
-}
-
-function filterAdminVendors(f,btn) {
-  document.querySelectorAll('#panel-admin-vendors .fbtn').forEach(b=>b.classList.remove('on'));
-  btn.classList.add('on');
-  const vendors = JSON.parse(document.getElementById('admin-vendors-rows').dataset.vendors||'[]');
-  renderAdminVendors(vendors,f);
-}
-
-function renderAdminVendors(vendors,f) {
-  const list = f==='all'?vendors:vendors.filter(v=>v.status===f);
-  if(!list.length){document.getElementById('admin-vendors-rows').innerHTML='<div class="empty">No vendors found.</div>';return;}
-  document.getElementById('admin-vendors-rows').innerHTML = list.map(v=>`
-    <div class="tbl" style="margin-bottom:8px;border-radius:10px">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;flex-wrap:wrap;gap:10px">
-        <div>
-          <div style="font-size:14px;font-weight:500;color:var(--text)">${v.full_name||'—'}</div>
-          <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:2px">${v.email||''} · ${(v.service_types||[]).join(', ')} · ${v.coverage_zips||''}</div>
-        </div>
-        <div style="display:flex;gap:8px;align-items:center">
-          ${badge(v.status)}
-          ${v.status==='pending'?`<button class="row-action" onclick="approveVendor('${v.id}')" style="background:var(--green);color:#000;border-color:var(--green)">Approve</button>`:''}
-          ${v.status==='active'?`<button class="row-action" onclick="deactivateVendor('${v.id}')">Deactivate</button>`:''}
-        </div>
-      </div>
-    </div>`).join('');
-}
-
-async function approveVendor(id) {
-  await fetch(`${SB}/rest/v1/providers?id=eq.${id}`,{method:'PATCH',headers:{...hdrs(SESSION),'Prefer':'return=minimal'},body:JSON.stringify({status:'active'})});
-  toast('✓ Vendor approved'); loadAdminVendors();
-}
-async function deactivateVendor(id) {
-  await fetch(`${SB}/rest/v1/providers?id=eq.${id}`,{method:'PATCH',headers:{...hdrs(SESSION),'Prefer':'return=minimal'},body:JSON.stringify({status:'inactive'})});
-  toast('Vendor deactivated'); loadAdminVendors();
-}
-
-async function loadAdminPayments() {
-  document.getElementById('admin-payments-rows').innerHTML='<div class="loading">Loading...</div>';
-  const res = await fetch(`${SB}/rest/v1/payments?select=*&order=created_at.desc`,{headers:hdrs(SESSION)});
-  const pays = await res.json();
-  if(!pays.length){document.getElementById('admin-payments-rows').innerHTML='<div class="empty">No payments yet.</div>';return;}
-  document.getElementById('admin-payments-rows').innerHTML = pays.map(p=>`
-    <div class="tbl-row" style="grid-template-columns:2fr 1fr 1fr 100px">
-      <div><div class="rt" style="font-size:12px">${p.job_id}</div><div class="rs">${p.stripe_link?p.stripe_link.substring(0,45)+'...':'—'}</div></div>
-      <div class="rc">${p.amount?'$'+p.amount:'—'}</div>
-      <div>${badge(p.status)}</div>
-      <div>${p.status==='pending'?`<button class="row-action" onclick="markPaid('${p.id}','${p.job_id}')" style="background:var(--green);color:#000;border-color:var(--green)">Mark Paid</button>`:'<span class="rc">Paid ✓</span>'}</div>
-    </div>`).join('');
-}
-
-async function markPaid(pid,jid) {
-  await fetch(`${SB}/rest/v1/payments?id=eq.${pid}`,{method:'PATCH',headers:{...hdrs(SESSION),'Prefer':'return=minimal'},body:JSON.stringify({status:'paid',paid_at:new Date().toISOString()})});
-  await fetch(`${SB}/rest/v1/jobs?id=eq.${jid}`,{method:'PATCH',headers:{...hdrs(SESSION),'Prefer':'return=minimal'},body:JSON.stringify({status:'completed'})});
-  toast('✓ Marked as paid'); loadAdminPayments();
-}
-
-// ════ CUSTOMERS ════
-
-async function loadAdminCustomers() {
-  document.getElementById('admin-customers-rows').innerHTML='<div class="loading">Loading...</div>';
-  try {
-    const res = await fetch(`${SB}/rest/v1/customers?select=*&order=created_at.desc`,{headers:hdrs(SESSION)});
-    const customers = await res.json();
-    if(!customers.length){document.getElementById('admin-customers-rows').innerHTML='<div class="empty">No customers yet.</div>';return;}
-    document.getElementById('admin-customers-rows').innerHTML = customers.map(c=>`
-      <div class="tbl-row" style="grid-template-columns:2fr 1fr 1fr 1fr">
-        <div><div class="rt">${c.full_name||'—'}</div></div>
-        <div class="rc">${c.email||'—'}</div>
-        <div class="rc">${c.phone||'—'}</div>
-        <div class="rc">${new Date(c.created_at).toLocaleDateString()}</div>
-      </div>`).join('');
-  } catch(e) {
-    document.getElementById('admin-customers-rows').innerHTML='<div class="empty">Failed to load customers.</div>';
-  }
-}
-
-// ════ ANALYTICS ════
-
-async function loadAnalytics() {
-  try {
-    const [jobsRes, vendorsRes, paymentsRes] = await Promise.all([
-      fetch(`${SB}/rest/v1/jobs?select=*`,{headers:hdrs(SESSION)}),
-      fetch(`${SB}/rest/v1/providers?select=*&status=eq.active`,{headers:hdrs(SESSION)}),
-      fetch(`${SB}/rest/v1/payments?select=*&status=eq.paid`,{headers:hdrs(SESSION)})
-    ]);
-    const jobs = await jobsRes.json();
-    const vendors = await vendorsRes.json();
-    const payments = await paymentsRes.json();
-
-    document.getElementById('a-total').textContent = jobs.length;
-    document.getElementById('a-completed').textContent = jobs.filter(j=>j.status==='completed').length;
-    document.getElementById('a-vendors').textContent = vendors.length;
-    const revenue = payments.reduce((sum,p)=>sum+(parseFloat(p.amount)||0),0);
-    document.getElementById('a-revenue').textContent = '$'+revenue.toFixed(0);
-
-    // By type
-    const byType = {};
-    jobs.forEach(j=>{byType[j.job_type]=(byType[j.job_type]||0)+1;});
-    document.getElementById('analytics-by-type').innerHTML = Object.entries(byType).length ?
-      Object.entries(byType).sort((a,b)=>b[1]-a[1]).map(([type,count])=>`
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--line)">
-          <span class="rc">${type||'Unknown'}</span>
-          <span style="font-family:var(--mono);font-size:12px;color:var(--text)">${count}</span>
-        </div>`).join('') :
-      '<div class="empty">No data yet.</div>';
-
-    // By status
-    const byStatus = {};
-    jobs.forEach(j=>{byStatus[j.status]=(byStatus[j.status]||0)+1;});
-    document.getElementById('analytics-by-status').innerHTML = Object.entries(byStatus).length ?
-      Object.entries(byStatus).sort((a,b)=>b[1]-a[1]).map(([status,count])=>`
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--line)">
-          <span>${badge(status)}</span>
-          <span style="font-family:var(--mono);font-size:12px;color:var(--text)">${count}</span>
-        </div>`).join('') :
-      '<div class="empty">No data yet.</div>';
-  } catch(e) {
-    document.getElementById('a-total').textContent = 'Err';
-  }
-}
-
-
-
-async function loadCustomerJobs() {
-  document.getElementById('customer-jobs-rows').innerHTML='<div class="loading">Loading your jobs...</div>';
-  const custRes = await fetch(`${SB}/rest/v1/customers?user_id=eq.${USER.id}&select=id`,{headers:hdrs(SESSION)});
-  const custs = await custRes.json();
-  if(!custs.length){
-    document.getElementById('customer-jobs-rows').innerHTML='<div class="empty">No jobs yet. <a href="https://contactrelayops.github.io/relayops-site/#request" style="color:var(--red)">Submit your first job →</a></div>';
+  if(error){
+    btn.disabled=false;btn.textContent='Submit Job Request →';
+    showNotif('Error','Something went wrong. Please try again.','warning');
     return;
   }
-  const cid = custs[0].id;
-  const jobRes = await fetch(`${SB}/rest/v1/jobs?customer_id=eq.${cid}&order=created_at.desc`,{headers:hdrs(SESSION)});
-  const jobs = await jobRes.json();
-  if(!jobs.length){
-    document.getElementById('customer-jobs-rows').innerHTML='<div class="empty">No jobs yet. <a href="https://contactrelayops.github.io/relayops-site/#request" style="color:var(--red)">Submit your first job →</a></div>';
-    return;
-  }
-  const jids = jobs.map(j=>j.id);
-  let pays=[];
-  if(jids.length){
-    const pr = await fetch(`${SB}/rest/v1/payments?job_id=in.(${jids.join(',')})`,{headers:hdrs(SESSION)});
-    pays = await pr.json();
-  }
-  const statusLabel={submitted:'Submitted',priced:'Quoted — check notes',assigned:'Vendor Assigned',in_progress:'In Progress',completed:'Completed',cancelled:'Cancelled'};
-  document.getElementById('customer-jobs-rows').innerHTML = jobs.map(j=>{
-    const pay = pays.find(p=>p.job_id===j.id);
-    const showPay = pay&&pay.stripe_link&&pay.status==='pending';
-    return `<div class="jc">
-      <div class="jc-top">
-        <div><div class="jc-type">${j.job_type||'—'}</div><div class="jc-addr">📍 ${j.property_address||'—'}</div></div>
-        ${badge(j.status)}
-      </div>
-      <div class="jc-meta">
-        <div class="jcm"><div class="jcml">Urgency</div><div class="jcmv">${j.urgency||'—'}</div></div>
-        <div class="jcm"><div class="jcml">Submitted</div><div class="jcmv">${new Date(j.created_at).toLocaleDateString()}</div></div>
-        ${j.quoted_price?`<div class="jcm"><div class="jcml">Quote</div><div class="jcmv">$${j.quoted_price}</div></div>`:''}
-        ${pay&&pay.status==='paid'?`<div class="jcm"><div class="jcml">Payment</div><div class="jcmv" style="color:var(--green)">✓ Paid</div></div>`:''}
-      </div>
-      ${j.admin_notes||showPay?`<div class="jc-footer">
-        ${j.admin_notes?`<div class="jc-notes">"${j.admin_notes}"</div>`:'<div></div>'}
-        ${showPay?`<a href="${pay.stripe_link}" target="_blank" class="pay-btn">💳 Pay Now${pay.amount?' — $'+pay.amount:''}</a>`:''}
-      </div>`:''}
-    </div>`;
-  }).join('');
+  // Seed cache
+  if(data) jobStatusCache[data.id]='submitted';
+
+  // Email notification
+  emailjs.send('service_slduczl','template_sacm0kn',{
+    subject:'🚨 New Job Request — '+type,
+    from_name:currentUser?.user_metadata?.full_name||'Portal user',
+    from_email:currentUser?.email||'',
+    phone:'—',
+    message:`Address: ${address}\nJob Type: ${type}\nUrgency: ${urgency}\nDescription: ${desc}`
+  }).catch(()=>{});
+
+  document.getElementById('req-form-card').style.display='none';
+  document.getElementById('req-success').style.display='block';
+  btn.disabled=false;
+  showNotif('Job Submitted!','We\'ll review and send you a quote within 2 hours.','success');
 }
 
-// ════ VENDOR ════
-
+// ──────────────────────────────────────────────────────
+// VENDOR: LOAD JOBS
+// ──────────────────────────────────────────────────────
 async function loadVendorJobs() {
-  document.getElementById('vendor-jobs-rows').innerHTML='<div class="loading">Loading...</div>';
-  document.getElementById('vendor-pending-notice').style.display='none';
-  const provRes = await fetch(`${SB}/rest/v1/providers?user_id=eq.${USER.id}&select=id,status,full_name`,{headers:hdrs(SESSION)});
-  const provs = await provRes.json();
-  if(!provs.length){
-    document.getElementById('vendor-jobs-rows').innerHTML='<div class="empty">No provider profile found. Contact contactrelayops@gmail.com</div>';
+  if(!currentUser||currentRole!=='provider') return;
+  const providerId=currentProviderRecord?.id;
+  if(!providerId) {
+    document.getElementById('vendor-jobs-list').innerHTML='<div class="empty-state">⏳ Your account is pending approval.</div>';
     return;
   }
-  const prov = provs[0];
-  if(prov.status==='pending'){
-    document.getElementById('vendor-pending-notice').style.display='block';
-    document.getElementById('vendor-jobs-rows').innerHTML='<div class="empty">Pending activation — we\'ll be in touch soon.</div>';
-    return;
-  }
-  const aRes = await fetch(`${SB}/rest/v1/provider_assignments?provider_id=eq.${prov.id}&select=*`,{headers:hdrs(SESSION)});
-  const assignments = await aRes.json();
-  if(!assignments.length){
-    document.getElementById('vendor-jobs-rows').innerHTML='<div class="empty">No jobs assigned yet. You\'ll be notified when jobs are available.</div>';
-    return;
-  }
-  const jids = assignments.map(a=>a.job_id);
-  const jRes = await fetch(`${SB}/rest/v1/jobs?id=in.(${jids.join(',')})&order=created_at.desc`,{headers:hdrs(SESSION)});
-  const jobs = await jRes.json();
-  document.getElementById('vendor-jobs-rows').innerHTML = jobs.map(j=>{
-    const asgn = assignments.find(a=>a.job_id===j.id);
-    return `<div class="vc">
-      <div class="vc-top">
-        <div><div class="jc-type">${j.job_type||'—'}</div><div class="jc-addr">📍 ${j.property_address||'—'}</div></div>
-        ${badge(asgn?.status||j.status)}
+  const {data}=await sb.from('jobs').select('*').eq('provider_id',providerId).order('created_at',{ascending:false});
+  allVendorJobs=data||[];
+
+  const assigned=allVendorJobs.filter(j=>j.status==='assigned').length;
+  const inprog=allVendorJobs.filter(j=>j.status==='in_progress').length;
+  const done=allVendorJobs.filter(j=>j.status==='completed').length;
+  document.getElementById('vs-assigned').textContent=assigned;
+  document.getElementById('vs-inprog').textContent=inprog;
+  document.getElementById('vs-done').textContent=done;
+
+  const badge=document.getElementById('badge-vendor-jobs');
+  if(assigned>0){badge.textContent=assigned;badge.classList.add('visible');}
+  else badge.classList.remove('visible');
+
+  const el=document.getElementById('vendor-jobs-list');
+  if(!allVendorJobs.length){el.innerHTML='<div class="empty-state">No jobs assigned yet. Check back soon.</div>';return;}
+  el.innerHTML=allVendorJobs.map(j=>`
+    <div class="table-row" style="grid-template-columns:2fr 1fr 1fr 100px">
+      <div><div class="tr-main">${esc(j.property_address||'No address')}</div><div class="tr-sub">${fmtDate(j.created_at)}</div></div>
+      <div class="tr-cell">${esc(j.job_type||'—')}</div>
+      <div>${statusPill(j.status)}</div>
+      <div>${vendorActionBtn(j)}</div>
+    </div>`).join('');
+}
+
+function vendorActionBtn(j) {
+  if(j.status==='assigned')
+    return `<button class="btn btn-red btn-sm" onclick="event.stopPropagation();updateVendorJobStatus('${j.id}','in_progress')">Start</button>`;
+  if(j.status==='in_progress')
+    return `<button class="btn btn-red btn-sm" onclick="event.stopPropagation();updateVendorJobStatus('${j.id}','completed')">Mark Done</button>`;
+  return `<span class="tr-cell">${j.status}</span>`;
+}
+
+async function updateVendorJobStatus(id,newStatus) {
+  const {error}=await sb.from('jobs').update({status:newStatus}).eq('id',id);
+  if(error){showNotif('Error','Could not update status.','warning');return;}
+  showNotif('Status Updated',`Job marked as ${newStatus.replace('_',' ')}.`,'success');
+  loadVendorJobs();
+}
+
+async function loadVendorPerf() {
+  if(!currentProviderRecord?.id) return;
+  const {data}=await sb.from('jobs').select('status').eq('provider_id',currentProviderRecord.id);
+  const total=(data||[]).length;
+  const done=(data||[]).filter(j=>j.status==='completed').length;
+  document.getElementById('vperf-total').textContent=total;
+  document.getElementById('vperf-done').textContent=done;
+}
+
+// ──────────────────────────────────────────────────────
+// ADMIN: JOBS
+// ──────────────────────────────────────────────────────
+async function loadAdminJobs() {
+  if(currentRole!=='admin') return;
+  const {data}=await sb.from('jobs').select('*').order('created_at',{ascending:false});
+  allAdminJobs=data||[];
+
+  const total=allAdminJobs.length;
+  const open=allAdminJobs.filter(j=>!['completed','cancelled'].includes(j.status)).length;
+  const newJ=allAdminJobs.filter(j=>j.status==='submitted').length;
+  const done=allAdminJobs.filter(j=>j.status==='completed').length;
+  document.getElementById('as-total').textContent=total;
+  document.getElementById('as-open').textContent=open;
+  document.getElementById('as-new').textContent=newJ;
+  document.getElementById('as-done').textContent=done;
+
+  const badge=document.getElementById('badge-admin-jobs');
+  if(newJ>0){badge.textContent=newJ;badge.classList.add('visible');}
+  else badge.classList.remove('visible');
+
+  renderAdminJobs(allAdminJobs);
+}
+
+function filterAdminJobs(status,btn) {
+  document.querySelectorAll('#p-admin-jobs .filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(status==='all') renderAdminJobs(allAdminJobs);
+  else renderAdminJobs(allAdminJobs.filter(j=>j.status===status));
+}
+
+function renderAdminJobs(jobs) {
+  const el=document.getElementById('admin-jobs-list');
+  if(!jobs.length){el.innerHTML='<div class="empty-state">No jobs found.</div>';return;}
+  el.innerHTML=jobs.map(j=>`
+    <div class="table-row" style="grid-template-columns:2fr 1fr 1fr 1fr 80px">
+      <div><div class="tr-main">${esc(j.property_address||'No address')}</div><div class="tr-sub">${fmtDate(j.created_at)}</div></div>
+      <div class="tr-cell">${esc(j.job_type||'—')}</div>
+      <div class="tr-cell">${esc(j.urgency||'—')}</div>
+      <div>${statusPill(j.status)}</div>
+      <div><button class="btn btn-ink btn-sm" onclick="event.stopPropagation();editAdminJob('${j.id}')">Edit</button></div>
+    </div>`).join('');
+}
+
+function editAdminJob(id) {
+  const j=allAdminJobs.find(x=>x.id===id);
+  if(!j) return;
+  document.getElementById('modal-job-title').textContent='Edit Job: '+(j.property_address||id);
+  const vendorOptions = allAdminVendors.filter(v=>v.status==='active')
+    .map(v=>`<option value="${v.id}" ${j.provider_id===v.id?'selected':''}>${esc(v.full_name)} — ${esc(v.service_types?.join(', ')||'')}</option>`).join('');
+
+  document.getElementById('modal-job-content').innerHTML=`
+    <div class="modal-section">
+      <div class="job-detail-grid">
+        <div><div class="detail-label">Address</div><div class="detail-val">${esc(j.property_address||'—')}</div></div>
+        <div><div class="detail-label">Type</div><div class="detail-val">${esc(j.job_type||'—')}</div></div>
+        <div><div class="detail-label">Urgency</div><div class="detail-val">${esc(j.urgency||'—')}</div></div>
+        <div><div class="detail-label">Submitted</div><div class="detail-val">${fmtDate(j.created_at)}</div></div>
       </div>
-      <div class="vc-desc">${j.description||'No description provided.'}</div>
-      <div class="vc-meta">
-        <div class="jcm"><div class="jcml">Urgency</div><div class="jcmv">${j.urgency||'—'}</div></div>
-        <div class="jcm"><div class="jcml">Date</div><div class="jcmv">${j.scheduled_date?new Date(j.scheduled_date).toLocaleDateString():'Flexible'}</div></div>
-        <div class="jcm"><div class="jcml">Assigned</div><div class="jcmv">${new Date(asgn?.assigned_at||j.created_at).toLocaleDateString()}</div></div>
+      <div class="detail-label" style="margin-top:12px">Description</div>
+      <div class="detail-desc">${esc(j.description||'No description.')}</div>
+    </div>
+    <div class="modal-section">
+      <div class="form-grid-2">
+        <div class="field"><label>Status</label>
+          <select id="edit-status">
+            ${['submitted','priced','assigned','in_progress','completed','cancelled'].map(s=>`<option value="${s}" ${j.status===s?'selected':''}>${s}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field"><label>Quoted Price ($)</label><input id="edit-price" type="number" value="${j.quoted_price||''}" placeholder="0.00"/></div>
+        <div class="field form-full"><label>Notes to Customer</label><textarea id="edit-notes" style="min-height:70px">${j.admin_notes||''}</textarea></div>
+        <div class="field form-full"><label>Payment Link (Stripe URL)</label><input id="edit-paylink" type="url" value="${j.payment_link||''}" placeholder="https://buy.stripe.com/..."/></div>
+        <div class="field"><label>Assign Vendor</label>
+          <select id="edit-vendor">
+            <option value="">— No vendor —</option>
+            ${vendorOptions}
+          </select>
+        </div>
+        <div class="field"><label>Payment Amount ($)</label><input id="edit-payamt" type="number" value="${j.payment_amount||''}" placeholder="0.00"/></div>
       </div>
-      ${asgn?.status!=='completed'?`<div class="vc-update">
-        <select class="vselect" id="vs-${j.id}">
-          <option value="assigned" ${asgn?.status==='assigned'?'selected':''}>Assigned</option>
-          <option value="in_progress" ${asgn?.status==='in_progress'?'selected':''}>In Progress</option>
-          <option value="completed" ${asgn?.status==='completed'?'selected':''}>Completed</option>
+      <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap">
+        <button class="btn btn-red" onclick="saveAdminJob('${j.id}')">Save Changes</button>
+        ${j.payment_link?`<button class="btn btn-ghost" onclick="sendPaymentLink('${j.id}')">📧 Send Payment Link</button>`:''}
+      </div>
+    </div>`;
+  document.getElementById('job-modal').classList.add('open');
+}
+
+async function saveAdminJob(id) {
+  const status=document.getElementById('edit-status').value;
+  const price=document.getElementById('edit-price').value;
+  const notes=document.getElementById('edit-notes').value;
+  const paylink=document.getElementById('edit-paylink').value;
+  const vendor=document.getElementById('edit-vendor').value;
+  const payamt=document.getElementById('edit-payamt').value;
+
+  const updates={status};
+  if(price) updates.quoted_price=parseFloat(price);
+  if(notes) updates.admin_notes=notes;
+  if(paylink) updates.payment_link=paylink;
+  if(vendor) updates.provider_id=vendor;
+  if(payamt) updates.payment_amount=parseFloat(payamt);
+
+  const {error}=await sb.from('jobs').update(updates).eq('id',id);
+  if(error){showNotif('Error','Could not save changes.','warning');return;}
+  showNotif('Saved','Job updated successfully.','success');
+  closeModal();
+  loadAdminJobs();
+}
+
+async function sendPaymentLink(id) {
+  const j=allAdminJobs.find(x=>x.id===id);
+  if(!j||!j.payment_link) return;
+  // In a real implementation, look up customer email from user_id
+  showNotif('Payment Link','Copied to clipboard — send to customer manually.','info');
+  navigator.clipboard?.writeText(j.payment_link).catch(()=>{});
+}
+
+// ──────────────────────────────────────────────────────
+// ADMIN: VENDORS
+// ──────────────────────────────────────────────────────
+async function loadAdminVendors() {
+  if(currentRole!=='admin') return;
+  const {data}=await sb.from('providers').select('*').order('created_at',{ascending:false});
+  allAdminVendors=data||[];
+
+  const pending=allAdminVendors.filter(v=>v.status==='pending').length;
+  const badge=document.getElementById('badge-pending-vendors');
+  if(pending>0){badge.textContent=pending;badge.classList.add('visible');}
+  else badge.classList.remove('visible');
+
+  renderAdminVendors(allAdminVendors);
+}
+
+function filterAdminVendors(status,btn) {
+  document.querySelectorAll('#p-admin-vendors .filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(status==='all') renderAdminVendors(allAdminVendors);
+  else renderAdminVendors(allAdminVendors.filter(v=>v.status===status));
+}
+
+function renderAdminVendors(vendors) {
+  const el=document.getElementById('admin-vendors-list');
+  if(!vendors.length){el.innerHTML='<div class="empty-state">No vendors found.</div>';return;}
+  el.innerHTML=`<div class="vendor-grid">${vendors.map(v=>`
+    <div class="vendor-card" onclick="editAdminVendor('${v.id}')">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="vendor-name">${esc(v.full_name)}</div>
+        ${statusPill(v.status)}
+      </div>
+      <div class="vendor-meta">${esc(v.service_types?.join(', ')||'—')}</div>
+      <div class="vendor-meta" style="margin-top:3px">${esc(v.coverage_zips||'—')}</div>
+      <div class="vendor-meta" style="margin-top:3px">${esc(v.email)}</div>
+    </div>`).join('')}</div>`;
+}
+
+function editAdminVendor(id) {
+  const v=allAdminVendors.find(x=>x.id===id);
+  if(!v) return;
+  document.getElementById('modal-job-title').textContent='Vendor: '+v.full_name;
+  document.getElementById('modal-job-content').innerHTML=`
+    <div class="modal-section">
+      <div class="job-detail-grid">
+        <div><div class="detail-label">Name</div><div class="detail-val">${esc(v.full_name)}</div></div>
+        <div><div class="detail-label">Email</div><div class="detail-val">${esc(v.email)}</div></div>
+        <div><div class="detail-label">Phone</div><div class="detail-val">${esc(v.phone||'—')}</div></div>
+        <div><div class="detail-label">Services</div><div class="detail-val">${esc(v.service_types?.join(', ')||'—')}</div></div>
+        <div><div class="detail-label">Coverage</div><div class="detail-val">${esc(v.coverage_zips||'—')}</div></div>
+        <div><div class="detail-label">Applied</div><div class="detail-val">${fmtDate(v.created_at)}</div></div>
+      </div>
+    </div>
+    <div class="modal-section">
+      <div class="field"><label>Status</label>
+        <select id="vedit-status">
+          <option value="pending" ${v.status==='pending'?'selected':''}>Pending</option>
+          <option value="active" ${v.status==='active'?'selected':''}>Active</option>
+          <option value="inactive" ${v.status==='inactive'?'selected':''}>Inactive</option>
         </select>
-        <button class="action-btn btn-green" onclick="updateVendorStatus('${asgn?.id}','${j.id}')">Update Status</button>
-      </div>`:`<div class="vc-update"><span style="font-size:12px;color:var(--green);font-family:var(--mono)">✓ Completed</span></div>`}
+      </div>
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <button class="btn btn-red" onclick="saveAdminVendor('${v.id}')">Save</button>
+        ${v.status==='pending'?`<button class="btn btn-ghost" onclick="activateVendor('${v.id}')">✅ Approve Vendor</button>`:''}
+      </div>
+    </div>`;
+  document.getElementById('job-modal').classList.add('open');
+}
+
+async function saveAdminVendor(id) {
+  const status=document.getElementById('vedit-status').value;
+  const {error}=await sb.from('providers').update({status}).eq('id',id);
+  if(error){showNotif('Error','Could not update vendor.','warning');return;}
+  showNotif('Saved','Vendor updated.','success');
+  closeModal();
+  loadAdminVendors();
+}
+
+async function activateVendor(id) {
+  const {error}=await sb.from('providers').update({status:'active'}).eq('id',id);
+  if(error){showNotif('Error','Could not activate vendor.','warning');return;}
+  const v=allAdminVendors.find(x=>x.id===id);
+  emailjs.send('service_slduczl','template_sacm0kn',{
+    subject:'✅ Your RelayOps vendor account is approved!',
+    from_name:'RelayOps Team',from_email:ADMIN_EMAIL,phone:'—',
+    message:`Hi ${v?.full_name||'there'},\n\nYour vendor account has been approved. Log in at https://contactrelayops.github.io/relayops-site/relayops-portal.html to see your jobs.\n\nWelcome to the network!\n\nRelayOps`
+  }).catch(()=>{});
+  showNotif('Vendor Approved','Account activated and email sent.','success');
+  closeModal();
+  loadAdminVendors();
+}
+
+// ──────────────────────────────────────────────────────
+// ADMIN: PAYMENTS
+// ──────────────────────────────────────────────────────
+async function loadAdminPayments() {
+  if(currentRole!=='admin') return;
+  const {data}=await sb.from('jobs').select('id,property_address,job_type,quoted_price,payment_link,payment_amount,status').not('payment_link','is',null).order('created_at',{ascending:false});
+  const el=document.getElementById('admin-payments-list');
+  if(!data||!data.length){el.innerHTML='<div class="empty-state">No payment links issued yet.</div>';return;}
+  el.innerHTML=data.map(j=>`
+    <div class="table-row" style="grid-template-columns:2fr 1fr 1fr 1fr">
+      <div><div class="tr-main">${esc(j.property_address||'—')}</div><div class="tr-sub">${esc(j.job_type||'—')}</div></div>
+      <div class="tr-cell">${j.quoted_price?'$'+j.quoted_price:'—'}</div>
+      <div>${statusPill(j.status)}</div>
+      <div><a href="${j.payment_link}" target="_blank" class="btn btn-ghost btn-sm">Open →</a></div>
+    </div>`).join('');
+}
+
+// ──────────────────────────────────────────────────────
+// ADMIN: CUSTOMERS
+// ──────────────────────────────────────────────────────
+async function loadAdminCustomers() {
+  if(currentRole!=='admin') return;
+  const {data}=await sb.from('jobs').select('user_id,description,created_at').order('created_at',{ascending:false});
+  // Extract contact info from description field (legacy format stores contact info there)
+  const el=document.getElementById('admin-customers-list');
+  if(!data||!data.length){el.innerHTML='<div class="empty-state">No customer data yet.</div>';return;}
+
+  // Group by user_id
+  const byUser={};
+  data.forEach(j=>{
+    const uid=j.user_id||'anon';
+    if(!byUser[uid]) byUser[uid]={count:0,first:j.created_at,desc:j.description};
+    byUser[uid].count++;
+  });
+
+  const rows=Object.entries(byUser).map(([uid,info])=>{
+    const contact=parseContactFromDesc(info.desc||'');
+    return `<div class="table-row" style="grid-template-columns:2fr 2fr 1fr 1fr">
+      <div class="tr-main">${esc(contact.name||uid.substring(0,8))}</div>
+      <div class="tr-cell">${esc(contact.email||'—')}</div>
+      <div class="tr-cell">${info.count}</div>
+      <div class="tr-cell">${fmtDate(info.first)}</div>
     </div>`;
   }).join('');
+  el.innerHTML=rows;
 }
 
-async function updateVendorStatus(aid, jid) {
-  const status = document.getElementById('vs-'+jid).value;
-  await fetch(`${SB}/rest/v1/provider_assignments?id=eq.${aid}`,{method:'PATCH',headers:{...hdrs(SESSION),'Prefer':'return=minimal'},body:JSON.stringify({status})});
-  await fetch(`${SB}/rest/v1/jobs?id=eq.${jid}`,{method:'PATCH',headers:{...hdrs(SESSION),'Prefer':'return=minimal'},body:JSON.stringify({status:status==='completed'?'completed':status==='in_progress'?'in_progress':'assigned'})});
-  toast('✓ Status updated');
-  setTimeout(loadVendorJobs, 800);
+function parseContactFromDesc(desc) {
+  const nameM=desc.match(/Name:\s*([^|]+)/);
+  const emailM=desc.match(/Email:\s*([^|]+)/);
+  return {
+    name:nameM?nameM[1].trim():'',
+    email:emailM?emailM[1].trim():''
+  };
 }
 
-// ── INIT ──
-const savedToken = localStorage.getItem('ro_token');
-const savedUser = localStorage.getItem('ro_user');
-const savedRole = localStorage.getItem('ro_role');
-if(savedToken && savedUser && savedRole) {
-  SESSION = savedToken;
-  USER = JSON.parse(savedUser);
-  bootApp(savedRole);
-} else {
-  // Check URL params for pre-filled signup
-  const params = new URLSearchParams(window.location.search);
-  const paramEmail = params.get('email');
-  const paramTab = params.get('tab');
-  const paramRole = params.get('role');
-  if(paramEmail) {
-    document.getElementById('su-email').value = paramEmail;
-    document.getElementById('si-email').value = paramEmail;
-  }
-  if(paramTab === 'signup') {
-    switchAuthTab('signup');
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab')[1].classList.add('active');
-    document.getElementById('signin-form').style.display = 'none';
-    document.getElementById('signup-form').style.display = 'block';
-  }
-  if(paramRole === 'provider') {
-    pickRole('provider');
-  }
+// ──────────────────────────────────────────────────────
+// ADMIN: ANALYTICS
+// ──────────────────────────────────────────────────────
+async function loadAdminAnalytics() {
+  if(currentRole!=='admin') return;
+  const {data:jobs}=await sb.from('jobs').select('status,job_type,quoted_price');
+  const {data:vendors}=await sb.from('providers').select('status');
+
+  const total=(jobs||[]).length;
+  const completed=(jobs||[]).filter(j=>j.status==='completed').length;
+  const revenue=(jobs||[]).reduce((s,j)=>s+(parseFloat(j.quoted_price)||0),0);
+  const activeVendors=(vendors||[]).filter(v=>v.status==='active').length;
+
+  document.getElementById('an-total').textContent=total;
+  document.getElementById('an-completed').textContent=completed;
+  document.getElementById('an-revenue').textContent='$'+revenue.toLocaleString('en-US',{minimumFractionDigits:0});
+  document.getElementById('an-vendors').textContent=activeVendors;
+
+  // Type breakdown
+  const byType={};
+  (jobs||[]).forEach(j=>{const t=j.job_type||'Other';byType[t]=(byType[t]||0)+1;});
+  const byStatus={};
+  (jobs||[]).forEach(j=>{const s=j.status||'submitted';byStatus[s]=(byStatus[s]||0)+1;});
+
+  document.getElementById('admin-analytics-detail').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px">
+      <div class="card"><div class="card-title">Jobs by Type</div>${Object.entries(byType).map(([k,v])=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="font-size:13px;color:rgba(255,255,255,.6)">${esc(k)}</div>
+          <div style="font-family:var(--mono);font-size:13px;color:var(--white)">${v}</div>
+        </div>`).join('')}</div>
+      <div class="card"><div class="card-title">Jobs by Status</div>${Object.entries(byStatus).map(([k,v])=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div>${statusPill(k)}</div>
+          <div style="font-family:var(--mono);font-size:13px;color:var(--white)">${v}</div>
+        </div>`).join('')}</div>
+    </div>`;
 }
 
-// Close modal on overlay click
-document.getElementById('job-modal').addEventListener('click', function(e){if(e.target===this)closeModal('job-modal');});
-
-// Enter key on login
-document.addEventListener('keydown', e=>{
-  if(e.key==='Enter'&&document.getElementById('login-view').classList.contains('active')){
-    if(document.getElementById('signin-form').style.display!=='none') doSignIn();
-    else doSignUp();
-  }
+// ──────────────────────────────────────────────────────
+// MODAL
+// ──────────────────────────────────────────────────────
+function closeModal() {
+  document.getElementById('job-modal').classList.remove('open');
+}
+document.getElementById('job-modal').addEventListener('click',function(e){
+  if(e.target===this) closeModal();
 });
+
+// ──────────────────────────────────────────────────────
+// UTILS
+// ──────────────────────────────────────────────────────
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function fmtDate(d){
+  if(!d) return '—';
+  return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
+
+// ──────────────────────────────────────────────────────
+// BOOT
+// ──────────────────────────────────────────────────────
+(async()=>{
+  // Handle URL params (from marketing site redirect)
+  const params=new URLSearchParams(location.search);
+  const emailParam=params.get('email');
+  const tabParam=params.get('tab');
+  const roleParam=params.get('role');
+
+  if(tabParam==='signup') {
+    switchAuthTab('signup');
+    if(emailParam) document.getElementById('su-email').value=emailParam;
+    if(roleParam==='provider') selectRole('provider');
+  } else if(emailParam) {
+    document.getElementById('si-email').value=emailParam;
+  }
+
+  // Check existing session
+  const {data:{session}}=await sb.auth.getSession();
+  if(session?.user) {
+    await initApp(session.user);
+  }
+
+  // Auth state listener
+  sb.auth.onAuthStateChange(async(event,session)=>{
+    if(event==='SIGNED_IN'&&session?.user&&!currentUser) {
+      await initApp(session.user);
+    }
+    if(event==='SIGNED_OUT') {
+      currentUser=null; currentRole=null;
+    }
+  });
+})();
 </script>
 </body>
 </html>
