@@ -434,6 +434,128 @@ a{text-decoration:none;color:inherit}
 }
 .chat-suggestion:hover{border-color:rgba(200,16,46,.5);color:rgba(255,255,255,.85);background:rgba(200,16,46,.08)}
 
+
+/* ── FLOATING CHAT BUBBLE ── */
+#chat-bubble-btn{
+  position:fixed;bottom:28px;right:28px;z-index:3000;
+  width:56px;height:56px;border-radius:50%;
+  background:var(--red);border:none;cursor:pointer;
+  display:none;align-items:center;justify-content:center;
+  font-size:22px;box-shadow:0 4px 20px rgba(200,16,46,.45);
+  transition:all .2s;
+}
+#chat-bubble-btn:hover{transform:scale(1.1);background:var(--red-deep)}
+#chat-bubble-btn.visible{display:flex}
+#chat-bubble-btn .chat-unread{
+  position:absolute;top:-3px;right:-3px;
+  width:18px;height:18px;border-radius:50%;
+  background:#ffd43b;color:#000;
+  font-size:10px;font-weight:700;font-family:var(--mono);
+  display:none;align-items:center;justify-content:center;
+}
+#chat-bubble-btn .chat-unread.show{display:flex}
+
+/* ── CHAT PANEL ── */
+#chat-panel{
+  position:fixed;bottom:96px;right:28px;z-index:2999;
+  width:380px;max-height:560px;
+  background:#161616;border:1px solid rgba(255,255,255,.1);
+  border-radius:20px;box-shadow:0 16px 48px rgba(0,0,0,.6);
+  display:flex;flex-direction:column;overflow:hidden;
+  transform:translateY(20px) scale(.96);opacity:0;
+  pointer-events:none;transition:all .25s cubic-bezier(.34,1.56,.64,1);
+}
+#chat-panel.open{transform:translateY(0) scale(1);opacity:1;pointer-events:all}
+.chat-panel-header{
+  padding:16px 18px 14px;border-bottom:1px solid rgba(255,255,255,.07);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+  background:#1a1a1a;
+}
+.chat-panel-title{
+  display:flex;align-items:center;gap:10px;
+  font-family:var(--display);font-size:16px;font-weight:700;color:var(--white);
+}
+.chat-panel-dot{
+  width:8px;height:8px;border-radius:50%;background:#51cf66;
+  animation:pulse 2s ease-in-out infinite;
+}
+.chat-panel-close{
+  width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.08);
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;color:rgba(255,255,255,.5);cursor:pointer;border:none;
+  transition:all .15s;
+}
+.chat-panel-close:hover{background:rgba(255,255,255,.15);color:var(--white)}
+.chat-panel-msgs{
+  flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;
+  scroll-behavior:smooth;min-height:200px;
+}
+.chat-panel-msgs::-webkit-scrollbar{width:3px}
+.chat-panel-msgs::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:2px}
+.cpbubble{max-width:82%;display:flex;flex-direction:column;gap:3px;animation:bubbleIn .18s ease forwards}
+.cpbubble.user{align-self:flex-end;align-items:flex-end}
+.cpbubble.ai{align-self:flex-start;align-items:flex-start}
+.cpbody{padding:10px 13px;border-radius:16px;font-size:13px;line-height:1.55}
+.cpbubble.user .cpbody{background:var(--red);color:#fff;border-bottom-right-radius:4px}
+.cpbubble.ai  .cpbody{background:#242424;border:1px solid rgba(255,255,255,.07);color:rgba(255,255,255,.85);border-bottom-left-radius:4px}
+.cpbody strong{color:#fff;font-weight:600}
+.cptime{font-size:10px;color:rgba(255,255,255,.2);font-family:var(--mono);padding:0 3px}
+.cp-typing{align-self:flex-start}
+.cp-typing-dots{display:flex;gap:3px;padding:10px 13px;background:#242424;border:1px solid rgba(255,255,255,.07);border-radius:16px;border-bottom-left-radius:4px}
+.cp-typing-dot{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.3);animation:typingBounce 1.2s ease-in-out infinite}
+.cp-typing-dot:nth-child(2){animation-delay:.2s}
+.cp-typing-dot:nth-child(3){animation-delay:.4s}
+.chat-panel-input-row{
+  padding:12px;border-top:1px solid rgba(255,255,255,.07);
+  display:flex;gap:8px;align-items:flex-end;flex-shrink:0;
+  background:#1a1a1a;
+}
+.chat-panel-input{
+  flex:1;padding:9px 12px;background:#242424;
+  border:1px solid rgba(255,255,255,.1);border-radius:12px;
+  font-family:var(--sans);font-size:13px;color:#fff;
+  outline:none;resize:none;min-height:38px;max-height:100px;
+  transition:border-color .2s;line-height:1.4;
+}
+.chat-panel-input:focus{border-color:rgba(200,16,46,.5)}
+.chat-panel-input::placeholder{color:rgba(255,255,255,.2)}
+.chat-panel-send{
+  width:36px;height:36px;border-radius:10px;background:var(--red);
+  border:none;cursor:pointer;display:flex;align-items:center;
+  justify-content:center;font-size:14px;flex-shrink:0;transition:all .2s;
+}
+.chat-panel-send:hover{background:var(--red-deep)}
+.chat-panel-send:disabled{opacity:.4;cursor:not-allowed}
+.cp-empty{text-align:center;padding:28px 16px;color:rgba(255,255,255,.25);font-size:13px}
+.cp-empty-icon{font-size:32px;margin-bottom:10px}
+.cp-suggestions{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:12px}
+.cp-suggestion{
+  padding:6px 12px;border:1px solid rgba(255,255,255,.1);border-radius:999px;
+  font-size:11px;color:rgba(255,255,255,.45);cursor:pointer;transition:all .15s;background:transparent;
+}
+.cp-suggestion:hover{border-color:rgba(200,16,46,.4);color:rgba(255,255,255,.8);background:rgba(200,16,46,.08)}
+
+/* ── ADMIN CHAT LOGS ── */
+.chatlog-user{
+  background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);
+  border-radius:var(--r-md);margin-bottom:12px;overflow:hidden;
+}
+.chatlog-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px;cursor:pointer;transition:background .12s;
+}
+.chatlog-header:hover{background:rgba(255,255,255,.04)}
+.chatlog-user-name{font-size:14px;font-weight:600;color:rgba(255,255,255,.85)}
+.chatlog-meta{font-size:11px;color:rgba(255,255,255,.3);font-family:var(--mono);margin-top:2px}
+.chatlog-msgs{display:none;padding:0 18px 14px;border-top:1px solid rgba(255,255,255,.05)}
+.chatlog-msgs.open{display:block}
+.chatlog-msg{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:13px;line-height:1.5}
+.chatlog-msg:last-child{border-bottom:none}
+.chatlog-role{font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.3);min-width:50px;padding-top:2px;text-transform:uppercase}
+.chatlog-role.user{color:var(--red)}
+.chatlog-role.ai{color:#51cf66}
+.chatlog-text{color:rgba(255,255,255,.7);flex:1}
+
 </style>
 </head>
 <body>
@@ -537,10 +659,6 @@ a{text-decoration:none;color:inherit}
         <div class="nav-item" onclick="showPage('p-request-job')" data-page="p-request-job">
           <span class="nav-icon">➕</span> Request a Job
         </div>
-        <div class="sidebar-section" style="margin-top:8px">Support</div>
-        <div class="nav-item" onclick="showPage('p-chat')" data-page="p-chat">
-          <span class="nav-icon">💬</span> AI Assistant
-        </div>
         <div class="sidebar-section" style="margin-top:8px">Account</div>
         <div class="nav-item" onclick="showPage('p-my-profile')" data-page="p-my-profile">
           <span class="nav-icon">👤</span> My Profile
@@ -553,10 +671,6 @@ a{text-decoration:none;color:inherit}
         <div class="nav-item active" onclick="showPage('p-vendor-jobs')" data-page="p-vendor-jobs">
           <span class="nav-icon">🔧</span> My Assigned Jobs
           <span class="nav-badge" id="badge-vendor-jobs"></span>
-        </div>
-        <div class="sidebar-section" style="margin-top:8px">Support</div>
-        <div class="nav-item" onclick="showPage('p-chat')" data-page="p-chat">
-          <span class="nav-icon">💬</span> AI Assistant
         </div>
         <div class="sidebar-section" style="margin-top:8px">Account</div>
         <div class="nav-item" onclick="showPage('p-vendor-profile')" data-page="p-vendor-profile">
@@ -589,8 +703,8 @@ a{text-decoration:none;color:inherit}
           <span class="nav-icon">⚙️</span> Settings
         </div>
         <div class="sidebar-section" style="margin-top:8px">Tools</div>
-        <div class="nav-item" onclick="showPage('p-chat')" data-page="p-chat">
-          <span class="nav-icon">💬</span> AI Assistant
+        <div class="nav-item" onclick="showPage('p-admin-chatlogs')" data-page="p-admin-chatlogs">
+          <span class="nav-icon">💬</span> AI Chat Logs
         </div>
       </nav>
 
@@ -912,25 +1026,22 @@ a{text-decoration:none;color:inherit}
       </div>
 
 
+/div>
+
+
       <!-- ══════════════════════════════════════════
-           AI CHAT PAGE (all roles)
+           ADMIN: AI CHAT LOGS
       ══════════════════════════════════════════ -->
-      <div class="page chat-page" id="p-chat">
-        <div class="chat-header">
-          <div class="page-title">AI Assistant</div>
-          <div class="page-sub">Ask anything about your jobs, how RelayOps works, or property maintenance</div>
-        </div>
-        <div class="chat-messages" id="chat-messages">
-          <div class="chat-empty" id="chat-empty">
-            <div class="chat-empty-icon">🤖</div>
-            <div class="chat-empty-title">RelayOps Assistant</div>
-            <div class="chat-empty-sub">I know your jobs, how the platform works, and can help with property maintenance questions. What do you need?</div>
-            <div class="chat-suggestions" id="chat-suggestions"></div>
+      <div class="page" id="p-admin-chatlogs">
+        <div class="page-header">
+          <div>
+            <div class="page-title">AI Chat Logs</div>
+            <div class="page-sub">All user conversations with the AI Assistant</div>
           </div>
+          <button class="btn btn-ghost btn-sm" onclick="loadChatLogs()">↻ Refresh</button>
         </div>
-        <div class="chat-input-row">
-          <textarea class="chat-input" id="chat-input" placeholder="Ask a question..." rows="1" onkeydown="chatKeydown(event)" oninput="autoResizeChat(this)"></textarea>
-          <button class="chat-send" id="chat-send-btn" onclick="sendChatMessage()" title="Send">➤</button>
+        <div id="chatlogs-container">
+          <div class="empty-state">Loading chat logs...</div>
         </div>
       </div>
 
@@ -1237,6 +1348,8 @@ function doSignOut() {
   chatHistories.customer = []; chatHistories.admin = []; chatHistories.provider = [];
   document.getElementById('app').style.display = 'none';
   document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('chat-bubble-btn').classList.remove('visible');
+  document.getElementById('chat-panel').classList.remove('open');
   // Reset nav
   ['nav-customer','nav-vendor','nav-admin'].forEach(id => document.getElementById(id).style.display = 'none');
 }
@@ -1262,7 +1375,7 @@ async function enterAdminMode(user) {
   document.getElementById('nav-vendor').style.display = 'none';
   setSidebarUser('Admin', 'A', 'ADMIN');
   showPage('p-admin-jobs');
-  loadAdminJobs(); loadAdminVendors(); initChat();
+  loadAdminJobs(); loadAdminVendors(); initChatBubble();
 }
 
 async function enterCustomerMode(user) {
@@ -1278,7 +1391,7 @@ async function enterCustomerMode(user) {
   document.getElementById('prof-email').textContent = user.email || '—';
   document.getElementById('prof-type').textContent  = 'Property Manager / Customer';
   document.getElementById('prof-since').textContent = new Date(user.created_at || Date.now()).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-  showPage('p-my-jobs'); loadCustomerJobs(); startStatusPolling(); initChat();
+  showPage('p-my-jobs'); loadCustomerJobs(); startStatusPolling(); initChatBubble();
 }
 
 async function enterVendorMode(user) {
@@ -1300,7 +1413,7 @@ async function enterVendorMode(user) {
   document.getElementById('vprof-status').innerHTML     = statusPill(status);
   document.getElementById('vprof-service').textContent  = currentProviderRecord?.service_types?.join(', ') || '—';
   document.getElementById('vprof-coverage').textContent = currentProviderRecord?.coverage_zips || '—';
-  showPage('p-vendor-jobs'); loadVendorJobs(); initChat();
+  showPage('p-vendor-jobs'); loadVendorJobs(); initChatBubble();
 }
 
 function setSidebarUser(name, initial, roleLabel) {
@@ -1698,356 +1811,243 @@ async function loadAdminAnalytics() {
 document.getElementById('job-modal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
 
 // ═══════════════════════════════════════════════════════
-// AI CHAT
+// FLOATING CHAT BUBBLE
 // ═══════════════════════════════════════════════════════
-const CHAT_SUGGESTIONS = {
-  customer: ['What\'s the status of my jobs?','How do I request an emergency job?','How does pricing work?','When will I hear back after submitting?'],
-  provider: ['How do I mark a job as complete?','When do I get paid after finishing?','What if I can\'t make it to a job?','How does vendor rating work?'],
-  admin:    ['How should I price a turnover cleaning?','What\'s the SLA for urgent jobs?','Draft a message to a customer about their quote','Summarize how the platform works']
+const CP_SUGGESTIONS = {
+  customer: ['How does pricing work?','How do I request an emergency job?','What happens after I submit?','How do I pay?'],
+  provider: ['How do I mark a job complete?','When do I get paid?','How does job assignment work?','How do I build my rating?'],
+  admin:    ['How should I price a turnover?','What is the SLA for urgent jobs?','Draft a quote message for a customer','How do vendors get paid?']
 };
 
-function getChatSystemPrompt() {
-  const name = document.getElementById('sb-name').textContent || 'User';
-  const base = `You are the RelayOps AI Assistant — helpful, concise, built into the RelayOps property maintenance portal. RelayOps connects property managers with vetted local vendors (handymen, cleaners, locksmiths, plumbers, junk removal, painters) to fill overflow maintenance jobs fast. Key facts: avg match time under 2 hours, end-to-end job tracking, Stripe payments, service areas Pittsburgh and Philadelphia PA. Pricing: 15% per-job, $199/mo priority plan, $499/mo pro plan. Be friendly and direct. Use short paragraphs. Never make up specific job data — tell users to check their dashboard for live info.`;
-  if (currentRole === 'customer') return `${base}\n\nSpeaking with ${name}, a property manager/customer. Help with job submission, status, pricing, and what to expect.`;
-  if (currentRole === 'provider') return `${base}\n\nSpeaking with ${name}, a vendor/provider. Help with job workflow, status updates, payment (Stripe on completion), and building reputation.`;
-  return `${base}\n\nSpeaking with the RelayOps admin. You have full visibility into the platform. Help with pricing guidance, vendor management, customer communication, and operational questions. Can draft messages to customers or vendors, suggest job pricing, and provide operational advice. The admin can see all jobs and all vendors across all customers.`;
+// Per-user chat storage key
+function cpStorageKey() {
+  const uid = currentUser?.id || currentUser?.email || 'anon';
+  return `relayops_chat_${uid}`;
 }
 
-function initChat() {
+// Load this user's chat history from localStorage
+function cpLoadHistory() {
+  try {
+    const raw = localStorage.getItem(cpStorageKey());
+    return raw ? JSON.parse(raw) : [];
+  } catch(e) { return []; }
+}
+
+// Save this user's chat history to localStorage
+function cpSaveHistory(history) {
+  try { localStorage.setItem(cpStorageKey(), JSON.stringify(history.slice(-60))); } catch(e) {}
+}
+
+// Save all chat sessions index (for admin logs)
+function cpSaveToLogs(history) {
+  if (!currentUser) return;
+  try {
+    const uid   = currentUser.id || currentUser.email || 'anon';
+    const name  = currentUser.user_metadata?.full_name || currentUser.email || uid;
+    const role  = currentRole || 'unknown';
+    const key   = `relayops_chatlog_${uid}`;
+    const entry = { uid, name, role, history, updated: new Date().toISOString() };
+    localStorage.setItem(key, JSON.stringify(entry));
+    // Update index
+    const idx = JSON.parse(localStorage.getItem('relayops_chatlog_index') || '[]');
+    if (!idx.includes(key)) { idx.push(key); localStorage.setItem('relayops_chatlog_index', JSON.stringify(idx)); }
+  } catch(e) {}
+}
+
+let cpPanelOpen = false;
+
+function initChatBubble() {
+  const btn = document.getElementById('chat-bubble-btn');
+  btn.classList.add('visible');
+  cpPanelOpen = false;
+  document.getElementById('chat-panel').classList.remove('open');
+
+  // Load existing history for this user
+  const history = cpLoadHistory();
+  const msgs = document.getElementById('cp-msgs');
+
+  // Render suggestions
   const role = currentRole === 'provider' ? 'provider' : currentRole === 'admin' ? 'admin' : 'customer';
-  const el = document.getElementById('chat-suggestions');
-  if (el) el.innerHTML = (CHAT_SUGGESTIONS[role]||[]).map(s=>`<button class="chat-suggestion" onclick="useSuggestion(this.textContent)">${s}</button>`).join('');
+  const sugEl = document.getElementById('cp-suggestions');
+  if (sugEl && history.length === 0) {
+    sugEl.innerHTML = (CP_SUGGESTIONS[role] || []).map(s =>
+      `<button class="cp-suggestion" onclick="cpUseSuggestion(this.textContent)">${s}</button>`
+    ).join('');
+  }
+
+  // Re-render existing messages
+  if (history.length > 0) {
+    document.getElementById('cp-empty')?.remove();
+    history.forEach(m => cpAppend(m.role === 'user' ? 'user' : 'ai', m.content, false));
+    setTimeout(() => { msgs.scrollTop = msgs.scrollHeight; }, 50);
+  }
 }
 
-function useSuggestion(text) { document.getElementById('chat-input').value = text; sendChatMessage(); }
+function toggleChatPanel() {
+  cpPanelOpen = !cpPanelOpen;
+  document.getElementById('chat-panel').classList.toggle('open', cpPanelOpen);
+  if (cpPanelOpen) {
+    document.getElementById('chat-unread-dot').classList.remove('show');
+    document.getElementById('cp-input').focus();
+    const msgs = document.getElementById('cp-msgs');
+    setTimeout(() => { msgs.scrollTop = msgs.scrollHeight; }, 80);
+  }
+}
 
-function chatKeydown(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } }
+function cpUseSuggestion(text) {
+  document.getElementById('cp-input').value = text;
+  cpSend();
+}
 
-function autoResizeChat(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 140) + 'px'; }
+function cpKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); cpSend(); }
+}
 
-function appendBubble(role, text) {
-  const empty = document.getElementById('chat-empty');
+function cpAutoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+function cpAppend(role, text, animate=true) {
+  const empty = document.getElementById('cp-empty');
   if (empty) empty.remove();
-  const msgs = document.getElementById('chat-messages');
-  const now = new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-  const div = document.createElement('div');
-  div.className = `chat-bubble ${role}`;
+  const msgs = document.getElementById('cp-msgs');
+  const now  = new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+  const div  = document.createElement('div');
+  div.className = `cpbubble ${role}${animate?' ':' '}`;
   if (role === 'ai') {
-    let html = text.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\n\n/g,'</p><p>').replace(/\n/g,'<br>');
-    div.innerHTML = `<div class="bubble-body"><p>${html}</p></div><div class="bubble-time">${now}</div>`;
+    let html = text.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+    div.innerHTML = `<div class="cpbody">${html}</div><div class="cptime">${now}</div>`;
   } else {
-    div.innerHTML = `<div class="bubble-body">${esc(text)}</div><div class="bubble-time">${now}</div>`;
+    div.innerHTML = `<div class="cpbody">${esc(text)}</div><div class="cptime">${now}</div>`;
   }
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
 }
 
-function showTyping() {
-  const msgs = document.getElementById('chat-messages');
-  const div = document.createElement('div');
-  div.className = 'chat-bubble ai'; div.id = 'chat-typing';
-  div.innerHTML = '<div class="typing-dots"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
+function cpShowTyping() {
+  const msgs = document.getElementById('cp-msgs');
+  const div  = document.createElement('div');
+  div.className = 'cp-typing'; div.id = 'cp-typing';
+  div.innerHTML = '<div class="cp-typing-dots"><div class="cp-typing-dot"></div><div class="cp-typing-dot"></div><div class="cp-typing-dot"></div></div>';
   msgs.appendChild(div); msgs.scrollTop = msgs.scrollHeight;
 }
-function hideTyping() { const el = document.getElementById('chat-typing'); if (el) el.remove(); }
+function cpHideTyping() { document.getElementById('cp-typing')?.remove(); }
 
-async function sendChatMessage() {
-  const input = document.getElementById('chat-input');
-  const text = input.value.trim(); if (!text) return;
-  const btn = document.getElementById('chat-send-btn');
+function getChatSystemPrompt() {
+  const name = currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || 'User';
+  const base = `You are the RelayOps AI Assistant — helpful, concise, built into the RelayOps property maintenance portal. RelayOps connects property managers with vetted local vendors (handymen, cleaners, locksmiths, plumbers, junk removal, painters) to fill overflow maintenance jobs fast. Key facts: avg match time under 2 hours, end-to-end job tracking, Stripe payments, service areas Pittsburgh and Philadelphia PA. Pricing: 15% per-job, $199/mo priority plan, $499/mo pro plan. Be friendly and direct. Keep responses short — this is a chat bubble, not a document. Use short paragraphs or bullet points. Never make up specific job data.`;
+  if (currentRole === 'customer') return `${base}\n\nSpeaking with ${name}, a property manager/customer. Help with job submission, status, pricing, and what to expect.`;
+  if (currentRole === 'provider') return `${base}\n\nSpeaking with ${name}, a vendor/provider. Help with job workflow, status updates, payment (Stripe on completion), and building reputation on the platform.`;
+  return `${base}\n\nSpeaking with the RelayOps admin (${name}). Help with pricing guidance, vendor management, customer communication, and operational questions. Can draft messages to customers or vendors.`;
+}
+
+async function cpSend() {
+  const input = document.getElementById('cp-input');
+  const text  = input.value.trim(); if (!text) return;
+  const btn   = document.getElementById('cp-send');
   btn.disabled = true; input.value = ''; input.style.height = 'auto';
-  appendBubble('user', text);
-  pushChat({ role: 'user', content: text });
-  showTyping();
+
+  cpAppend('user', text);
+
+  // Load + update history
+  const history = cpLoadHistory();
+  history.push({ role: 'user', content: text });
+  cpSaveHistory(history);
+
+  cpShowTyping();
+
   try {
-    // Use corsproxy.io to get around the CORS block on api.anthropic.com
     const res = await fetch('https://corsproxy.io/?' + encodeURIComponent('https://api.anthropic.com/v1/messages'), {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'anthropic-version': '2023-06-01',
-        'x-api-key': 'RELAYOPS_AI_PLACEHOLDER'
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1000,
-        system: getChatSystemPrompt(),
-        messages: getChatHistory()
-      })
+      headers: { 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01', 'x-api-key': 'RELAYOPS_AI_PLACEHOLDER' },
+      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 600, system: getChatSystemPrompt(), messages: history })
     });
     const data = await res.json();
-    hideTyping();
+    cpHideTyping();
+
+    let reply;
     if (data.error || data.type === 'error') {
-      // API key not set — fall back to local smart responses
-      const reply = getLocalReply(text);
-      appendBubble('ai', reply);
-      pushChat({ role: 'assistant', content: reply });
-      trimChat();
+      reply = getLocalReply(text);
     } else {
-      const reply = data.content?.map(b => b.text || '').join('') || 'No response.';
-      appendBubble('ai', reply);
-      pushChat({ role: 'assistant', content: reply });
-      trimChat();
+      reply = data.content?.map(b => b.text||'').join('') || 'No response.';
     }
+
+    cpAppend('ai', reply);
+    history.push({ role: 'assistant', content: reply });
+    cpSaveHistory(history);
+    cpSaveToLogs(history);
+
+    // Show unread dot if panel is closed
+    if (!cpPanelOpen) {
+      document.getElementById('chat-unread-dot').classList.add('show');
+    }
+
   } catch(e) {
-    hideTyping();
-    // Network error — use local fallback
+    cpHideTyping();
     const reply = getLocalReply(text);
-    appendBubble('ai', reply);
-    pushChat({ role: 'assistant', content: reply });
-    trimChat();
-  }
-  btn.disabled = false; input.focus();
-}
-
-// Local smart fallback — handles common questions without needing the API
-// Local smart fallback — handles common questions without needing the API
-function getLocalReply(text) {
-  const t = text.toLowerCase();
-  const role = currentRole;
-
-  if (t.includes('status') && t.includes('job')) return role === 'customer'
-    ? `Check the **My Jobs** tab to see the current status of all your submitted jobs. Each job shows its status — Submitted, Quoted, Assigned, In Progress, or Completed.`
-    : `Check the **My Assigned Jobs** tab to see jobs assigned to you and their current status.`;
-
-  if (t.includes('pric') && (t.includes('turnover') || t.includes('cleaning')))
-    return `Turnover cleaning pricing typically depends on unit size:\n\n- **Studio / 1BR**: $120-$180\n- **2BR**: $160-$240\n- **3BR**: $200-$320\n\nSame-day turnovers command a 20-30% premium. RelayOps adds a 15% coordination fee on top of the vendor quote.`;
-
-  if (t.includes('pric') || t.includes('cost') || t.includes('fee'))
-    return `RelayOps pricing:\n\n- **Per-Job Fill**: 15% of job total, no monthly fee\n- **Priority Plan**: $199/month + 10% per job, guaranteed 2hr response\n- **Pro Plan**: $499/month + 8% per job, multi-property and same-day guarantee\n\nEmergency jobs carry an additional rush fee + 20-25% take rate.`;
-
-  if (t.includes('emergency') || t.includes('urgent') || t.includes('same day'))
-    return `For emergency jobs, submit via **Request a Job** and select **Emergency - Same Hour** as the urgency level. Our team targets a 30 minute response for emergencies. An additional rush fee applies.`;
-
-  if (t.includes('how') && (t.includes('work') || t.includes('submit') || t.includes('request')))
-    return `Here is how RelayOps works:\n\n1. **Submit** - Fill out the job request form (60 seconds)\n2. **Quote** - We review, price, and match a vendor (usually within 2 hours)\n3. **Confirm** - You approve the quote and receive a Stripe payment link\n4. **Track** - Vendor is dispatched, you see real-time status updates\n5. **Done** - You receive completion confirmation and photos`;
-
-  if (t.includes('pay') || t.includes('stripe') || t.includes('invoice'))
-    return `Payment on RelayOps works through **Stripe**. Once a job is quoted and you approve, you will receive a secure Stripe payment link. No cash, no invoices lost in email. Vendors are paid by RelayOps after job completion is confirmed.`;
-
-  if (t.includes('vendor') && (t.includes('join') || t.includes('sign') || t.includes('apply')))
-    return `To join the RelayOps vendor network, fill out the **Vendor Application** on the marketing site. Applications are reviewed manually within 24 hours. Once approved, you will see assigned jobs in your dashboard.`;
-
-  if (t.includes('vendor') && t.includes('assign'))
-    return role === 'admin'
-      ? `To assign a vendor: go to **Job Queue**, click **Edit** on the job, then use the **Assign Vendor** dropdown. The vendor must be Active status. Assigning a vendor auto-advances the status to Assigned.`
-      : `Once you submit a job, our team reviews it and assigns a qualified vendor from our network. You will be notified when a vendor is assigned.`;
-
-  if (t.includes('cancel'))
-    return `To cancel a job, contact us at **contactrelayops@gmail.com** or call **(267) 875-9111** and we will handle it right away.`;
-
-  if (t.includes('contact') || t.includes('phone') || t.includes('email') || t.includes('reach'))
-    return `You can reach RelayOps directly:\n\n- Email: **contactrelayops@gmail.com**\n- Phone: **(267) 875-9111**\n- Service areas: **Pittsburgh and Philadelphia, PA**`;
-
-  if (t.includes('lock') || t.includes('rekey'))
-    return `RelayOps handles lock changes and rekeying. Select **Lock Change / Rekey** when submitting a job. For emergency lockouts, choose Emergency urgency for same-hour response.`;
-
-  if (t.includes('plumb'))
-    return `Plumbing jobs including leaks, clogs, fixture replacements, and urgent calls are fully supported. Submit via Request a Job and select **Plumbing** as the service type.`;
-
-  if (t.includes('handyman') || t.includes('repair') || t.includes('punch'))
-    return `Handyman work is one of our most common job types - repairs, punch-list items, general maintenance. Include as much detail as possible so we can match the right vendor.`;
-
-  if (t.includes('paint'))
-    return `Paint touch-ups and full unit repaints are available. Describe the scope (number of rooms, walls only vs trim, current color) so we can provide an accurate quote.`;
-
-  if (t.includes('junk') || t.includes('haul') || t.includes('removal') || t.includes('cleanout'))
-    return `Junk removal jobs including move-out hauls, appliance removal, and full unit cleanouts are available. Mention the approximate volume or number of rooms for the most accurate quote.`;
-
-  if (t.includes('sla') || t.includes('response time') || t.includes('how long') || t.includes('how fast'))
-    return `Response time targets:\n\n- **Emergency**: Under 30 min\n- **Urgent same-day**: Under 2 hours\n- **Standard**: Quote within 2-4 hours\n- **Flexible**: Same business day\n\nPriority Plan subscribers get guaranteed 2hr response on standard jobs.`;
-
-  if (t.includes('area') || t.includes('location') || t.includes('city') || t.includes('where') || t.includes('pittsburgh') || t.includes('philadelphia') || t.includes('philly'))
-    return `RelayOps currently operates in **Pittsburgh, PA** and **Philadelphia, PA**. We are expanding nationally. Contact contactrelayops@gmail.com to get on the waitlist for your city.`;
-
-  return `Happy to help! You can:\n\n- Check your dashboard tabs for live job info\n- Email us at **contactrelayops@gmail.com**\n- Call **(267) 875-9111**\n\nWhat specifically would you like to know about your jobs, pricing, or how RelayOps works?`;
-}
-
-
-// ═══════════════════════════════════════════════════════
-// SEED TEST DATA (admin only)
-// ═══════════════════════════════════════════════════════
-async function seedTestData() {
-  const btn = document.getElementById('seed-btn');
-  const log = document.getElementById('seed-log');
-  btn.disabled = true; btn.textContent = 'Seeding...';
-  log.style.display = 'block'; log.innerHTML = '';
-
-  function addLog(msg, ok=true) {
-    log.innerHTML += `<div style="color:${ok?'#51cf66':'#ff8898'}">${msg}</div>`;
-    log.scrollTop = log.scrollHeight;
+    cpAppend('ai', reply);
+    history.push({ role: 'assistant', content: reply });
+    cpSaveHistory(history);
+    cpSaveToLogs(history);
   }
 
-  // ── Get a real Supabase token for inserts (RLS requires auth) ──
-  // We use direct fetch so we don't touch the global _accessToken
-  addLog('Authenticating with Supabase...');
-  let seedToken = _accessToken; // use existing if available
-  if (!seedToken) {
+  btn.disabled = false;
+  document.getElementById('cp-input').focus();
+}
+
+// ── ADMIN: CHAT LOGS ──
+function loadChatLogs() {
+  const container = document.getElementById('chatlogs-container');
+  if (!container) return;
+
+  const index = JSON.parse(localStorage.getItem('relayops_chatlog_index') || '[]');
+
+  if (!index.length) {
+    container.innerHTML = '<div class="empty-state">No chat logs yet. Users must send at least one message for their chat to appear here.</div>';
+    return;
+  }
+
+  let html = '';
+  let count = 0;
+  index.forEach(key => {
     try {
-      const authRes = await fetch(BASE + '/auth/v1/token?grant_type=password', {
-        method: 'POST',
-        headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASS })
-      });
-      const authData = await authRes.json();
-      if (authData.access_token) {
-        seedToken = authData.access_token;
-        addLog('  ✓ Got auth token');
-      } else {
-        addLog('  ⚠ No Supabase account for admin yet — creating...', true);
-        // Try sign up
-        const suRes = await fetch(BASE + '/auth/v1/signup', {
-          method: 'POST',
-          headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASS, data: { full_name: 'Admin', role: 'admin' } })
-        });
-        const suData = await suRes.json();
-        if (suData.access_token) {
-          seedToken = suData.access_token;
-          addLog('  ✓ Admin account created and authenticated');
-        } else {
-          addLog('  ✗ Could not authenticate. Error: ' + JSON.stringify(suData).slice(0,100), false);
-          addLog('  → Try logging into Supabase dashboard and disabling RLS on jobs/providers tables, then retry.', false);
-          btn.disabled = false; btn.textContent = '🌱 Insert Test Data';
-          return;
-        }
-      }
-    } catch(e) {
-      addLog('  ✗ Auth network error: ' + e.message, false);
-      btn.disabled = false; btn.textContent = '🌱 Insert Test Data';
-      return;
-    }
+      const entry = JSON.parse(localStorage.getItem(key) || 'null');
+      if (!entry || !entry.history?.length) return;
+      count++;
+      const msgCount = entry.history.filter(m => m.role === 'user').length;
+      const updated  = new Date(entry.updated).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+      const roleLabel = entry.role === 'provider' ? 'Vendor' : entry.role === 'admin' ? 'Admin' : 'Customer';
+      html += `
+        <div class="chatlog-user">
+          <div class="chatlog-header" onclick="this.nextElementSibling.classList.toggle('open')">
+            <div>
+              <div class="chatlog-user-name">${esc(entry.name)} <span style="font-size:11px;color:rgba(255,255,255,.3);margin-left:8px;font-family:var(--mono)">${roleLabel}</span></div>
+              <div class="chatlog-meta">${msgCount} message${msgCount!==1?'s':''} · Last active ${updated}</div>
+            </div>
+            <span style="color:rgba(255,255,255,.3);font-size:12px">▾</span>
+          </div>
+          <div class="chatlog-msgs">
+            ${entry.history.map(m => `
+              <div class="chatlog-msg">
+                <div class="chatlog-role ${m.role === 'user' ? 'user' : 'ai'}">${m.role === 'user' ? 'User' : 'AI'}</div>
+                <div class="chatlog-text">${esc(m.content).replace(/\n/g,'<br>')}</div>
+              </div>`).join('')}
+          </div>
+        </div>`;
+    } catch(e) {}
+  });
+
+  if (!count) {
+    container.innerHTML = '<div class="empty-state">No chat logs yet.</div>';
   } else {
-    addLog('  ✓ Using existing session token');
+    container.innerHTML = `<div style="font-size:13px;color:rgba(255,255,255,.3);margin-bottom:16px;font-family:var(--mono)">${count} conversation${count!==1?'s':''} on this device</div>` + html;
   }
-
-  // Helper: insert with seed token
-  async function seedInsert(table, body) {
-    const r = await fetch(`${BASE}/rest/v1/${table}`, {
-      method: 'POST',
-      headers: {
-        'apikey': ANON_KEY,
-        'Authorization': 'Bearer ' + seedToken,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=representation'
-      },
-      body: JSON.stringify(body)
-    });
-    const d = await r.json().catch(() => ({}));
-    return { data: Array.isArray(d) ? d[0] : d, ok: r.ok };
-  }
-
-  // Helper: query with seed token
-  async function seedQuery(table, filter) {
-    const r = await fetch(`${BASE}/rest/v1/${table}?${filter}`, {
-      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + seedToken }
-    });
-    if (!r.ok) return [];
-    const d = await r.json().catch(() => []);
-    return Array.isArray(d) ? d : [];
-  }
-
-  // ── 1. Seed Vendors ──
-  const vendors = [
-    { full_name:'Marcus J. Williams', email:'marcus@mjwhandyman.com', phone:'(412) 555-0192', service_types:['Handyman','Painting'], coverage_zips:'Pittsburgh, PA — 25 miles', status:'active' },
-    { full_name:'Clean & Clear Crew', email:'ops@clearcrew.com', phone:'(412) 555-0847', service_types:['Cleaning','Turnover'], coverage_zips:'Pittsburgh, PA — 20 miles', status:'active' },
-    { full_name:'FastLock Pittsburgh', email:'dispatch@fastlockpgh.com', phone:'(412) 555-0334', service_types:['Lock Change'], coverage_zips:'Pittsburgh, PA — 15 miles', status:'active' },
-    { full_name:'Haul It Away LLC', email:'info@haulitaway.com', phone:'(412) 555-0561', service_types:['Junk Removal'], coverage_zips:'Pittsburgh & Philadelphia, PA', status:'active' },
-    { full_name:'Rivera Plumbing Co.', email:'service@riveraplumbing.com', phone:'(267) 555-0728', service_types:['Plumbing'], coverage_zips:'Philadelphia, PA — 20 miles', status:'pending' },
-    { full_name:'Philly Multi-Trade', email:'contact@phillytrade.com', phone:'(267) 555-0412', service_types:['Handyman','Cleaning','Painting'], coverage_zips:'Philadelphia, PA — 30 miles', status:'active' },
-  ];
-
-  addLog('\nInserting vendors...');
-  let vendorIds = {};
-  for (const v of vendors) {
-    const existing = await seedQuery('providers', `email=eq.${encodeURIComponent(v.email)}`);
-    if (existing.length > 0) {
-      addLog(`  ⏭ ${v.full_name} already exists`);
-      vendorIds[v.full_name] = existing[0].id;
-      continue;
-    }
-    const { data, ok } = await seedInsert('providers', v);
-    if (ok && data?.id) {
-      vendorIds[v.full_name] = data.id;
-      addLog(`  ✓ ${v.full_name}`);
-    } else {
-      addLog(`  ✗ Failed: ${v.full_name} — ${JSON.stringify(data).slice(0,80)}`, false);
-    }
-  }
-
-  // ── 2. Seed Jobs ──
-  const jobs = [
-    {
-      property_address:'347 Amberson Ave, Pittsburgh, PA 15232',
-      job_type:'Cleaning', urgency:'Urgent', status:'submitted',
-      description:'Move-out clean on 2BR/1BA unit. Tenant left yesterday. Need same-day if possible. Access via lockbox code 4412.',
-    },
-    {
-      property_address:'1128 Penn Ave, Pittsburgh, PA 15222',
-      job_type:'Lock Change', urgency:'Emergency', status:'assigned',
-      description:'Emergency rekey needed after tenant dispute. All 3 exterior locks need rekeying. Owner will meet vendor on site.',
-      provider_id: vendorIds['FastLock Pittsburgh'] || null,
-      quoted_price: 185, admin_notes:'FastLock confirmed, ETA 45 min.',
-    },
-    {
-      property_address:'512 S 20th St, Philadelphia, PA 19146',
-      job_type:'Handyman', urgency:'Scheduled', status:'priced',
-      description:'Punch-list for unit turnover: fix 2 cabinet doors, patch 3 drywall holes, replace bathroom faucet, touch up baseboards.',
-      quoted_price: 320, admin_notes:'Quote approved by ops. Awaiting customer payment to dispatch.',
-      payment_link:'https://buy.stripe.com/test_example',
-    },
-    {
-      property_address:'88 Shady Ave, Pittsburgh, PA 15206',
-      job_type:'Junk Removal', urgency:'Flexible', status:'completed',
-      description:'Full basement cleanout. Previous tenant left furniture, appliances, and boxes. Estimate 1 truck load.',
-      provider_id: vendorIds['Haul It Away LLC'] || null,
-      quoted_price: 450, admin_notes:'Job completed. 1.5 truck loads total.',
-      completion_notes:'Cleared full basement. Removed: 1 couch, 2 mattresses, 4 appliances, ~30 boxes. Property clean.',
-    },
-    {
-      property_address:'2234 Murray Ave, Pittsburgh, PA 15217',
-      job_type:'Painting', urgency:'Scheduled', status:'in_progress',
-      description:'Full unit repaint — 2BR/1BA. Walls only, standard white. Unit is empty. Paint and supplies needed.',
-      provider_id: vendorIds['Marcus J. Williams'] || null,
-      quoted_price: 680, admin_notes:'Marcus started Day 1 of 2 today.',
-    },
-    {
-      property_address:'1901 Chestnut St, Philadelphia, PA 19103',
-      job_type:'Plumbing', urgency:'Urgent', status:'submitted',
-      description:'Kitchen sink drain completely blocked, water backing up. Tenant reports slow drain in bathroom too. Need same-day.',
-    },
-    {
-      property_address:'443 N Negley Ave, Pittsburgh, PA 15206',
-      job_type:'Turnover', urgency:'Urgent', status:'assigned',
-      description:'Same-day turnover needed — new tenant moves in tomorrow morning. Need full clean + lock rekey. Unit is empty.',
-      provider_id: vendorIds['Clean & Clear Crew'] || null,
-      quoted_price: 395, admin_notes:'Clean & Clear confirmed for 3pm today.',
-    },
-    {
-      property_address:'834 South St, Philadelphia, PA 19147',
-      job_type:'Handyman', urgency:'Flexible', status:'submitted',
-      description:'General maintenance punch-list: 5 items including leaking bathroom faucet, broken closet rod, 2 outlet covers missing, squeaky door hinge.',
-    },
-  ];
-
-  addLog('\nInserting jobs...');
-  let inserted = 0;
-  for (const j of jobs) {
-    if (!j.provider_id) delete j.provider_id;
-    const { data, ok } = await seedInsert('jobs', j);
-    if (ok) { inserted++; addLog(`  ✓ [${j.status}] ${j.job_type} — ${j.property_address.split(',')[0]}`); }
-    else { addLog(`  ✗ Failed: ${j.job_type} — ${JSON.stringify(data).slice(0,80)}`, false); }
-  }
-
-  addLog(`\n✅ Done! Inserted ${inserted} jobs and ${Object.keys(vendorIds).length} vendors.`);
-  addLog('Refresh the Job Queue and Vendors pages to see the data.');
-  btn.disabled = false; btn.textContent = '🌱 Insert Test Data';
-  loadAdminJobs(); loadAdminVendors();
 }
 
 // ═══════════════════════════════════════════════════════
 // BOOT
+
 // ═══════════════════════════════════════════════════════
 (async () => {
   const params    = new URLSearchParams(location.search);
@@ -2068,5 +2068,34 @@ async function seedTestData() {
   }
 })();
 </script>
+
+<!-- ── FLOATING CHAT BUBBLE + PANEL ── -->
+<button id="chat-bubble-btn" onclick="toggleChatPanel()" title="AI Assistant">
+  💬
+  <div class="chat-unread" id="chat-unread-dot"></div>
+</button>
+
+<div id="chat-panel">
+  <div class="chat-panel-header">
+    <div class="chat-panel-title">
+      <div class="chat-panel-dot"></div>
+      RelayOps AI
+    </div>
+    <button class="chat-panel-close" onclick="toggleChatPanel()">✕</button>
+  </div>
+  <div class="chat-panel-msgs" id="cp-msgs">
+    <div class="cp-empty" id="cp-empty">
+      <div class="cp-empty-icon">🤖</div>
+      <div>Ask anything about RelayOps,<br/>your jobs, or property maintenance.</div>
+      <div class="cp-suggestions" id="cp-suggestions"></div>
+    </div>
+  </div>
+  <div class="chat-panel-input-row">
+    <textarea class="chat-panel-input" id="cp-input" placeholder="Ask a question..." rows="1"
+      onkeydown="cpKeydown(event)" oninput="cpAutoResize(this)"></textarea>
+    <button class="chat-panel-send" id="cp-send" onclick="cpSend()">➤</button>
+  </div>
+</div>
+
 </body>
 </html>
