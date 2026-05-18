@@ -863,8 +863,14 @@ footer{background:#080808;padding:40px 0 28px;border-top:1px solid rgba(255,255,
       <div class="form-card">
         <div class="form-title">Job Request Form</div>
         <div class="form-sub">Submit your job details and we'll review, price, and match a vendor — typically within 2 hours.</div>
-        <div id="job-success" style="display:none;padding:16px;background:#eaf3de;border:1px solid #b7d9a0;border-radius:12px;color:#3b6d11;font-size:14px;margin-bottom:16px">
-          ✅ <strong>Job submitted!</strong> We'll review it and send you a quote within 2 hours.
+        <div id="job-success" style="display:none;padding:20px;background:#eaf3de;border:1px solid #b7d9a0;border-radius:12px;color:#3b6d11;font-size:14px;margin-bottom:16px">
+          <div style="font-weight:600;font-size:15px;margin-bottom:8px">✅ Job submitted successfully!</div>
+          <div style="margin-bottom:16px;color:#3b6d11">We'll review your request and send you a quote within 2 hours. Check your email for updates.</div>
+          <div style="background:#fff;border:1px solid #b7d9a0;border-radius:10px;padding:16px;margin-top:8px">
+            <div style="font-weight:600;color:#0d0d0d;margin-bottom:6px">📋 Track your job in real time</div>
+            <div style="font-size:13px;color:#6b6560;margin-bottom:14px">Create a free account to see your job status, receive your quote, and pay securely — all in one place.</div>
+            <a id="job-signup-btn" href="https://contactrelayops.github.io/relayops-site/relayops-portal.html" class="btn btn-red" style="display:inline-block;font-size:13px">Create Your Account →</a>
+          </div>
         </div>
         <div class="form-grid" id="job-form-fields">
           <div class="field"><label>Full Name</label><input id="job-name" type="text" placeholder="Your name"/></div>
@@ -943,8 +949,14 @@ footer{background:#080808;padding:40px 0 28px;border-top:1px solid rgba(255,255,
       <div class="form-card">
         <div class="form-title">Vendor Application</div>
         <div class="form-sub">Takes about 2 minutes. We review every application manually before activation.</div>
-        <div id="vendor-success" style="display:none;padding:16px;background:#eaf3de;border:1px solid #b7d9a0;border-radius:12px;color:#3b6d11;font-size:14px;margin-bottom:16px">
-          ✅ <strong>Application received!</strong> We'll review it and be in touch within 24 hours.
+        <div id="vendor-success" style="display:none;padding:20px;background:#eaf3de;border:1px solid #b7d9a0;border-radius:12px;color:#3b6d11;font-size:14px;margin-bottom:16px">
+          <div style="font-weight:600;font-size:15px;margin-bottom:8px">✅ Application received!</div>
+          <div style="margin-bottom:16px;color:#3b6d11">We review every application manually. You'll hear from us within 24 hours.</div>
+          <div style="background:#fff;border:1px solid #b7d9a0;border-radius:10px;padding:16px;margin-top:8px">
+            <div style="font-weight:600;color:#0d0d0d;margin-bottom:6px">🔧 Set up your vendor account</div>
+            <div style="font-size:13px;color:#6b6560;margin-bottom:14px">Create your portal account now so you're ready to see and accept jobs the moment we approve you.</div>
+            <a id="vendor-signup-btn" href="https://contactrelayops.github.io/relayops-site/relayops-portal.html" class="btn btn-red" style="display:inline-block;font-size:13px">Create Your Vendor Account →</a>
+          </div>
         </div>
         <div class="form-grid" id="vendor-form-fields">
           <div class="field"><label>Full Name</label><input id="v-name" type="text" placeholder="Your name"/></div>
@@ -1095,6 +1107,10 @@ async function submitJob() {
     document.getElementById('job-form-fields').style.display = 'none';
     document.getElementById('job-success').style.display = 'block';
     btn.style.display = 'none';
+    // Pre-fill email in portal signup link
+    if(email) {
+      document.getElementById('job-signup-btn').href = `https://contactrelayops.github.io/relayops-site/relayops-portal.html?email=${encodeURIComponent(email)}&tab=signup`;
+    }
     // Send email notification
     emailjs.send('service_slduczl', 'template_sacm0kn', {
       subject: '🚨 New Job Request — ' + jobType,
@@ -1157,6 +1173,10 @@ async function submitVendor() {
     document.getElementById('vendor-form-fields').style.display = 'none';
     document.getElementById('vendor-success').style.display = 'block';
     btn.style.display = 'none';
+    // Pre-fill email in portal signup link
+    if(email) {
+      document.getElementById('vendor-signup-btn').href = `https://contactrelayops.github.io/relayops-site/relayops-portal.html?email=${encodeURIComponent(email)}&tab=signup&role=provider`;
+    }
     // Send email notification
     emailjs.send('service_slduczl', 'template_sacm0kn', {
       subject: '🔧 New Vendor Application — ' + service,

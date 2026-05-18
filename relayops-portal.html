@@ -960,6 +960,26 @@ if(savedToken && savedUser && savedRole) {
   SESSION = savedToken;
   USER = JSON.parse(savedUser);
   bootApp(savedRole);
+} else {
+  // Check URL params for pre-filled signup
+  const params = new URLSearchParams(window.location.search);
+  const paramEmail = params.get('email');
+  const paramTab = params.get('tab');
+  const paramRole = params.get('role');
+  if(paramEmail) {
+    document.getElementById('su-email').value = paramEmail;
+    document.getElementById('si-email').value = paramEmail;
+  }
+  if(paramTab === 'signup') {
+    switchAuthTab('signup');
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab')[1].classList.add('active');
+    document.getElementById('signin-form').style.display = 'none';
+    document.getElementById('signup-form').style.display = 'block';
+  }
+  if(paramRole === 'provider') {
+    pickRole('provider');
+  }
 }
 
 // Close modal on overlay click
