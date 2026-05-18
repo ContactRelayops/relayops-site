@@ -1026,9 +1026,6 @@ a{text-decoration:none;color:inherit}
       </div>
 
 
-/div>
-
-
       <!-- ══════════════════════════════════════════
            ADMIN: AI CHAT LOGS
       ══════════════════════════════════════════ -->
@@ -1280,7 +1277,9 @@ async function doSignIn() {
   // ── Admin: bypass Supabase entirely ──
   if (email.toLowerCase() === ADMIN_EMAIL.toLowerCase() && pass === ADMIN_PASS) {
     btn.disabled = false; btn.textContent = 'Sign In →';
-    await enterAdminMode({ id: 'admin-local', email: ADMIN_EMAIL, user_metadata: { full_name: 'Admin' }, created_at: new Date().toISOString() });
+    const adminUser = { id: 'admin-local', email: ADMIN_EMAIL, user_metadata: { full_name: 'Admin' }, created_at: new Date().toISOString() };
+    sessionStorage.setItem('relayops_admin', '1');
+    await enterAdminMode(adminUser);
     return;
   }
 
@@ -1348,6 +1347,7 @@ function doSignOut() {
   chatHistories.customer = []; chatHistories.admin = []; chatHistories.provider = [];
   document.getElementById('app').style.display = 'none';
   document.getElementById('auth-screen').style.display = 'flex';
+  sessionStorage.removeItem('relayops_admin');
   document.getElementById('chat-bubble-btn').classList.remove('visible');
   document.getElementById('chat-panel').classList.remove('open');
   // Reset nav
@@ -1862,9 +1862,17 @@ function initChatBubble() {
   cpPanelOpen = false;
   document.getElementById('chat-panel').classList.remove('open');
 
+  // ── Fully reset the chat DOM for this user (prevents cross-user bleed) ──
+  const msgs = document.getElementById('cp-msgs');
+  msgs.innerHTML = `<div class="cp-empty" id="cp-empty">
+    <div class="cp-empty-icon">🤖</div>
+    <div>Ask anything about RelayOps,<br>your jobs, or property maintenance.</div>
+    <div class="cp-suggestions" id="cp-suggestions"></div>
+  </div>`;
+  document.getElementById('chat-unread-dot').classList.remove('show');
+
   // Load existing history for this user
   const history = cpLoadHistory();
-  const msgs = document.getElementById('cp-msgs');
 
   // Render suggestions
   const role = currentRole === 'provider' ? 'provider' : currentRole === 'admin' ? 'admin' : 'customer';
@@ -1957,39 +1965,40 @@ async function cpSend() {
 
   cpShowTyping();
 
+  // Try Anthropic API directly (works in Claude.ai artifact context),
+  // otherwise immediately fall back to smart local replies — no error shown to user.
+  let reply = null;
   try {
-    const res = await fetch('https://corsproxy.io/?' + encodeURIComponent('https://api.anthropic.com/v1/messages'), {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01', 'x-api-key': 'RELAYOPS_AI_PLACEHOLDER' },
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+        'x-api-key': 'RELAYOPS_AI_PLACEHOLDER'
+      },
       body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 600, system: getChatSystemPrompt(), messages: history })
     });
+    clearTimeout(timeout);
     const data = await res.json();
-    cpHideTyping();
-
-    let reply;
-    if (data.error || data.type === 'error') {
-      reply = getLocalReply(text);
-    } else {
-      reply = data.content?.map(b => b.text||'').join('') || 'No response.';
+    if (!data.error && data.content) {
+      reply = data.content.map(b => b.text||'').join('');
     }
+  } catch(e) { /* fall through to local */ }
 
-    cpAppend('ai', reply);
-    history.push({ role: 'assistant', content: reply });
-    cpSaveHistory(history);
-    cpSaveToLogs(history);
+  cpHideTyping();
+  if (!reply) reply = getLocalReply(text);
 
-    // Show unread dot if panel is closed
-    if (!cpPanelOpen) {
-      document.getElementById('chat-unread-dot').classList.add('show');
-    }
+  cpAppend('ai', reply);
+  history.push({ role: 'assistant', content: reply });
+  cpSaveHistory(history);
+  cpSaveToLogs(history);
 
-  } catch(e) {
-    cpHideTyping();
-    const reply = getLocalReply(text);
-    cpAppend('ai', reply);
-    history.push({ role: 'assistant', content: reply });
-    cpSaveHistory(history);
-    cpSaveToLogs(history);
+  if (!cpPanelOpen) {
+    document.getElementById('chat-unread-dot').classList.add('show');
   }
 
   btn.disabled = false;
@@ -2057,14 +2066,25 @@ function loadChatLogs() {
   if (tabP === 'signup') { switchAuthTab('signup'); if (emailP) document.getElementById('su-email').value = emailP; if (roleP === 'provider') selectRole('provider'); }
   else if (emailP) { document.getElementById('si-email').value = emailP; }
 
-  // Restore session from sessionStorage
+  // ── Restore admin session (no Supabase needed) ──
+  if (sessionStorage.getItem('relayops_admin') === '1') {
+    await enterAdminMode({ id: 'admin-local', email: ADMIN_EMAIL, user_metadata: { full_name: 'Admin' }, created_at: new Date().toISOString() });
+    return;
+  }
+
+  // ── Restore regular user session from token ──
   if (sbRestoreSession()) {
-    // We have a token — try to get user from Supabase
     try {
-      const r = await fetch(BASE + '/auth/v1/user', { headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + _accessToken } });
-      if (r.ok) { const user = await r.json(); await initApp(user); return; }
+      const r = await fetch(BASE + '/auth/v1/user', {
+        headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + _accessToken }
+      });
+      if (r.ok) {
+        const user = await r.json();
+        await initApp(user);
+        return;
+      }
     } catch(e) {}
-    sbSignOut(); // token was bad
+    sbSignOut(); // token expired
   }
 })();
 </script>
