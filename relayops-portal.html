@@ -899,6 +899,12 @@ a{text-decoration:none;color:inherit}
               <a href="https://contactrelayops.github.io/relayops-site" target="_blank" class="btn btn-ghost btn-sm">🌐 Website</a>
             </div>
           </div>
+          <div class="card">
+            <div class="card-title">🌱 Seed Test Data</div>
+            <div style="font-size:13px;color:rgba(255,255,255,.4);margin-bottom:16px;line-height:1.6">Inserts sample vendors and jobs for testing. Safe to run multiple times — checks for duplicates first.</div>
+            <div id="seed-log" style="font-size:12px;font-family:var(--mono);color:rgba(255,255,255,.5);background:rgba(0,0,0,.3);border-radius:8px;padding:12px;margin-bottom:14px;display:none;max-height:180px;overflow-y:auto;line-height:1.8"></div>
+            <button class="btn btn-red" id="seed-btn" onclick="seedTestData()">🌱 Insert Test Data</button>
+          </div>
         </div>
       </div>
 
@@ -1853,6 +1859,121 @@ function getLocalReply(text) {
     return `RelayOps currently operates in **Pittsburgh, PA** and **Philadelphia, PA**. We are expanding nationally. Contact contactrelayops@gmail.com to get on the waitlist for your city.`;
 
   return `Happy to help! You can:\n\n- Check your dashboard tabs for live job info\n- Email us at **contactrelayops@gmail.com**\n- Call **(267) 875-9111**\n\nWhat specifically would you like to know about your jobs, pricing, or how RelayOps works?`;
+}
+
+
+// ═══════════════════════════════════════════════════════
+// SEED TEST DATA (admin only)
+// ═══════════════════════════════════════════════════════
+async function seedTestData() {
+  const btn = document.getElementById('seed-btn');
+  const log = document.getElementById('seed-log');
+  btn.disabled = true; btn.textContent = 'Seeding...';
+  log.style.display = 'block'; log.innerHTML = '';
+
+  function addLog(msg, ok=true) {
+    log.innerHTML += `<div style="color:${ok?'#51cf66':'#ff8898'}">${msg}</div>`;
+    log.scrollTop = log.scrollHeight;
+  }
+
+  // ── 1. Seed Vendors ──
+  const vendors = [
+    { full_name:'Marcus J. Williams', email:'marcus@mjwhandyman.com', phone:'(412) 555-0192', service_types:['Handyman','Painting'], coverage_zips:'Pittsburgh, PA — 25 miles', status:'active' },
+    { full_name:'Clean & Clear Crew', email:'ops@clearcrew.com', phone:'(412) 555-0847', service_types:['Cleaning','Turnover'], coverage_zips:'Pittsburgh, PA — 20 miles', status:'active' },
+    { full_name:'FastLock Pittsburgh', email:'dispatch@fastlockpgh.com', phone:'(412) 555-0334', service_types:['Lock Change'], coverage_zips:'Pittsburgh, PA — 15 miles', status:'active' },
+    { full_name:'Haul It Away LLC', email:'info@haulitaway.com', phone:'(412) 555-0561', service_types:['Junk Removal'], coverage_zips:'Pittsburgh & Philadelphia, PA', status:'active' },
+    { full_name:'Rivera Plumbing Co.', email:'service@riveraplumbing.com', phone:'(267) 555-0728', service_types:['Plumbing'], coverage_zips:'Philadelphia, PA — 20 miles', status:'pending' },
+    { full_name:'Philly Multi-Trade', email:'contact@phillytrade.com', phone:'(267) 555-0412', service_types:['Handyman','Cleaning','Painting'], coverage_zips:'Philadelphia, PA — 30 miles', status:'active' },
+  ];
+
+  addLog('Inserting vendors...');
+  let vendorIds = {};
+  for (const v of vendors) {
+    // Check if exists
+    const existing = await dbWhere('providers', 'email', v.email);
+    if (existing.length > 0) {
+      addLog(`  ⏭ ${v.full_name} already exists`);
+      vendorIds[v.full_name] = existing[0].id;
+      continue;
+    }
+    const { data, ok } = await dbInsert('providers', v);
+    if (ok && data?.id) {
+      vendorIds[v.full_name] = data.id;
+      addLog(`  ✓ ${v.full_name}`);
+    } else {
+      addLog(`  ✗ Failed: ${v.full_name}`, false);
+    }
+  }
+
+  // ── 2. Seed Jobs ──
+  const jobs = [
+    {
+      property_address:'347 Amberson Ave, Pittsburgh, PA 15232',
+      job_type:'Cleaning', urgency:'Urgent', status:'submitted',
+      description:'Move-out clean on 2BR/1BA unit. Tenant left yesterday. Need same-day if possible. Access via lockbox code 4412.',
+    },
+    {
+      property_address:'1128 Penn Ave, Pittsburgh, PA 15222',
+      job_type:'Lock Change', urgency:'Emergency', status:'assigned',
+      description:'Emergency rekey needed after tenant dispute. All 3 exterior locks need rekeying. Owner will meet vendor on site.',
+      provider_id: vendorIds['FastLock Pittsburgh'] || null,
+      quoted_price: 185, admin_notes:'FastLock confirmed, ETA 45 min.',
+    },
+    {
+      property_address:'512 S 20th St, Philadelphia, PA 19146',
+      job_type:'Handyman', urgency:'Scheduled', status:'priced',
+      description:'Punch-list for unit turnover: fix 2 cabinet doors, patch 3 drywall holes, replace bathroom faucet, touch up baseboards.',
+      quoted_price: 320, admin_notes:'Quote approved by ops. Awaiting customer payment to dispatch.',
+      payment_link:'https://buy.stripe.com/test_example',
+    },
+    {
+      property_address:'88 Shady Ave, Pittsburgh, PA 15206',
+      job_type:'Junk Removal', urgency:'Flexible', status:'completed',
+      description:'Full basement cleanout. Previous tenant left furniture, appliances, and boxes. Estimate 1 truck load.',
+      provider_id: vendorIds['Haul It Away LLC'] || null,
+      quoted_price: 450, admin_notes:'Job completed. 1.5 truck loads total.',
+      completion_notes:'Cleared full basement. Removed: 1 couch, 2 mattresses, 4 appliances, ~30 boxes. Property clean.',
+    },
+    {
+      property_address:'2234 Murray Ave, Pittsburgh, PA 15217',
+      job_type:'Painting', urgency:'Scheduled', status:'in_progress',
+      description:'Full unit repaint — 2BR/1BA. Walls only, standard white. Unit is empty. Paint and supplies needed.',
+      provider_id: vendorIds['Marcus J. Williams'] || null,
+      quoted_price: 680, admin_notes:'Marcus started Day 1 of 2 today.',
+    },
+    {
+      property_address:'1901 Chestnut St, Philadelphia, PA 19103',
+      job_type:'Plumbing', urgency:'Urgent', status:'submitted',
+      description:'Kitchen sink drain completely blocked, water backing up. Tenant reports slow drain in bathroom too. Need same-day.',
+    },
+    {
+      property_address:'443 N Negley Ave, Pittsburgh, PA 15206',
+      job_type:'Turnover', urgency:'Urgent', status:'assigned',
+      description:'Same-day turnover needed — new tenant moves in tomorrow morning. Need full clean + lock rekey. Unit is empty.',
+      provider_id: vendorIds['Clean & Clear Crew'] || null,
+      quoted_price: 395, admin_notes:'Clean & Clear confirmed for 3pm today.',
+    },
+    {
+      property_address:'834 South St, Philadelphia, PA 19147',
+      job_type:'Handyman', urgency:'Flexible', status:'submitted',
+      description:'General maintenance punch-list: 5 items including leaking bathroom faucet, broken closet rod, 2 outlet covers missing, squeaky door hinge.',
+    },
+  ];
+
+  addLog('\nInserting jobs...');
+  let inserted = 0;
+  for (const j of jobs) {
+    // Clean undefined provider_ids
+    if (j.provider_id === null || j.provider_id === undefined) delete j.provider_id;
+    const { data, ok } = await dbInsert('jobs', j);
+    if (ok) { inserted++; addLog(`  ✓ [${j.status}] ${j.job_type} — ${j.property_address.split(',')[0]}`); }
+    else { addLog(`  ✗ Failed: ${j.job_type}`, false); }
+  }
+
+  addLog(`\n✅ Done! Inserted ${inserted} jobs and ${Object.keys(vendorIds).length} vendors.`);
+  addLog('Refresh the Job Queue and Vendors pages to see the data.');
+  btn.disabled = false; btn.textContent = '🌱 Insert Test Data';
+  loadAdminJobs(); loadAdminVendors();
 }
 
 // ═══════════════════════════════════════════════════════
