@@ -7,7 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <script>emailjs.init('fjlY4_qDvbN5NHIbn');</script>
 <style>
@@ -932,159 +931,215 @@ a{text-decoration:none;color:inherit}
 </div>
 
 <script>
-// ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 // CONFIG
-// ──────────────────────────────────────────────────────
-const SUPABASE_URL = 'https://qnufazzxoiomgqxydvnf.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFudWZhenp4b2lvbWdxeHlkdm5mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0MjIyNjksImV4cCI6MjA5MDk5ODI2OX0.dEVE3cdJupCHhqZ4OvoSi3A2ZbNmANHoCWG4bISeDzc';
-const ADMIN_EMAIL  = 'contactrelayops@gmail.com';
-const ADMIN_PASS   = 'Relay2025';
+// ═══════════════════════════════════════════════════════
+const BASE      = 'https://qnufazzxoiomgqxydvnf.supabase.co';
+const ANON_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFudWZhenp4b2lvbWdxeHlkdm5mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0MjIyNjksImV4cCI6MjA5MDk5ODI2OX0.dEVE3cdJupCHhqZ4OvoSi3A2ZbNmANHoCWG4bISeDzc';
+const ADMIN_EMAIL = 'contactrelayops@gmail.com';
+const ADMIN_PASS  = 'Relay2025';
 
-// Supabase UMD bundle exposes window.supabase = { createClient }
-const _supa = window.supabase || window.Supabase || {};
-const _createClient = _supa.createClient || (typeof createClient !== 'undefined' ? createClient : null);
-if(!_createClient) { console.error('Supabase failed to load'); }
-const sb = _createClient ? _createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+// ═══════════════════════════════════════════════════════
+// RAW SUPABASE HELPERS  (no SDK — pure fetch)
+// ═══════════════════════════════════════════════════════
+let _accessToken = null;
+let _refreshToken = null;
 
+function authHeaders(extra) {
+  const h = { 'apikey': ANON_KEY, 'Content-Type': 'application/json', ...extra };
+  if (_accessToken) h['Authorization'] = 'Bearer ' + _accessToken;
+  else h['Authorization'] = 'Bearer ' + ANON_KEY;
+  return h;
+}
+
+// Auth: sign in
+async function sbSignIn(email, password) {
+  const r = await fetch(BASE + '/auth/v1/token?grant_type=password', {
+    method: 'POST',
+    headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  const d = await r.json();
+  if (!r.ok) return { user: null, error: d.error_description || d.msg || 'Sign in failed' };
+  _accessToken  = d.access_token;
+  _refreshToken = d.refresh_token;
+  sessionStorage.setItem('sb_access',  _accessToken);
+  sessionStorage.setItem('sb_refresh', _refreshToken);
+  return { user: d.user, error: null };
+}
+
+// Auth: sign up
+async function sbSignUp(email, password, meta) {
+  const r = await fetch(BASE + '/auth/v1/signup', {
+    method: 'POST',
+    headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password, data: meta })
+  });
+  const d = await r.json();
+  if (!r.ok) return { user: null, error: d.error_description || d.msg || 'Sign up failed' };
+  if (d.access_token) { _accessToken = d.access_token; _refreshToken = d.refresh_token; sessionStorage.setItem('sb_access', _accessToken); sessionStorage.setItem('sb_refresh', _refreshToken); }
+  return { user: d.user || d, error: null };
+}
+
+// Auth: sign out
+function sbSignOut() {
+  _accessToken = null; _refreshToken = null;
+  sessionStorage.removeItem('sb_access'); sessionStorage.removeItem('sb_refresh');
+}
+
+// Auth: restore from session
+function sbRestoreSession() {
+  _accessToken  = sessionStorage.getItem('sb_access');
+  _refreshToken = sessionStorage.getItem('sb_refresh');
+  return !!_accessToken;
+}
+
+// DB: select
+async function dbSelect(table, params = '') {
+  const r = await fetch(`${BASE}/rest/v1/${table}?${params}&order=created_at.desc`, {
+    headers: authHeaders({ 'Prefer': 'return=representation' })
+  });
+  if (!r.ok) return [];
+  return await r.json();
+}
+
+// DB: insert
+async function dbInsert(table, body) {
+  const r = await fetch(`${BASE}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: authHeaders({ 'Prefer': 'return=representation' }),
+    body: JSON.stringify(body)
+  });
+  const d = await r.json();
+  return { data: Array.isArray(d) ? d[0] : d, ok: r.ok, error: r.ok ? null : d };
+}
+
+// DB: update
+async function dbUpdate(table, id, body) {
+  const r = await fetch(`${BASE}/rest/v1/${table}?id=eq.${id}`, {
+    method: 'PATCH',
+    headers: authHeaders({ 'Prefer': 'return=representation' }),
+    body: JSON.stringify(body)
+  });
+  return r.ok;
+}
+
+// DB: select with filter
+async function dbWhere(table, col, val, extra = '') {
+  return dbSelect(table, `${col}=eq.${encodeURIComponent(val)}${extra ? '&' + extra : ''}`);
+}
+
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
 let currentUser = null;
-let currentRole = null; // 'admin' | 'customer' | 'provider'
+let currentRole = null;
 let currentProviderRecord = null;
 let allAdminJobs = [];
 let allAdminVendors = [];
 let allCustomerJobs = [];
 let allVendorJobs = [];
 let notifPollInterval = null;
-let jobStatusCache = {}; // jobId → status
+let jobStatusCache = {};
+let chatHistory = [];
 
-// ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 // NOTIFICATIONS
-// ──────────────────────────────────────────────────────
-function showNotif(title, msg, type='info', duration=5000) {
-  const icons = {info:'ℹ️', success:'✅', warning:'⚠️', update:'🔔'};
+// ═══════════════════════════════════════════════════════
+function showNotif(title, msg, type = 'info', duration = 5000) {
+  const icons = { info: 'ℹ️', success: '✅', warning: '⚠️', update: '🔔' };
   const container = document.getElementById('notif-container');
   const el = document.createElement('div');
   el.className = `notif ${type}`;
-  el.innerHTML = `
-    <div class="notif-icon">${icons[type]||'🔔'}</div>
-    <div class="notif-body">
-      <div class="notif-title">${title}</div>
-      <div class="notif-msg">${msg}</div>
-    </div>
-    <button class="notif-close" onclick="dismissNotif(this.parentElement)">✕</button>
-  `;
+  el.innerHTML = `<div class="notif-icon">${icons[type]||'🔔'}</div><div class="notif-body"><div class="notif-title">${title}</div><div class="notif-msg">${msg}</div></div><button class="notif-close" onclick="dismissNotif(this.parentElement)">✕</button>`;
   container.appendChild(el);
-  if(duration>0) setTimeout(()=>dismissNotif(el), duration);
+  if (duration > 0) setTimeout(() => dismissNotif(el), duration);
 }
 function dismissNotif(el) {
-  if(!el||el.classList.contains('out'))return;
+  if (!el || el.classList.contains('out')) return;
   el.classList.add('out');
-  setTimeout(()=>el.remove(), 300);
+  setTimeout(() => el.remove(), 300);
 }
 
-// ──────────────────────────────────────────────────────
-// STATUS POLL — detects job status changes for customers
-// ──────────────────────────────────────────────────────
-const STATUS_LABELS = {
-  submitted:'Submitted', priced:'Quoted — awaiting your approval',
-  assigned:'Vendor assigned', in_progress:'In progress',
-  completed:'Job completed! 🎉', cancelled:'Cancelled'
-};
-const STATUS_NOTIF_TYPE = {
-  priced:'warning', assigned:'info', in_progress:'info',
-  completed:'success', cancelled:'warning'
-};
+// ═══════════════════════════════════════════════════════
+// STATUS POLLING
+// ═══════════════════════════════════════════════════════
+const STATUS_LABELS = { submitted: 'Submitted', priced: 'Quoted — awaiting approval', assigned: 'Vendor assigned', in_progress: 'In progress', completed: 'Job completed! 🎉', cancelled: 'Cancelled' };
+const STATUS_NOTIF_TYPE = { priced: 'warning', assigned: 'info', in_progress: 'info', completed: 'success', cancelled: 'warning' };
 
 async function pollJobStatuses() {
-  if(!currentUser || currentRole !== 'customer') return;
+  if (!currentUser || currentRole !== 'customer') return;
   try {
-    const {data} = await sb.from('jobs').select('id,status,property_address,job_type').eq('user_id', currentUser.id);
-    if(!data) return;
-    data.forEach(j => {
+    const jobs = await dbWhere('jobs', 'user_id', currentUser.id, 'select=id,status,property_address,job_type');
+    jobs.forEach(j => {
       const prev = jobStatusCache[j.id];
-      if(prev && prev !== j.status) {
+      if (prev && prev !== j.status) {
         const label = STATUS_LABELS[j.status] || j.status;
         const type  = STATUS_NOTIF_TYPE[j.status] || 'info';
-        const addr  = j.property_address ? j.property_address.split(',')[0] : j.job_type;
-        showNotif(`Job Update: ${addr}`, `Status changed → ${label}`, type, 8000);
-        // refresh the list if it's visible
+        const addr  = (j.property_address || j.job_type || 'Job').split(',')[0];
+        showNotif(`Job Update: ${addr}`, `Status → ${label}`, type, 8000);
         loadCustomerJobs();
       }
       jobStatusCache[j.id] = j.status;
     });
-  } catch(e){}
+  } catch(e) {}
 }
+function startStatusPolling() { if (notifPollInterval) clearInterval(notifPollInterval); notifPollInterval = setInterval(pollJobStatuses, 30000); }
+function stopStatusPolling()  { if (notifPollInterval) clearInterval(notifPollInterval); }
 
-function startStatusPolling() {
-  if(notifPollInterval) clearInterval(notifPollInterval);
-  notifPollInterval = setInterval(pollJobStatuses, 30000); // every 30s
-}
-function stopStatusPolling() {
-  if(notifPollInterval) clearInterval(notifPollInterval);
-}
-
-// ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 // AUTH
-// ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 let selectedRole = 'customer';
 function selectRole(r) {
   selectedRole = r;
-  document.getElementById('role-customer').classList.toggle('selected', r==='customer');
-  document.getElementById('role-provider').classList.toggle('selected', r==='provider');
+  document.getElementById('role-customer').classList.toggle('selected', r === 'customer');
+  document.getElementById('role-provider').classList.toggle('selected', r === 'provider');
 }
 function switchAuthTab(t) {
-  document.getElementById('tab-signin').classList.toggle('active', t==='signin');
-  document.getElementById('tab-signup').classList.toggle('active', t==='signup');
-  document.getElementById('signin-form').style.display = t==='signin' ? '' : 'none';
-  document.getElementById('signup-form').style.display = t==='signup' ? '' : 'none';
-  document.getElementById('auth-error').style.display = 'none';
+  document.getElementById('tab-signin').classList.toggle('active', t === 'signin');
+  document.getElementById('tab-signup').classList.toggle('active', t === 'signup');
+  document.getElementById('signin-form').style.display = t === 'signin' ? '' : 'none';
+  document.getElementById('signup-form').style.display = t === 'signup' ? '' : 'none';
+  document.getElementById('auth-error').style.cssText = 'display:none';
 }
-function authErr(msg) {
+function authErr(msg, green) {
   const el = document.getElementById('auth-error');
-  el.textContent = msg; el.style.display = 'block';
+  el.textContent = msg;
+  el.style.cssText = green
+    ? 'display:block;background:rgba(81,207,102,.12);border:1px solid rgba(81,207,102,.3);border-radius:10px;padding:10px 14px;font-size:13px;color:#51cf66;margin-bottom:14px'
+    : 'display:block;background:rgba(200,16,46,.15);border:1px solid rgba(200,16,46,.3);border-radius:10px;padding:10px 14px;font-size:13px;color:#ff8898;margin-bottom:14px';
 }
 
 async function doSignIn() {
   const email = document.getElementById('si-email').value.trim();
   const pass  = document.getElementById('si-pass').value;
-  if(!email||!pass){authErr('Please enter email and password.');return;}
-  const btn = document.getElementById('si-btn');
-  btn.disabled=true; btn.textContent='Signing in...';
-  document.getElementById('auth-error').style.display='none';
+  if (!email || !pass) { authErr('Please enter your email and password.'); return; }
 
-  // Admin bypass — no Supabase needed
-  if(email===ADMIN_EMAIL && pass===ADMIN_PASS) {
-    if(sb) {
-      try {
-        const {data} = await sb.auth.signInWithPassword({email,password:pass});
-        if(data?.user) { btn.disabled=false; btn.textContent='Sign In →'; await enterAdminMode(data.user); return; }
-      } catch(e) {}
-    }
-    btn.disabled=false; btn.textContent='Sign In →';
-    await enterAdminMode({id:'admin-local',email:ADMIN_EMAIL,user_metadata:{full_name:'Admin'},created_at:new Date().toISOString()});
+  const btn = document.getElementById('si-btn');
+  btn.disabled = true; btn.textContent = 'Signing in...';
+  document.getElementById('auth-error').style.display = 'none';
+
+  // ── Admin shortcut: bypass Supabase auth entirely ──
+  if (email === ADMIN_EMAIL && pass === ADMIN_PASS) {
+    btn.disabled = false; btn.textContent = 'Sign In →';
+    await enterAdminMode({ id: 'admin-local', email: ADMIN_EMAIL, user_metadata: { full_name: 'Admin' }, created_at: new Date().toISOString() });
     return;
   }
 
-  if(!sb) { btn.disabled=false; btn.textContent='Sign In →'; authErr('Connection error — page failed to load properly. Please hard-refresh (Ctrl+Shift+R) and try again.'); return; }
-
   try {
-    const {data,error} = await sb.auth.signInWithPassword({email,password:pass});
-
-    if(error) {
-      btn.disabled=false; btn.textContent='Sign In →';
-      const msg = error.message || 'Sign in failed';
-      if(msg.toLowerCase().includes('invalid login') || msg.toLowerCase().includes('invalid credentials')) authErr('Incorrect email or password. Please try again.');
-      else if(msg.toLowerCase().includes('email not confirmed')) authErr('Please confirm your email address first, then try again.');
-      else authErr(msg);
+    const { user, error } = await sbSignIn(email, pass);
+    btn.disabled = false; btn.textContent = 'Sign In →';
+    if (error) {
+      if (error.toLowerCase().includes('invalid') || error.toLowerCase().includes('credentials') || error.toLowerCase().includes('wrong')) authErr('Incorrect email or password.');
+      else if (error.toLowerCase().includes('confirm')) authErr('Please confirm your email first, then try again.');
+      else authErr(error);
       return;
     }
-
-    btn.disabled=false; btn.textContent='Sign In →';
-    if(!data?.user) { authErr('Sign in failed — no user returned. Please try again.'); return; }
-    await initApp(data.user);
-
+    await initApp(user);
   } catch(e) {
-    btn.disabled=false; btn.textContent='Sign In →';
-    authErr('Connection error. Please check your internet and try again.');
+    btn.disabled = false; btn.textContent = 'Sign In →';
+    authErr('Network error. Please check your connection and try again.');
   }
 }
 
@@ -1092,224 +1147,174 @@ async function doSignUp() {
   const name  = document.getElementById('su-name').value.trim();
   const email = document.getElementById('su-email').value.trim();
   const pass  = document.getElementById('su-pass').value;
-  if(!name||!email||!pass){authErr('Please fill in all fields.');return;}
-  if(pass.length<6){authErr('Password must be at least 6 characters.');return;}
+  if (!name || !email || !pass) { authErr('Please fill in all fields.'); return; }
+  if (pass.length < 6) { authErr('Password must be at least 6 characters.'); return; }
+
   const btn = document.getElementById('su-btn');
-  btn.disabled=true; btn.textContent='Creating account...';
-  document.getElementById('auth-error').style.display='none';
+  btn.disabled = true; btn.textContent = 'Creating account...';
+  document.getElementById('auth-error').style.display = 'none';
 
-  let signUpData, signUpError;
   try {
-    const res = await sb.auth.signUp({
-      email, password:pass,
-      options:{data:{full_name:name, role:selectedRole}}
-    });
-    signUpData = res.data; signUpError = res.error;
+    const { user, error } = await sbSignUp(email, pass, { full_name: name, role: selectedRole });
+    btn.disabled = false; btn.textContent = 'Create Account →';
+    if (error) {
+      if (error.toLowerCase().includes('already')) authErr('An account with this email already exists. Try signing in.');
+      else authErr(error);
+      return;
+    }
+    if (selectedRole === 'provider') {
+      await dbInsert('providers', { full_name: name, email, phone: '', service_types: [], coverage_zips: '', status: 'pending', user_id: user?.id || null });
+    }
+    if (_accessToken) {
+      await initApp(user);
+    } else {
+      authErr('✅ Account created! Check your email to confirm it, then sign in.', true);
+    }
   } catch(e) {
-    btn.disabled=false; btn.textContent='Create Account →';
-    authErr('Connection error. Please try again.');
-    return;
-  }
-  btn.disabled=false; btn.textContent='Create Account →';
-  if(signUpError) {
-    const msg = signUpError.message||'';
-    if(msg.toLowerCase().includes('already registered')) authErr('An account with this email already exists. Try signing in instead.');
-    else authErr(msg||'Sign up failed. Please try again.');
-    return;
-  }
-  if(!signUpData?.user) { authErr('Account creation failed. Please try again.'); return; }
-
-  if(selectedRole==='provider') {
-    await sb.from('providers').insert({
-      full_name:name, email, phone:'', service_types:[], coverage_zips:'', status:'pending',
-      user_id: signUpData.user.id
-    }).catch(()=>{});
-  }
-  // Supabase may require email confirmation — handle gracefully
-  if(signUpData.session) {
-    await initApp(signUpData.user);
-  } else {
-    authErr('');
-    document.getElementById('auth-error').style.cssText='display:block;background:rgba(81,207,102,.12);border-color:rgba(81,207,102,.3);color:#51cf66';
-    document.getElementById('auth-error').textContent='✅ Account created! Check your email to confirm, then sign in.';
+    btn.disabled = false; btn.textContent = 'Create Account →';
+    authErr('Network error. Please try again.');
   }
 }
 
-async function doSignOut() {
-  stopStatusPolling();
-  await sb.auth.signOut();
-  currentUser=null; currentRole=null; currentProviderRecord=null;
-  jobStatusCache={};
-  document.getElementById('app').style.display='none';
-  document.getElementById('auth-screen').style.display='flex';
+function doSignOut() {
+  stopStatusPolling(); sbSignOut();
+  currentUser = null; currentRole = null; currentProviderRecord = null; jobStatusCache = {}; chatHistory = [];
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+  // Reset nav
+  ['nav-customer','nav-vendor','nav-admin'].forEach(id => document.getElementById(id).style.display = 'none');
 }
 
-// ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 // APP INIT
-// ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 async function initApp(user) {
   currentUser = user;
-  const meta = user.user_metadata || {};
-  const role = meta.role || 'customer';
-
-  if(user.email === ADMIN_EMAIL) {
-    await enterAdminMode(user); return;
-  }
-  if(role==='provider') {
-    await enterVendorMode(user); return;
-  }
+  if (!user) { doSignOut(); return; }
+  const role = user.user_metadata?.role || user.role || 'customer';
+  if (user.email === ADMIN_EMAIL) { await enterAdminMode(user); return; }
+  if (role === 'provider') { await enterVendorMode(user); return; }
   await enterCustomerMode(user);
 }
 
 async function enterAdminMode(user) {
-  currentRole = 'admin';
-  currentUser = user;
-  document.getElementById('auth-screen').style.display='none';
-  document.getElementById('app').style.display='block';
-  document.getElementById('nav-admin').style.display='block';
-  document.getElementById('nav-customer').style.display='none';
-  document.getElementById('nav-vendor').style.display='none';
+  currentRole = 'admin'; currentUser = user;
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('nav-admin').style.display = 'block';
+  document.getElementById('nav-customer').style.display = 'none';
+  document.getElementById('nav-vendor').style.display = 'none';
   setSidebarUser('Admin', 'A', 'ADMIN');
   showPage('p-admin-jobs');
-  loadAdminJobs();
-  loadAdminVendors();
-  initChat();
+  loadAdminJobs(); loadAdminVendors(); initChat();
 }
 
 async function enterCustomerMode(user) {
   currentRole = 'customer';
-  const name = user.user_metadata?.full_name || user.email.split('@')[0];
-  document.getElementById('auth-screen').style.display='none';
-  document.getElementById('app').style.display='block';
-  document.getElementById('nav-customer').style.display='block';
-  document.getElementById('nav-vendor').style.display='none';
-  document.getElementById('nav-admin').style.display='none';
+  const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'User';
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('nav-customer').style.display = 'block';
+  document.getElementById('nav-vendor').style.display = 'none';
+  document.getElementById('nav-admin').style.display = 'none';
   setSidebarUser(name, name[0].toUpperCase(), 'CUSTOMER');
-  // Fill profile page
-  document.getElementById('prof-name').textContent = name;
-  document.getElementById('prof-email').textContent = user.email;
-  document.getElementById('prof-type').textContent = 'Property Manager / Customer';
-  document.getElementById('prof-since').textContent = new Date(user.created_at||Date.now()).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
-  showPage('p-my-jobs');
-  loadCustomerJobs();
-  startStatusPolling();
-  initChat();
+  document.getElementById('prof-name').textContent  = name;
+  document.getElementById('prof-email').textContent = user.email || '—';
+  document.getElementById('prof-type').textContent  = 'Property Manager / Customer';
+  document.getElementById('prof-since').textContent = new Date(user.created_at || Date.now()).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  showPage('p-my-jobs'); loadCustomerJobs(); startStatusPolling(); initChat();
 }
 
 async function enterVendorMode(user) {
   currentRole = 'provider';
-  const name = user.user_metadata?.full_name || user.email.split('@')[0];
-  document.getElementById('auth-screen').style.display='none';
-  document.getElementById('app').style.display='block';
-  document.getElementById('nav-vendor').style.display='block';
-  document.getElementById('nav-customer').style.display='none';
-  document.getElementById('nav-admin').style.display='none';
+  const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Vendor';
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('nav-vendor').style.display = 'block';
+  document.getElementById('nav-customer').style.display = 'none';
+  document.getElementById('nav-admin').style.display = 'none';
   setSidebarUser(name, name[0].toUpperCase(), 'VENDOR');
-
-  // Load provider record
-  const {data} = await sb.from('providers').select('*').eq('email', user.email).maybeSingle();
-  currentProviderRecord = data;
-
-  const status = data?.status || 'pending';
+  const providers = await dbWhere('providers', 'email', user.email);
+  currentProviderRecord = providers[0] || null;
+  const status = currentProviderRecord?.status || 'pending';
   const isPending = status === 'pending';
   document.getElementById('vendor-pending-notice').style.display = isPending ? 'block' : 'none';
-
-  // Fill vendor profile
-  document.getElementById('vprof-name').textContent = name;
-  document.getElementById('vprof-email').textContent = user.email;
-  document.getElementById('vprof-status').innerHTML = `<span class="pill ${isPending?'pill-pending':'pill-active'}">${status.toUpperCase()}</span>`;
-  document.getElementById('vprof-service').textContent = data?.service_types?.join(', ') || '—';
-  document.getElementById('vprof-coverage').textContent = data?.coverage_zips || '—';
-
-  showPage('p-vendor-jobs');
-  loadVendorJobs();
-  initChat();
+  document.getElementById('vprof-name').textContent     = name;
+  document.getElementById('vprof-email').textContent    = user.email || '—';
+  document.getElementById('vprof-status').innerHTML     = statusPill(status);
+  document.getElementById('vprof-service').textContent  = currentProviderRecord?.service_types?.join(', ') || '—';
+  document.getElementById('vprof-coverage').textContent = currentProviderRecord?.coverage_zips || '—';
+  showPage('p-vendor-jobs'); loadVendorJobs(); initChat();
 }
 
 function setSidebarUser(name, initial, roleLabel) {
-  document.getElementById('sb-name').textContent = name;
+  document.getElementById('sb-name').textContent  = name;
   document.getElementById('sb-avatar').textContent = initial;
-  document.getElementById('sb-role').textContent = roleLabel;
+  document.getElementById('sb-role').textContent  = roleLabel;
 }
 
-// ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 // PAGE NAVIGATION
-// ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 function showPage(pageId) {
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const page = document.getElementById(pageId);
-  if(page) page.classList.add('active');
-  const navItem = document.querySelector(`[data-page="${pageId}"]`);
-  if(navItem) navItem.classList.add('active');
-  document.getElementById('main-content').scrollTop=0;
-
-  // Lazy-load data
-  if(pageId==='p-my-jobs') loadCustomerJobs();
-  if(pageId==='p-vendor-jobs') loadVendorJobs();
-  if(pageId==='p-admin-jobs') loadAdminJobs();
-  if(pageId==='p-admin-vendors') loadAdminVendors();
-  if(pageId==='p-admin-payments') loadAdminPayments();
-  if(pageId==='p-admin-customers') loadAdminCustomers();
-  if(pageId==='p-admin-analytics') loadAdminAnalytics();
-  if(pageId==='p-chat') { const empty=document.getElementById('chat-empty'); if(!empty&&chatHistory.length===0) initChat(); }
-  if(pageId==='p-vendor-profile') loadVendorPerf();
+  if (page) page.classList.add('active');
+  const nav = document.querySelector(`[data-page="${pageId}"]`);
+  if (nav) nav.classList.add('active');
+  document.getElementById('main-content').scrollTop = 0;
+  if (pageId === 'p-my-jobs')          loadCustomerJobs();
+  if (pageId === 'p-vendor-jobs')      loadVendorJobs();
+  if (pageId === 'p-admin-jobs')       loadAdminJobs();
+  if (pageId === 'p-admin-vendors')    loadAdminVendors();
+  if (pageId === 'p-admin-payments')   loadAdminPayments();
+  if (pageId === 'p-admin-customers')  loadAdminCustomers();
+  if (pageId === 'p-admin-analytics')  loadAdminAnalytics();
+  if (pageId === 'p-vendor-profile')   loadVendorPerf();
 }
 
-// ──────────────────────────────────────────────────────
-// PILL HELPER
-// ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtDate(d) { if (!d) return '—'; return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
 function statusPill(s) {
-  const cls = {submitted:'pill-submitted',priced:'pill-priced',assigned:'pill-assigned',
-    in_progress:'pill-progress',completed:'pill-completed',cancelled:'pill-cancelled',
-    pending:'pill-pending',active:'pill-active'}[s] || 'pill-submitted';
-  const label = {submitted:'Submitted',priced:'Quoted',assigned:'Assigned',
-    in_progress:'In Progress',completed:'Completed',cancelled:'Cancelled',
-    pending:'Pending',active:'Active'}[s] || s;
+  const cls = { submitted:'pill-submitted', priced:'pill-priced', assigned:'pill-assigned', in_progress:'pill-progress', completed:'pill-completed', cancelled:'pill-cancelled', pending:'pill-pending', active:'pill-active' }[s] || 'pill-submitted';
+  const label = { submitted:'Submitted', priced:'Quoted', assigned:'Assigned', in_progress:'In Progress', completed:'Completed', cancelled:'Cancelled', pending:'Pending', active:'Active' }[s] || s;
   return `<span class="pill ${cls}">${label}</span>`;
 }
+function closeModal() { document.getElementById('job-modal').classList.remove('open'); }
 
-// ──────────────────────────────────────────────────────
-// CUSTOMER: LOAD JOBS
-// ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
+// CUSTOMER: JOBS
+// ═══════════════════════════════════════════════════════
 async function loadCustomerJobs() {
-  if(!currentUser||currentRole!=='customer') return;
-  const {data,error} = await sb.from('jobs').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});
-  if(error){console.error(error);return;}
-  allCustomerJobs = data||[];
-
-  // Seed status cache
-  allCustomerJobs.forEach(j=>{if(!jobStatusCache[j.id]) jobStatusCache[j.id]=j.status;});
-
-  // Stats
-  const total=allCustomerJobs.length;
-  const active=allCustomerJobs.filter(j=>['assigned','in_progress'].includes(j.status)).length;
-  const completed=allCustomerJobs.filter(j=>j.status==='completed').length;
-  const pendingPay=allCustomerJobs.filter(j=>j.status==='priced').length;
-  document.getElementById('cs-total').textContent=total;
-  document.getElementById('cs-active').textContent=active;
-  document.getElementById('cs-completed').textContent=completed;
-  document.getElementById('cs-pending-pay').textContent=pendingPay;
-
-  // New jobs badge
-  const badge=document.getElementById('badge-new-jobs');
-  if(pendingPay>0){badge.textContent=pendingPay;badge.classList.add('visible');}
-  else badge.classList.remove('visible');
-
-  renderCustomerJobs(allCustomerJobs);
+  if (!currentUser || currentRole !== 'customer') return;
+  const jobs = await dbWhere('jobs', 'user_id', currentUser.id);
+  allCustomerJobs = jobs;
+  jobs.forEach(j => { if (!jobStatusCache[j.id]) jobStatusCache[j.id] = j.status; });
+  const total = jobs.length, active = jobs.filter(j => ['assigned','in_progress'].includes(j.status)).length;
+  const completed = jobs.filter(j => j.status === 'completed').length, pendingPay = jobs.filter(j => j.status === 'priced').length;
+  document.getElementById('cs-total').textContent     = total;
+  document.getElementById('cs-active').textContent    = active;
+  document.getElementById('cs-completed').textContent = completed;
+  document.getElementById('cs-pending-pay').textContent = pendingPay;
+  const badge = document.getElementById('badge-new-jobs');
+  pendingPay > 0 ? (badge.textContent = pendingPay, badge.classList.add('visible')) : badge.classList.remove('visible');
+  renderCustomerJobs(jobs);
 }
 
-function filterCustomerJobs(status,btn) {
-  document.querySelectorAll('#p-my-jobs .filter-btn').forEach(b=>b.classList.remove('active'));
+function filterCustomerJobs(status, btn) {
+  document.querySelectorAll('#p-my-jobs .filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  if(status==='all') renderCustomerJobs(allCustomerJobs);
-  else renderCustomerJobs(allCustomerJobs.filter(j=>j.status===status));
+  renderCustomerJobs(status === 'all' ? allCustomerJobs : allCustomerJobs.filter(j => j.status === status));
 }
 
 function renderCustomerJobs(jobs) {
-  const el=document.getElementById('cust-jobs-list');
-  if(!jobs.length){el.innerHTML='<div class="empty-state">No jobs yet. <a onclick="showPage(\'p-request-job\')" href="#">Submit your first job →</a></div>';return;}
-  el.innerHTML=jobs.map(j=>`
+  const el = document.getElementById('cust-jobs-list');
+  if (!jobs.length) { el.innerHTML = '<div class="empty-state">No jobs yet. <a onclick="showPage(\'p-request-job\')" href="#">Submit your first job →</a></div>'; return; }
+  el.innerHTML = jobs.map(j => `
     <div class="table-row" style="grid-template-columns:2fr 1fr 1fr 1fr 90px" onclick="viewCustomerJob('${j.id}')">
       <div><div class="tr-main">${esc(j.property_address||'No address')}</div><div class="tr-sub">${fmtDate(j.created_at)}</div></div>
       <div class="tr-cell">${esc(j.job_type||'—')}</div>
@@ -1320,113 +1325,59 @@ function renderCustomerJobs(jobs) {
 }
 
 function viewCustomerJob(id) {
-  const j=allCustomerJobs.find(x=>x.id===id);
-  if(!j) return;
-  document.getElementById('modal-job-title').textContent=j.property_address||'Job Details';
-  let html=`
-    <div class="modal-section">
-      <div class="job-detail-grid">
-        <div><div class="detail-label">Status</div><div class="detail-val">${statusPill(j.status)}</div></div>
-        <div><div class="detail-label">Type</div><div class="detail-val">${esc(j.job_type||'—')}</div></div>
-        <div><div class="detail-label">Urgency</div><div class="detail-val">${esc(j.urgency||'—')}</div></div>
-        <div><div class="detail-label">Submitted</div><div class="detail-val">${fmtDate(j.created_at)}</div></div>
-      </div>
-    </div>
-    <div class="modal-section">
-      <div class="detail-label">Description</div>
-      <div class="detail-desc">${esc(j.description||'No description provided.')}</div>
-    </div>`;
-  if(j.quoted_price){
-    html+=`<div class="modal-section">
-      <div class="detail-label">Quote</div>
-      <div class="detail-val" style="font-size:22px;font-weight:700;color:#51cf66">$${j.quoted_price}</div>
-      ${j.admin_notes?`<div style="margin-top:8px;font-size:13px;color:rgba(255,255,255,.5)">${esc(j.admin_notes)}</div>`:''}
-    </div>`;
-  }
-  if(j.payment_link){
-    html+=`<div class="modal-section">
-      <div class="detail-label">Payment</div>
-      <a href="${j.payment_link}" target="_blank" class="btn btn-red" style="margin-top:4px">💳 Pay Now →</a>
-    </div>`;
-  }
-  if(j.status==='completed'&&j.completion_notes){
-    html+=`<div class="modal-section">
-      <div class="detail-label">Completion Notes</div>
-      <div class="detail-desc">${esc(j.completion_notes)}</div>
-    </div>`;
-  }
-  document.getElementById('modal-job-content').innerHTML=html;
+  const j = allCustomerJobs.find(x => x.id === id); if (!j) return;
+  document.getElementById('modal-job-title').textContent = j.property_address || 'Job Details';
+  let html = `<div class="modal-section"><div class="job-detail-grid">
+    <div><div class="detail-label">Status</div><div class="detail-val">${statusPill(j.status)}</div></div>
+    <div><div class="detail-label">Type</div><div class="detail-val">${esc(j.job_type||'—')}</div></div>
+    <div><div class="detail-label">Urgency</div><div class="detail-val">${esc(j.urgency||'—')}</div></div>
+    <div><div class="detail-label">Submitted</div><div class="detail-val">${fmtDate(j.created_at)}</div></div>
+  </div></div>
+  <div class="modal-section"><div class="detail-label">Description</div><div class="detail-desc">${esc(j.description||'No description.')}</div></div>`;
+  if (j.quoted_price) html += `<div class="modal-section"><div class="detail-label">Quote</div><div class="detail-val" style="font-size:22px;font-weight:700;color:#51cf66">$${j.quoted_price}</div>${j.admin_notes ? `<div style="margin-top:8px;font-size:13px;color:rgba(255,255,255,.5)">${esc(j.admin_notes)}</div>` : ''}</div>`;
+  if (j.payment_link) html += `<div class="modal-section"><div class="detail-label">Payment</div><a href="${j.payment_link}" target="_blank" class="btn btn-red" style="margin-top:4px">💳 Pay Now →</a></div>`;
+  if (j.status === 'completed' && j.completion_notes) html += `<div class="modal-section"><div class="detail-label">Completion Notes</div><div class="detail-desc">${esc(j.completion_notes)}</div></div>`;
+  document.getElementById('modal-job-content').innerHTML = html;
   document.getElementById('job-modal').classList.add('open');
 }
 
-// ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 // CUSTOMER: REQUEST JOB
-// ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 async function submitJobRequest() {
-  const address=document.getElementById('rj-address').value.trim();
-  const type=document.getElementById('rj-type').value;
-  const urgency=document.getElementById('rj-urgency').value;
-  const desc=document.getElementById('rj-desc').value.trim();
-  if(!address||!type||!urgency||!desc){showNotif('Missing Fields','Please fill in all required fields.','warning');return;}
-
-  const btn=document.getElementById('rj-btn');
-  btn.disabled=true;btn.textContent='Submitting...';
-
-  const {data,error}=await sb.from('jobs').insert({
-    property_address:address,job_type:type,urgency,description:desc,
-    status:'submitted',user_id:currentUser?.id||null
-  }).select().single();
-
-  if(error){
-    btn.disabled=false;btn.textContent='Submit Job Request →';
-    showNotif('Error','Something went wrong. Please try again.','warning');
-    return;
-  }
-  // Seed cache
-  if(data) jobStatusCache[data.id]='submitted';
-
-  // Email notification
-  emailjs.send('service_slduczl','template_sacm0kn',{
-    subject:'🚨 New Job Request — '+type,
-    from_name:currentUser?.user_metadata?.full_name||'Portal user',
-    from_email:currentUser?.email||'',
-    phone:'—',
-    message:`Address: ${address}\nJob Type: ${type}\nUrgency: ${urgency}\nDescription: ${desc}`
-  }).catch(()=>{});
-
-  document.getElementById('req-form-card').style.display='none';
-  document.getElementById('req-success').style.display='block';
-  btn.disabled=false;
-  showNotif('Job Submitted!','We\'ll review and send you a quote within 2 hours.','success');
+  const address = document.getElementById('rj-address').value.trim();
+  const type    = document.getElementById('rj-type').value;
+  const urgency = document.getElementById('rj-urgency').value;
+  const desc    = document.getElementById('rj-desc').value.trim();
+  if (!address || !type || !urgency || !desc) { showNotif('Missing Fields', 'Please fill in all required fields.', 'warning'); return; }
+  const btn = document.getElementById('rj-btn'); btn.disabled = true; btn.textContent = 'Submitting...';
+  const { data, ok } = await dbInsert('jobs', { property_address: address, job_type: type, urgency, description: desc, status: 'submitted', user_id: currentUser?.id || null });
+  if (!ok) { btn.disabled = false; btn.textContent = 'Submit Job Request →'; showNotif('Error', 'Something went wrong. Please try again.', 'warning'); return; }
+  if (data) jobStatusCache[data.id] = 'submitted';
+  emailjs.send('service_slduczl','template_sacm0kn',{ subject:'🚨 New Job — '+type, from_name: currentUser?.user_metadata?.full_name||'Portal', from_email: currentUser?.email||'', phone:'—', message:`Address: ${address}\nType: ${type}\nUrgency: ${urgency}\nDesc: ${desc}` }).catch(()=>{});
+  document.getElementById('req-form-card').style.display = 'none';
+  document.getElementById('req-success').style.display  = 'block';
+  btn.disabled = false;
+  showNotif('Job Submitted!', 'We\'ll review and quote within 2 hours.', 'success');
 }
 
-// ──────────────────────────────────────────────────────
-// VENDOR: LOAD JOBS
-// ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
+// VENDOR: JOBS
+// ═══════════════════════════════════════════════════════
 async function loadVendorJobs() {
-  if(!currentUser||currentRole!=='provider') return;
-  const providerId=currentProviderRecord?.id;
-  if(!providerId) {
-    document.getElementById('vendor-jobs-list').innerHTML='<div class="empty-state">⏳ Your account is pending approval.</div>';
-    return;
-  }
-  const {data}=await sb.from('jobs').select('*').eq('provider_id',providerId).order('created_at',{ascending:false});
-  allVendorJobs=data||[];
-
-  const assigned=allVendorJobs.filter(j=>j.status==='assigned').length;
-  const inprog=allVendorJobs.filter(j=>j.status==='in_progress').length;
-  const done=allVendorJobs.filter(j=>j.status==='completed').length;
-  document.getElementById('vs-assigned').textContent=assigned;
-  document.getElementById('vs-inprog').textContent=inprog;
-  document.getElementById('vs-done').textContent=done;
-
-  const badge=document.getElementById('badge-vendor-jobs');
-  if(assigned>0){badge.textContent=assigned;badge.classList.add('visible');}
-  else badge.classList.remove('visible');
-
-  const el=document.getElementById('vendor-jobs-list');
-  if(!allVendorJobs.length){el.innerHTML='<div class="empty-state">No jobs assigned yet. Check back soon.</div>';return;}
-  el.innerHTML=allVendorJobs.map(j=>`
+  if (!currentUser || currentRole !== 'provider') return;
+  if (!currentProviderRecord?.id) { document.getElementById('vendor-jobs-list').innerHTML = '<div class="empty-state">⏳ Account pending approval.</div>'; return; }
+  const jobs = await dbWhere('jobs', 'provider_id', currentProviderRecord.id);
+  allVendorJobs = jobs;
+  document.getElementById('vs-assigned').textContent = jobs.filter(j => j.status === 'assigned').length;
+  document.getElementById('vs-inprog').textContent   = jobs.filter(j => j.status === 'in_progress').length;
+  document.getElementById('vs-done').textContent     = jobs.filter(j => j.status === 'completed').length;
+  const badge = document.getElementById('badge-vendor-jobs');
+  const assigned = jobs.filter(j => j.status === 'assigned').length;
+  assigned > 0 ? (badge.textContent = assigned, badge.classList.add('visible')) : badge.classList.remove('visible');
+  const el = document.getElementById('vendor-jobs-list');
+  if (!jobs.length) { el.innerHTML = '<div class="empty-state">No jobs assigned yet.</div>'; return; }
+  el.innerHTML = jobs.map(j => `
     <div class="table-row" style="grid-template-columns:2fr 1fr 1fr 100px">
       <div><div class="tr-main">${esc(j.property_address||'No address')}</div><div class="tr-sub">${fmtDate(j.created_at)}</div></div>
       <div class="tr-cell">${esc(j.job_type||'—')}</div>
@@ -1436,64 +1387,50 @@ async function loadVendorJobs() {
 }
 
 function vendorActionBtn(j) {
-  if(j.status==='assigned')
-    return `<button class="btn btn-red btn-sm" onclick="event.stopPropagation();updateVendorJobStatus('${j.id}','in_progress')">Start</button>`;
-  if(j.status==='in_progress')
-    return `<button class="btn btn-red btn-sm" onclick="event.stopPropagation();updateVendorJobStatus('${j.id}','completed')">Mark Done</button>`;
+  if (j.status === 'assigned')    return `<button class="btn btn-red btn-sm" onclick="event.stopPropagation();updateVendorStatus('${j.id}','in_progress')">Start</button>`;
+  if (j.status === 'in_progress') return `<button class="btn btn-red btn-sm" onclick="event.stopPropagation();updateVendorStatus('${j.id}','completed')">Mark Done</button>`;
   return `<span class="tr-cell">${j.status}</span>`;
 }
 
-async function updateVendorJobStatus(id,newStatus) {
-  const {error}=await sb.from('jobs').update({status:newStatus}).eq('id',id);
-  if(error){showNotif('Error','Could not update status.','warning');return;}
-  showNotif('Status Updated',`Job marked as ${newStatus.replace('_',' ')}.`,'success');
+async function updateVendorStatus(id, newStatus) {
+  const ok = await dbUpdate('jobs', id, { status: newStatus });
+  if (!ok) { showNotif('Error', 'Could not update status.', 'warning'); return; }
+  showNotif('Updated', `Job marked as ${newStatus.replace('_',' ')}.`, 'success');
   loadVendorJobs();
 }
 
 async function loadVendorPerf() {
-  if(!currentProviderRecord?.id) return;
-  const {data}=await sb.from('jobs').select('status').eq('provider_id',currentProviderRecord.id);
-  const total=(data||[]).length;
-  const done=(data||[]).filter(j=>j.status==='completed').length;
-  document.getElementById('vperf-total').textContent=total;
-  document.getElementById('vperf-done').textContent=done;
+  if (!currentProviderRecord?.id) return;
+  const jobs = await dbWhere('jobs', 'provider_id', currentProviderRecord.id, 'select=status');
+  document.getElementById('vperf-total').textContent = jobs.length;
+  document.getElementById('vperf-done').textContent  = jobs.filter(j => j.status === 'completed').length;
 }
 
-// ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 // ADMIN: JOBS
-// ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 async function loadAdminJobs() {
-  if(currentRole!=='admin') return;
-  const {data}=await sb.from('jobs').select('*').order('created_at',{ascending:false});
-  allAdminJobs=data||[];
-
-  const total=allAdminJobs.length;
-  const open=allAdminJobs.filter(j=>!['completed','cancelled'].includes(j.status)).length;
-  const newJ=allAdminJobs.filter(j=>j.status==='submitted').length;
-  const done=allAdminJobs.filter(j=>j.status==='completed').length;
-  document.getElementById('as-total').textContent=total;
-  document.getElementById('as-open').textContent=open;
-  document.getElementById('as-new').textContent=newJ;
-  document.getElementById('as-done').textContent=done;
-
-  const badge=document.getElementById('badge-admin-jobs');
-  if(newJ>0){badge.textContent=newJ;badge.classList.add('visible');}
-  else badge.classList.remove('visible');
-
-  renderAdminJobs(allAdminJobs);
+  if (currentRole !== 'admin') return;
+  const jobs = await dbSelect('jobs');
+  allAdminJobs = jobs;
+  const total = jobs.length, open = jobs.filter(j => !['completed','cancelled'].includes(j.status)).length;
+  const newJ = jobs.filter(j => j.status === 'submitted').length, done = jobs.filter(j => j.status === 'completed').length;
+  document.getElementById('as-total').textContent = total; document.getElementById('as-open').textContent = open;
+  document.getElementById('as-new').textContent   = newJ;  document.getElementById('as-done').textContent = done;
+  const badge = document.getElementById('badge-admin-jobs');
+  newJ > 0 ? (badge.textContent = newJ, badge.classList.add('visible')) : badge.classList.remove('visible');
+  renderAdminJobs(jobs);
 }
 
-function filterAdminJobs(status,btn) {
-  document.querySelectorAll('#p-admin-jobs .filter-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  if(status==='all') renderAdminJobs(allAdminJobs);
-  else renderAdminJobs(allAdminJobs.filter(j=>j.status===status));
+function filterAdminJobs(status, btn) {
+  document.querySelectorAll('#p-admin-jobs .filter-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active');
+  renderAdminJobs(status === 'all' ? allAdminJobs : allAdminJobs.filter(j => j.status === status));
 }
 
 function renderAdminJobs(jobs) {
-  const el=document.getElementById('admin-jobs-list');
-  if(!jobs.length){el.innerHTML='<div class="empty-state">No jobs found.</div>';return;}
-  el.innerHTML=jobs.map(j=>`
+  const el = document.getElementById('admin-jobs-list');
+  if (!jobs.length) { el.innerHTML = '<div class="empty-state">No jobs found.</div>'; return; }
+  el.innerHTML = jobs.map(j => `
     <div class="table-row" style="grid-template-columns:2fr 1fr 1fr 1fr 80px">
       <div><div class="tr-main">${esc(j.property_address||'No address')}</div><div class="tr-sub">${fmtDate(j.created_at)}</div></div>
       <div class="tr-cell">${esc(j.job_type||'—')}</div>
@@ -1504,20 +1441,13 @@ function renderAdminJobs(jobs) {
 }
 
 async function editAdminJob(id) {
-  const j=allAdminJobs.find(x=>x.id===id);
-  if(!j) return;
-  // Always fetch fresh vendor list so dropdown is never empty
-  if(!allAdminVendors.length) {
-    const {data}=await sb.from('providers').select('*').eq('status','active');
-    allAdminVendors=data||[];
-  }
-  document.getElementById('modal-job-title').textContent='Edit Job: '+(j.property_address||id);
-  const activeVendors=allAdminVendors.filter(v=>v.status==='active');
-  const vendorOptions = activeVendors
-    .map(v=>`<option value="${v.id}" ${j.provider_id===v.id?'selected':''}>${esc(v.full_name)} — ${esc(v.service_types?.join(', ')||'')}</option>`).join('');
+  const j = allAdminJobs.find(x => x.id === id); if (!j) return;
+  if (!allAdminVendors.length) { const v = await dbSelect('providers', 'status=eq.active'); allAdminVendors = v; }
+  const activeVendors = allAdminVendors.filter(v => v.status === 'active');
+  const vendorOptions = activeVendors.map(v => `<option value="${v.id}" ${j.provider_id===v.id?'selected':''}>${esc(v.full_name)} — ${esc(v.service_types?.join(', ')||'')}</option>`).join('');
   const noVendors = !activeVendors.length ? '<div style="font-size:12px;color:rgba(255,255,255,.35);margin-top:6px">No active vendors yet — approve vendors in the Vendors tab first.</div>' : '';
-
-  document.getElementById('modal-job-content').innerHTML=`
+  document.getElementById('modal-job-title').textContent = 'Edit Job: ' + (j.property_address || id);
+  document.getElementById('modal-job-content').innerHTML = `
     <div class="modal-section">
       <div class="job-detail-grid">
         <div><div class="detail-label">Address</div><div class="detail-val">${esc(j.property_address||'—')}</div></div>
@@ -1531,97 +1461,69 @@ async function editAdminJob(id) {
     <div class="modal-section">
       <div class="form-grid-2">
         <div class="field"><label>Status</label>
-          <select id="edit-status">
-            ${['submitted','priced','assigned','in_progress','completed','cancelled'].map(s=>`<option value="${s}" ${j.status===s?'selected':''}>${s}</option>`).join('')}
-          </select>
+          <select id="edit-status">${['submitted','priced','assigned','in_progress','completed','cancelled'].map(s=>`<option value="${s}" ${j.status===s?'selected':''}>${s}</option>`).join('')}</select>
         </div>
         <div class="field"><label>Quoted Price ($)</label><input id="edit-price" type="number" value="${j.quoted_price||''}" placeholder="0.00"/></div>
         <div class="field form-full"><label>Notes to Customer</label><textarea id="edit-notes" style="min-height:70px">${j.admin_notes||''}</textarea></div>
         <div class="field form-full"><label>Payment Link (Stripe URL)</label><input id="edit-paylink" type="url" value="${j.payment_link||''}" placeholder="https://buy.stripe.com/..."/></div>
         <div class="field"><label>Assign Vendor</label>
-          <select id="edit-vendor">
-            <option value="">— No vendor —</option>
-            ${vendorOptions}
-          </select>
+          <select id="edit-vendor"><option value="">— No vendor —</option>${vendorOptions}</select>
           ${noVendors}
         </div>
         <div class="field"><label>Payment Amount ($)</label><input id="edit-payamt" type="number" value="${j.payment_amount||''}" placeholder="0.00"/></div>
       </div>
       <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap">
         <button class="btn btn-red" onclick="saveAdminJob('${j.id}')">Save Changes</button>
-        ${j.payment_link?`<button class="btn btn-ghost" onclick="sendPaymentLink('${j.id}')">📧 Send Payment Link</button>`:''}
+        ${j.payment_link ? `<button class="btn btn-ghost" onclick="navigator.clipboard?.writeText('${j.payment_link}');showNotif('Copied','Payment link copied to clipboard.','info')">📋 Copy Payment Link</button>` : ''}
       </div>
     </div>`;
   document.getElementById('job-modal').classList.add('open');
 }
 
 async function saveAdminJob(id) {
-  const status=document.getElementById('edit-status').value;
-  const price=document.getElementById('edit-price').value;
-  const notes=document.getElementById('edit-notes').value;
-  const paylink=document.getElementById('edit-paylink').value;
-  const vendor=document.getElementById('edit-vendor').value;
-  const payamt=document.getElementById('edit-payamt').value;
-
-  const updates={status};
-  if(price) updates.quoted_price=parseFloat(price);
-  if(notes) updates.admin_notes=notes;
-  if(paylink) updates.payment_link=paylink;
-  // Assign vendor and auto-advance status to 'assigned' if still at submitted/priced
-  if(vendor) {
-    updates.provider_id=vendor;
-    if(['submitted','priced'].includes(status)) updates.status='assigned';
-  }
-  if(!vendor) updates.provider_id=null;
-  if(payamt) updates.payment_amount=parseFloat(payamt);
-
-  const {error}=await sb.from('jobs').update(updates).eq('id',id);
-  if(error){showNotif('Error','Could not save changes.','warning');return;}
-  showNotif('Saved','Job updated successfully.','success');
-  closeModal();
-  loadAdminJobs();
+  const status  = document.getElementById('edit-status').value;
+  const price   = document.getElementById('edit-price').value;
+  const notes   = document.getElementById('edit-notes').value;
+  const paylink = document.getElementById('edit-paylink').value;
+  const vendor  = document.getElementById('edit-vendor').value;
+  const payamt  = document.getElementById('edit-payamt').value;
+  const updates = { status };
+  if (price)   updates.quoted_price    = parseFloat(price);
+  if (notes)   updates.admin_notes     = notes;
+  if (paylink) updates.payment_link    = paylink;
+  if (payamt)  updates.payment_amount  = parseFloat(payamt);
+  updates.provider_id = vendor || null;
+  if (vendor && ['submitted','priced'].includes(status)) updates.status = 'assigned';
+  const ok = await dbUpdate('jobs', id, updates);
+  if (!ok) { showNotif('Error', 'Could not save.', 'warning'); return; }
+  showNotif('Saved', 'Job updated.', 'success');
+  closeModal(); loadAdminJobs();
 }
 
-async function sendPaymentLink(id) {
-  const j=allAdminJobs.find(x=>x.id===id);
-  if(!j||!j.payment_link) return;
-  // In a real implementation, look up customer email from user_id
-  showNotif('Payment Link','Copied to clipboard — send to customer manually.','info');
-  navigator.clipboard?.writeText(j.payment_link).catch(()=>{});
-}
-
-// ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 // ADMIN: VENDORS
-// ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 async function loadAdminVendors() {
-  if(currentRole!=='admin') return;
-  const {data}=await sb.from('providers').select('*').order('created_at',{ascending:false});
-  allAdminVendors=data||[];
-
-  const pending=allAdminVendors.filter(v=>v.status==='pending').length;
-  const badge=document.getElementById('badge-pending-vendors');
-  if(pending>0){badge.textContent=pending;badge.classList.add('visible');}
-  else badge.classList.remove('visible');
-
-  renderAdminVendors(allAdminVendors);
+  if (currentRole !== 'admin') return;
+  const vendors = await dbSelect('providers');
+  allAdminVendors = vendors;
+  const pending = vendors.filter(v => v.status === 'pending').length;
+  const badge = document.getElementById('badge-pending-vendors');
+  pending > 0 ? (badge.textContent = pending, badge.classList.add('visible')) : badge.classList.remove('visible');
+  renderAdminVendors(vendors);
 }
 
-function filterAdminVendors(status,btn) {
-  document.querySelectorAll('#p-admin-vendors .filter-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  if(status==='all') renderAdminVendors(allAdminVendors);
-  else renderAdminVendors(allAdminVendors.filter(v=>v.status===status));
+function filterAdminVendors(status, btn) {
+  document.querySelectorAll('#p-admin-vendors .filter-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active');
+  renderAdminVendors(status === 'all' ? allAdminVendors : allAdminVendors.filter(v => v.status === status));
 }
 
 function renderAdminVendors(vendors) {
-  const el=document.getElementById('admin-vendors-list');
-  if(!vendors.length){el.innerHTML='<div class="empty-state">No vendors found.</div>';return;}
-  el.innerHTML=`<div class="vendor-grid">${vendors.map(v=>`
+  const el = document.getElementById('admin-vendors-list');
+  if (!vendors.length) { el.innerHTML = '<div class="empty-state">No vendors found.</div>'; return; }
+  el.innerHTML = `<div class="vendor-grid">${vendors.map(v => `
     <div class="vendor-card" onclick="editAdminVendor('${v.id}')">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <div class="vendor-name">${esc(v.full_name)}</div>
-        ${statusPill(v.status)}
-      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div class="vendor-name">${esc(v.full_name)}</div>${statusPill(v.status)}</div>
       <div class="vendor-meta">${esc(v.service_types?.join(', ')||'—')}</div>
       <div class="vendor-meta" style="margin-top:3px">${esc(v.coverage_zips||'—')}</div>
       <div class="vendor-meta" style="margin-top:3px">${esc(v.email)}</div>
@@ -1629,381 +1531,223 @@ function renderAdminVendors(vendors) {
 }
 
 function editAdminVendor(id) {
-  const v=allAdminVendors.find(x=>x.id===id);
-  if(!v) return;
-  document.getElementById('modal-job-title').textContent='Vendor: '+v.full_name;
-  document.getElementById('modal-job-content').innerHTML=`
-    <div class="modal-section">
-      <div class="job-detail-grid">
-        <div><div class="detail-label">Name</div><div class="detail-val">${esc(v.full_name)}</div></div>
-        <div><div class="detail-label">Email</div><div class="detail-val">${esc(v.email)}</div></div>
-        <div><div class="detail-label">Phone</div><div class="detail-val">${esc(v.phone||'—')}</div></div>
-        <div><div class="detail-label">Services</div><div class="detail-val">${esc(v.service_types?.join(', ')||'—')}</div></div>
-        <div><div class="detail-label">Coverage</div><div class="detail-val">${esc(v.coverage_zips||'—')}</div></div>
-        <div><div class="detail-label">Applied</div><div class="detail-val">${fmtDate(v.created_at)}</div></div>
-      </div>
-    </div>
+  const v = allAdminVendors.find(x => x.id === id); if (!v) return;
+  document.getElementById('modal-job-title').textContent = 'Vendor: ' + v.full_name;
+  document.getElementById('modal-job-content').innerHTML = `
+    <div class="modal-section"><div class="job-detail-grid">
+      <div><div class="detail-label">Name</div><div class="detail-val">${esc(v.full_name)}</div></div>
+      <div><div class="detail-label">Email</div><div class="detail-val">${esc(v.email)}</div></div>
+      <div><div class="detail-label">Phone</div><div class="detail-val">${esc(v.phone||'—')}</div></div>
+      <div><div class="detail-label">Services</div><div class="detail-val">${esc(v.service_types?.join(', ')||'—')}</div></div>
+      <div><div class="detail-label">Coverage</div><div class="detail-val">${esc(v.coverage_zips||'—')}</div></div>
+      <div><div class="detail-label">Applied</div><div class="detail-val">${fmtDate(v.created_at)}</div></div>
+    </div></div>
     <div class="modal-section">
       <div class="field"><label>Status</label>
         <select id="vedit-status">
-          <option value="pending" ${v.status==='pending'?'selected':''}>Pending</option>
-          <option value="active" ${v.status==='active'?'selected':''}>Active</option>
+          <option value="pending"  ${v.status==='pending' ?'selected':''}>Pending</option>
+          <option value="active"   ${v.status==='active'  ?'selected':''}>Active</option>
           <option value="inactive" ${v.status==='inactive'?'selected':''}>Inactive</option>
         </select>
       </div>
       <div style="display:flex;gap:10px;margin-top:12px">
         <button class="btn btn-red" onclick="saveAdminVendor('${v.id}')">Save</button>
-        ${v.status==='pending'?`<button class="btn btn-ghost" onclick="activateVendor('${v.id}')">✅ Approve Vendor</button>`:''}
+        ${v.status==='pending' ? `<button class="btn btn-ghost" onclick="activateVendor('${v.id}')">✅ Approve Vendor</button>` : ''}
       </div>
     </div>`;
   document.getElementById('job-modal').classList.add('open');
 }
 
 async function saveAdminVendor(id) {
-  const status=document.getElementById('vedit-status').value;
-  const {error}=await sb.from('providers').update({status}).eq('id',id);
-  if(error){showNotif('Error','Could not update vendor.','warning');return;}
-  showNotif('Saved','Vendor updated.','success');
-  closeModal();
-  loadAdminVendors();
+  const status = document.getElementById('vedit-status').value;
+  const ok = await dbUpdate('providers', id, { status });
+  if (!ok) { showNotif('Error', 'Could not update vendor.', 'warning'); return; }
+  showNotif('Saved', 'Vendor updated.', 'success'); closeModal(); loadAdminVendors();
 }
 
 async function activateVendor(id) {
-  const {error}=await sb.from('providers').update({status:'active'}).eq('id',id);
-  if(error){showNotif('Error','Could not activate vendor.','warning');return;}
-  const v=allAdminVendors.find(x=>x.id===id);
-  emailjs.send('service_slduczl','template_sacm0kn',{
-    subject:'✅ Your RelayOps vendor account is approved!',
-    from_name:'RelayOps Team',from_email:ADMIN_EMAIL,phone:'—',
-    message:`Hi ${v?.full_name||'there'},\n\nYour vendor account has been approved. Log in at https://contactrelayops.github.io/relayops-site/relayops-portal.html to see your jobs.\n\nWelcome to the network!\n\nRelayOps`
-  }).catch(()=>{});
-  showNotif('Vendor Approved','Account activated and email sent.','success');
-  closeModal();
-  loadAdminVendors();
+  const ok = await dbUpdate('providers', id, { status: 'active' });
+  if (!ok) { showNotif('Error', 'Could not activate.', 'warning'); return; }
+  const v = allAdminVendors.find(x => x.id === id);
+  emailjs.send('service_slduczl','template_sacm0kn',{ subject:'✅ Your RelayOps vendor account is approved!', from_name:'RelayOps', from_email:ADMIN_EMAIL, phone:'—', message:`Hi ${v?.full_name||'there'},\n\nYour vendor account is approved. Log in at https://contactrelayops.github.io/relayops-site/relayops-portal.html\n\nWelcome!\nRelayOps` }).catch(()=>{});
+  showNotif('Approved', 'Vendor activated and notified.', 'success'); closeModal(); loadAdminVendors();
 }
 
-// ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 // ADMIN: PAYMENTS
-// ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 async function loadAdminPayments() {
-  if(currentRole!=='admin') return;
-  const {data}=await sb.from('jobs').select('id,property_address,job_type,quoted_price,payment_link,payment_amount,status').not('payment_link','is',null).order('created_at',{ascending:false});
-  const el=document.getElementById('admin-payments-list');
-  if(!data||!data.length){el.innerHTML='<div class="empty-state">No payment links issued yet.</div>';return;}
-  el.innerHTML=data.map(j=>`
+  if (currentRole !== 'admin') return;
+  const jobs = await dbSelect('jobs', 'payment_link=not.is.null&select=id,property_address,job_type,quoted_price,payment_link,status');
+  const el = document.getElementById('admin-payments-list');
+  if (!jobs.length) { el.innerHTML = '<div class="empty-state">No payment links issued yet.</div>'; return; }
+  el.innerHTML = jobs.map(j => `
     <div class="table-row" style="grid-template-columns:2fr 1fr 1fr 1fr">
       <div><div class="tr-main">${esc(j.property_address||'—')}</div><div class="tr-sub">${esc(j.job_type||'—')}</div></div>
-      <div class="tr-cell">${j.quoted_price?'$'+j.quoted_price:'—'}</div>
+      <div class="tr-cell">${j.quoted_price ? '$'+j.quoted_price : '—'}</div>
       <div>${statusPill(j.status)}</div>
       <div><a href="${j.payment_link}" target="_blank" class="btn btn-ghost btn-sm">Open →</a></div>
     </div>`).join('');
 }
 
-// ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 // ADMIN: CUSTOMERS
-// ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 async function loadAdminCustomers() {
-  if(currentRole!=='admin') return;
-  const {data}=await sb.from('jobs').select('user_id,description,created_at').order('created_at',{ascending:false});
-  // Extract contact info from description field (legacy format stores contact info there)
-  const el=document.getElementById('admin-customers-list');
-  if(!data||!data.length){el.innerHTML='<div class="empty-state">No customer data yet.</div>';return;}
-
-  // Group by user_id
-  const byUser={};
-  data.forEach(j=>{
-    const uid=j.user_id||'anon';
-    if(!byUser[uid]) byUser[uid]={count:0,first:j.created_at,desc:j.description};
-    byUser[uid].count++;
-  });
-
-  const rows=Object.entries(byUser).map(([uid,info])=>{
-    const contact=parseContactFromDesc(info.desc||'');
+  if (currentRole !== 'admin') return;
+  const jobs = await dbSelect('jobs', 'select=user_id,description,created_at');
+  const el = document.getElementById('admin-customers-list');
+  if (!jobs.length) { el.innerHTML = '<div class="empty-state">No data yet.</div>'; return; }
+  const byUser = {};
+  jobs.forEach(j => { const uid = j.user_id||'anon'; if (!byUser[uid]) byUser[uid]={count:0,first:j.created_at,desc:j.description}; byUser[uid].count++; });
+  el.innerHTML = Object.entries(byUser).map(([uid,info]) => {
+    const c = parseContact(info.desc||'');
     return `<div class="table-row" style="grid-template-columns:2fr 2fr 1fr 1fr">
-      <div class="tr-main">${esc(contact.name||uid.substring(0,8))}</div>
-      <div class="tr-cell">${esc(contact.email||'—')}</div>
+      <div class="tr-main">${esc(c.name||uid.substring(0,8))}</div>
+      <div class="tr-cell">${esc(c.email||'—')}</div>
       <div class="tr-cell">${info.count}</div>
       <div class="tr-cell">${fmtDate(info.first)}</div>
     </div>`;
   }).join('');
-  el.innerHTML=rows;
+}
+function parseContact(desc) {
+  return { name: (desc.match(/Name:\s*([^|]+)/)||[])[1]?.trim()||'', email: (desc.match(/Email:\s*([^|]+)/)||[])[1]?.trim()||'' };
 }
 
-function parseContactFromDesc(desc) {
-  const nameM=desc.match(/Name:\s*([^|]+)/);
-  const emailM=desc.match(/Email:\s*([^|]+)/);
-  return {
-    name:nameM?nameM[1].trim():'',
-    email:emailM?emailM[1].trim():''
-  };
-}
-
-// ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 // ADMIN: ANALYTICS
-// ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 async function loadAdminAnalytics() {
-  if(currentRole!=='admin') return;
-  const {data:jobs}=await sb.from('jobs').select('status,job_type,quoted_price');
-  const {data:vendors}=await sb.from('providers').select('status');
-
-  const total=(jobs||[]).length;
-  const completed=(jobs||[]).filter(j=>j.status==='completed').length;
-  const revenue=(jobs||[]).reduce((s,j)=>s+(parseFloat(j.quoted_price)||0),0);
-  const activeVendors=(vendors||[]).filter(v=>v.status==='active').length;
-
-  document.getElementById('an-total').textContent=total;
-  document.getElementById('an-completed').textContent=completed;
-  document.getElementById('an-revenue').textContent='$'+revenue.toLocaleString('en-US',{minimumFractionDigits:0});
-  document.getElementById('an-vendors').textContent=activeVendors;
-
-  // Type breakdown
-  const byType={};
-  (jobs||[]).forEach(j=>{const t=j.job_type||'Other';byType[t]=(byType[t]||0)+1;});
-  const byStatus={};
-  (jobs||[]).forEach(j=>{const s=j.status||'submitted';byStatus[s]=(byStatus[s]||0)+1;});
-
-  document.getElementById('admin-analytics-detail').innerHTML=`
+  if (currentRole !== 'admin') return;
+  const [jobs, vendors] = await Promise.all([dbSelect('jobs','select=status,job_type,quoted_price'), dbSelect('providers','select=status')]);
+  const total = jobs.length, completed = jobs.filter(j=>j.status==='completed').length;
+  const revenue = jobs.reduce((s,j)=>s+(parseFloat(j.quoted_price)||0),0);
+  const activeV = vendors.filter(v=>v.status==='active').length;
+  document.getElementById('an-total').textContent     = total;
+  document.getElementById('an-completed').textContent = completed;
+  document.getElementById('an-revenue').textContent   = '$'+revenue.toLocaleString('en-US');
+  document.getElementById('an-vendors').textContent   = activeV;
+  const byType={}, byStatus={};
+  jobs.forEach(j=>{byType[j.job_type||'Other']=(byType[j.job_type||'Other']||0)+1; byStatus[j.status||'submitted']=(byStatus[j.status||'submitted']||0)+1;});
+  document.getElementById('admin-analytics-detail').innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px">
-      <div class="card"><div class="card-title">Jobs by Type</div>${Object.entries(byType).map(([k,v])=>`
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <div style="font-size:13px;color:rgba(255,255,255,.6)">${esc(k)}</div>
-          <div style="font-family:var(--mono);font-size:13px;color:var(--white)">${v}</div>
-        </div>`).join('')}</div>
-      <div class="card"><div class="card-title">Jobs by Status</div>${Object.entries(byStatus).map(([k,v])=>`
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <div>${statusPill(k)}</div>
-          <div style="font-family:var(--mono);font-size:13px;color:var(--white)">${v}</div>
-        </div>`).join('')}</div>
+      <div class="card"><div class="card-title">Jobs by Type</div>${Object.entries(byType).map(([k,v])=>`<div style="display:flex;justify-content:space-between;margin-bottom:8px"><div style="font-size:13px;color:rgba(255,255,255,.6)">${esc(k)}</div><div style="font-family:var(--mono);font-size:13px;color:var(--white)">${v}</div></div>`).join('')}</div>
+      <div class="card"><div class="card-title">Jobs by Status</div>${Object.entries(byStatus).map(([k,v])=>`<div style="display:flex;justify-content:space-between;margin-bottom:8px"><div>${statusPill(k)}</div><div style="font-family:var(--mono);font-size:13px;color:var(--white)">${v}</div></div>`).join('')}</div>
     </div>`;
 }
 
-// ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 // MODAL
-// ──────────────────────────────────────────────────────
-function closeModal() {
-  document.getElementById('job-modal').classList.remove('open');
-}
-document.getElementById('job-modal').addEventListener('click',function(e){
-  if(e.target===this) closeModal();
-});
+// ═══════════════════════════════════════════════════════
+document.getElementById('job-modal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
 
-// ──────────────────────────────────────────────────────
-// UTILS
-// ──────────────────────────────────────────────────────
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function fmtDate(d){
-  if(!d) return '—';
-  return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-}
-
-// ──────────────────────────────────────────────────────
-// BOOT
-// ──────────────────────────────────────────────────────
-(async()=>{
-  // Handle URL params (from marketing site redirect)
-  const params=new URLSearchParams(location.search);
-  const emailParam=params.get('email');
-  const tabParam=params.get('tab');
-  const roleParam=params.get('role');
-
-  if(tabParam==='signup') {
-    switchAuthTab('signup');
-    if(emailParam) document.getElementById('su-email').value=emailParam;
-    if(roleParam==='provider') selectRole('provider');
-  } else if(emailParam) {
-    document.getElementById('si-email').value=emailParam;
-  }
-
-  // Check existing session
-  const {data:{session}}=await sb.auth.getSession();
-  if(session?.user) {
-    await initApp(session.user);
-  }
-
-  // Auth state listener
-  sb.auth.onAuthStateChange(async(event,session)=>{
-    if(event==='SIGNED_IN'&&session?.user&&!currentUser) {
-      await initApp(session.user);
-    }
-    if(event==='SIGNED_OUT') {
-      currentUser=null; currentRole=null;
-    }
-  });
-})();
-
-// ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════
 // AI CHAT
-// ──────────────────────────────────────────────────────
-let chatHistory = [];
+// ═══════════════════════════════════════════════════════
 const CHAT_SUGGESTIONS = {
-  customer: [
-    'What's the status of my jobs?',
-    'How do I request an emergency job?',
-    'How does pricing work?',
-    'When will I hear back after submitting?'
-  ],
-  provider: [
-    'How do I mark a job as complete?',
-    'When do I get paid after finishing a job?',
-    'What should I do if I can't make it to a job?',
-    'How does vendor rating work?'
-  ],
-  admin: [
-    'Summarize open jobs',
-    'Which vendors are pending approval?',
-    'How should I price a turnover cleaning?',
-    'What's the SLA for urgent jobs?'
-  ]
+  customer: ['What\'s the status of my jobs?','How do I request an emergency job?','How does pricing work?','When will I hear back after submitting?'],
+  provider: ['How do I mark a job as complete?','When do I get paid after finishing?','What if I can\'t make it to a job?','How does vendor rating work?'],
+  admin:    ['How should I price a turnover cleaning?','What\'s the SLA for urgent jobs?','Draft a message to a customer about their quote','Summarize how the platform works']
 };
 
 function getChatSystemPrompt() {
   const name = document.getElementById('sb-name').textContent || 'User';
-  const base = `You are the RelayOps AI Assistant — a helpful, concise assistant built into the RelayOps property maintenance platform. RelayOps connects property managers and landlords with vetted local vendors (handymen, cleaners, locksmiths, plumbers, junk removal, painters) to fill overflow maintenance jobs quickly. Key facts: average match time is under 2 hours, jobs are tracked end-to-end, payment is via Stripe, service areas are Pittsburgh and Philadelphia PA. Be friendly, direct, and practical. Use short paragraphs. Never make up specific job data — if asked about live data, tell the user to check their dashboard tabs.`;
-
-  if(currentRole==='customer') {
-    return `${base}
-
-You are speaking with ${name}, a property manager / customer. Help them understand how to submit jobs, track status, understand pricing (15% per-job, $199/mo priority, $499/mo pro), and what to expect from the process. If they ask about their specific jobs, tell them to check the My Jobs tab.`;
-  }
-  if(currentRole==='provider') {
-    return `${base}
-
-You are speaking with ${name}, a vendor / service provider. Help them understand how job assignments work, how to update job status, how payment works (via Stripe on completion), and how to build their reputation on the platform. If they ask about their specific assigned jobs, direct them to the My Assigned Jobs tab.`;
-  }
-  if(currentRole==='admin') {
-    return `${base}
-
-You are speaking with the RelayOps admin. Help with operational questions: how to price jobs (15% markup standard, 20-25% emergency), vendor management, customer communication, platform operations, and property maintenance best practices. You can also help draft messages to customers or vendors.`;
-  }
-  return base;
+  const base = `You are the RelayOps AI Assistant — helpful, concise, built into the RelayOps property maintenance portal. RelayOps connects property managers with vetted local vendors (handymen, cleaners, locksmiths, plumbers, junk removal, painters) to fill overflow maintenance jobs fast. Key facts: avg match time under 2 hours, end-to-end job tracking, Stripe payments, service areas Pittsburgh and Philadelphia PA. Pricing: 15% per-job, $199/mo priority plan, $499/mo pro plan. Be friendly and direct. Use short paragraphs. Never make up specific job data — tell users to check their dashboard for live info.`;
+  if (currentRole === 'customer') return `${base}\n\nSpeaking with ${name}, a property manager/customer. Help with job submission, status, pricing, and what to expect.`;
+  if (currentRole === 'provider') return `${base}\n\nSpeaking with ${name}, a vendor/provider. Help with job workflow, status updates, payment (Stripe on completion), and building reputation.`;
+  return `${base}\n\nSpeaking with the RelayOps admin. Help with pricing guidance, vendor management, customer communication, and operational questions. Can also help draft messages.`;
 }
 
 function initChat() {
-  chatHistory = [];
-  const role = currentRole==='provider' ? 'provider' : currentRole==='admin' ? 'admin' : 'customer';
-  const suggestions = CHAT_SUGGESTIONS[role] || CHAT_SUGGESTIONS.customer;
-  const sugEl = document.getElementById('chat-suggestions');
-  if(sugEl) {
-    sugEl.innerHTML = suggestions.map(s =>
-      `<button class="chat-suggestion" onclick="useChatSuggestion(this.textContent)">${s}</button>`
-    ).join('');
-  }
+  const role = currentRole === 'provider' ? 'provider' : currentRole === 'admin' ? 'admin' : 'customer';
+  const el = document.getElementById('chat-suggestions');
+  if (el) el.innerHTML = (CHAT_SUGGESTIONS[role]||[]).map(s=>`<button class="chat-suggestion" onclick="useSuggestion(this.textContent)">${s}</button>`).join('');
 }
 
-function useChatSuggestion(text) {
-  document.getElementById('chat-input').value = text;
-  sendChatMessage();
-}
+function useSuggestion(text) { document.getElementById('chat-input').value = text; sendChatMessage(); }
 
-function chatKeydown(e) {
-  if(e.key==='Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendChatMessage();
-  }
-}
+function chatKeydown(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } }
 
-function autoResizeChat(el) {
-  el.style.height = 'auto';
-  el.style.height = Math.min(el.scrollHeight, 140) + 'px';
-}
+function autoResizeChat(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 140) + 'px'; }
 
 function appendBubble(role, text) {
   const empty = document.getElementById('chat-empty');
-  if(empty) empty.remove();
-
+  if (empty) empty.remove();
   const msgs = document.getElementById('chat-messages');
   const now = new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
   const div = document.createElement('div');
   div.className = `chat-bubble ${role}`;
-
-  if(role==='ai') {
-    // Convert markdown-lite to HTML
-    let html = text
-      .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
-      .replace(/
-
-/g,'</p><p>')
-      .replace(/
-- /g,'</p><ul><li>').replace(/
-  - /g,'<li>')
-      .replace(/
-/g,'<br>');
-    html = '<p>' + html + '</p>';
-    div.innerHTML = `<div class="bubble-body">${html}</div><div class="bubble-time">${now}</div>`;
+  if (role === 'ai') {
+    let html = text.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\n\n/g,'</p><p>').replace(/\n/g,'<br>');
+    div.innerHTML = `<div class="bubble-body"><p>${html}</p></div><div class="bubble-time">${now}</div>`;
   } else {
-    div.innerHTML = `<div class="bubble-body">${esc(text).replace(/\n/g,'<br>')}</div><div class="bubble-time">${now}</div>`;
+    div.innerHTML = `<div class="bubble-body">${esc(text)}</div><div class="bubble-time">${now}</div>`;
   }
-
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
-  return div;
 }
 
 function showTyping() {
   const msgs = document.getElementById('chat-messages');
   const div = document.createElement('div');
-  div.className = 'chat-bubble ai chat-typing';
-  div.id = 'chat-typing-indicator';
-  div.innerHTML = `<div class="typing-dots"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
-  msgs.appendChild(div);
-  msgs.scrollTop = msgs.scrollHeight;
+  div.className = 'chat-bubble ai'; div.id = 'chat-typing';
+  div.innerHTML = '<div class="typing-dots"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>';
+  msgs.appendChild(div); msgs.scrollTop = msgs.scrollHeight;
 }
-
-function hideTyping() {
-  const el = document.getElementById('chat-typing-indicator');
-  if(el) el.remove();
-}
+function hideTyping() { const el = document.getElementById('chat-typing'); if (el) el.remove(); }
 
 async function sendChatMessage() {
   const input = document.getElementById('chat-input');
-  const text = input.value.trim();
-  if(!text) return;
-
-  const sendBtn = document.getElementById('chat-send-btn');
-  sendBtn.disabled = true;
-  input.value = '';
-  input.style.height = 'auto';
-
+  const text = input.value.trim(); if (!text) return;
+  const btn = document.getElementById('chat-send-btn');
+  btn.disabled = true; input.value = ''; input.style.height = 'auto';
   appendBubble('user', text);
-  chatHistory.push({role:'user', content:text});
-
+  chatHistory.push({ role: 'user', content: text });
   showTyping();
-
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        system: getChatSystemPrompt(),
-        messages: chatHistory
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 1000, system: getChatSystemPrompt(), messages: chatHistory })
     });
-
-    const data = await response.json();
+    const data = await res.json();
     hideTyping();
-
-    if(data.error) {
-      appendBubble('ai', '⚠️ ' + (data.error.message || 'Something went wrong. Please try again.'));
-      chatHistory.pop();
-    } else {
+    if (data.error) { appendBubble('ai', '⚠️ ' + (data.error.message||'Error — please try again.')); chatHistory.pop(); }
+    else {
       const reply = data.content?.map(b=>b.text||'').join('') || 'No response.';
       appendBubble('ai', reply);
-      chatHistory.push({role:'assistant', content:reply});
-      // Keep history manageable — last 20 turns
-      if(chatHistory.length > 40) chatHistory = chatHistory.slice(-40);
+      chatHistory.push({ role: 'assistant', content: reply });
+      if (chatHistory.length > 40) chatHistory = chatHistory.slice(-40);
     }
   } catch(e) {
     hideTyping();
     appendBubble('ai', '⚠️ Could not reach the AI. Check your connection and try again.');
     chatHistory.pop();
   }
-
-  sendBtn.disabled = false;
-  input.focus();
+  btn.disabled = false; input.focus();
 }
 
+// ═══════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════
+(async () => {
+  const params    = new URLSearchParams(location.search);
+  const emailP    = params.get('email');
+  const tabP      = params.get('tab');
+  const roleP     = params.get('role');
+  if (tabP === 'signup') { switchAuthTab('signup'); if (emailP) document.getElementById('su-email').value = emailP; if (roleP === 'provider') selectRole('provider'); }
+  else if (emailP) { document.getElementById('si-email').value = emailP; }
+
+  // Restore session from sessionStorage
+  if (sbRestoreSession()) {
+    // We have a token — try to get user from Supabase
+    try {
+      const r = await fetch(BASE + '/auth/v1/user', { headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + _accessToken } });
+      if (r.ok) { const user = await r.json(); await initApp(user); return; }
+    } catch(e) {}
+    sbSignOut(); // token was bad
+  }
+})();
 </script>
 </body>
 </html>
