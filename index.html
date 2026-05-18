@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>emailjs.init('fjlY4_qDvbN5NHIbn');</script>
 <style>
 :root{
   --ink:#0d0d0d;
@@ -914,11 +916,17 @@ footer{background:#080808;padding:40px 0 28px;border-top:1px solid rgba(255,255,
         </div>
         <div class="info-block">
           <h3>Contact us directly</h3>
-          <p>Prefer to talk first? Reach out and we'll walk you through the process.</p>
-          <div class="contact-item"><div class="contact-item-label">Email</div><div class="contact-item-val"><a href="mailto:contactrelayops@gmail.com" style="color:var(--ink);text-decoration:none">contactrelayops@gmail.com</a></div></div>
-          <div class="contact-item"><div class="contact-item-label">Phone</div><div class="contact-item-val"><a href="tel:+12678759111" style="color:var(--ink);text-decoration:none">(267) 875-9111</a></div></div>
-          <div class="contact-item"><div class="contact-item-label">Service area</div><div class="contact-item-val">Pittsburgh, PA &amp; Philadelphia, PA</div></div>
-          <div style="margin-top:20px"><a href="mailto:contactrelayops@gmail.com" class="btn btn-ghost" style="font-size:13px">Email RelayOps</a></div>
+          <p>Have a question? Send us a message and we'll get back to you fast.</p>
+          <div id="contact-success" style="display:none;margin-top:14px;padding:12px 14px;background:#eaf3de;border:1px solid #b7d9a0;border-radius:10px;color:#3b6d11;font-size:13px">✅ Message sent! We'll reply shortly.</div>
+          <div id="contact-form-fields" style="margin-top:16px;display:grid;gap:12px">
+            <div class="field"><label>Your Name</label><input id="c-name" type="text" placeholder="Your name"/></div>
+            <div class="field"><label>Email Address</label><input id="c-email" type="email" placeholder="name@company.com"/></div>
+            <div class="field"><label>Message</label><textarea id="c-message" placeholder="What can we help you with?" style="min-height:80px;resize:vertical;width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-sm);font:inherit;background:var(--paper);color:var(--ink);outline:none;"></textarea></div>
+            <button class="btn btn-red" type="button" onclick="submitContact()" id="c-btn">Send Message →</button>
+          </div>
+          <div class="contact-item" style="margin-top:16px"><div class="contact-item-label">Phone</div><div class="contact-item-val"><a href="tel:+12678759111" style="color:var(--ink);text-decoration:none">(267) 875-9111</a></div></div>
+          <div class="contact-item"><div class="contact-item-label">Email</div><div class="contact-item-val"><a href="mailto:contactrelayops@gmail.com" style="color:var(--red);text-decoration:none">contactrelayops@gmail.com</a></div></div>
+          <div class="contact-item"><div class="contact-item-label">Service area</div><div class="contact-item-val">Pittsburgh &amp; Philadelphia, PA</div></div>
         </div>
       </div>
     </div>
@@ -1088,19 +1096,12 @@ async function submitJob() {
     document.getElementById('job-success').style.display = 'block';
     btn.style.display = 'none';
     // Send email notification
-    fetch('https://formsubmit.co/ajax/contactrelayops@gmail.com', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-      body: JSON.stringify({
-        _subject: '🚨 New RelayOps Job Request',
-        name: name || 'Unknown',
-        email: email || 'Not provided',
-        phone: phone || 'Not provided',
-        address: address,
-        job_type: jobType,
-        urgency: urgency,
-        description: description
-      })
+    emailjs.send('service_slduczl', 'template_sacm0kn', {
+      subject: '🚨 New Job Request — ' + jobType,
+      from_name: name || 'Unknown',
+      from_email: email || 'Not provided',
+      phone: phone || 'Not provided',
+      message: `Address: ${address}\nJob Type: ${jobType}\nUrgency: ${urgency}\nDescription: ${description}${company ? '\nCompany: ' + company : ''}`
     }).catch(()=>{});
   } else {
     btn.textContent = 'Submit Job Request →';
@@ -1157,24 +1158,38 @@ async function submitVendor() {
     document.getElementById('vendor-success').style.display = 'block';
     btn.style.display = 'none';
     // Send email notification
-    fetch('https://formsubmit.co/ajax/contactrelayops@gmail.com', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-      body: JSON.stringify({
-        _subject: '🔧 New RelayOps Vendor Application',
-        name: name,
-        email: email,
-        phone: phone || 'Not provided',
-        service: service,
-        city: city || 'Not provided',
-        emergency: emergency,
-        notes: notes || 'None'
-      })
+    emailjs.send('service_slduczl', 'template_sacm0kn', {
+      subject: '🔧 New Vendor Application — ' + service,
+      from_name: name,
+      from_email: email,
+      phone: phone || 'Not provided',
+      message: `Service: ${service}\nCity: ${city || 'Not provided'}\nEmergency Availability: ${emergency}\nResponse Time: ${document.getElementById('v-response').value || 'Not provided'}\nYears in Business: ${document.getElementById('v-years').value || 'Not provided'}\nNotes: ${notes || 'None'}`
     }).catch(()=>{});
   } else {
     btn.textContent = 'Apply to Join Network →';
     btn.disabled = false;
     alert('Something went wrong. Please try again or email contactrelayops@gmail.com');
+  }
+}async function submitContact() {
+  const name = document.getElementById('c-name').value.trim();
+  const email = document.getElementById('c-email').value.trim();
+  const message = document.getElementById('c-message').value.trim();
+  if(!name || !email || !message) { alert('Please fill in all fields.'); return; }
+  const btn = document.getElementById('c-btn');
+  btn.textContent = 'Sending...'; btn.disabled = true;
+  try {
+    await emailjs.send('service_slduczl', 'template_sacm0kn', {
+      subject: '💬 Contact from ' + name,
+      from_name: name,
+      from_email: email,
+      phone: 'N/A',
+      message: message
+    });
+    document.getElementById('contact-form-fields').style.display = 'none';
+    document.getElementById('contact-success').style.display = 'block';
+  } catch(e) {
+    btn.textContent = 'Send Message →'; btn.disabled = false;
+    alert('Something went wrong. Please email contactrelayops@gmail.com directly.');
   }
 }
 </script>
