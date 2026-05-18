@@ -60,6 +60,14 @@ a{text-decoration:none;color:inherit}
 }
 .auth-input:focus{border-color:var(--red);background:#222}
 .auth-input::placeholder{color:rgba(255,255,255,.25)}
+.auth-input:-webkit-autofill,
+.auth-input:-webkit-autofill:hover,
+.auth-input:-webkit-autofill:focus{
+  -webkit-box-shadow:0 0 0 1000px #1e1e1e inset !important;
+  -webkit-text-fill-color:#ffffff !important;
+  border-color:rgba(255,255,255,.1) !important;
+  caret-color:#ffffff;
+}
 .auth-role-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
 .auth-role{
   padding:14px 12px;border:1px solid rgba(255,255,255,.1);border-radius:var(--r-md);
@@ -454,13 +462,14 @@ a{text-decoration:none;color:inherit}
     <div id="signin-form">
       <div class="auth-field">
         <div class="auth-label">Email</div>
-        <input class="auth-input" id="si-email" type="email" placeholder="name@company.com" onkeydown="if(event.key==='Enter')doSignIn()"/>
+        <input class="auth-input" id="si-email" type="email" placeholder="name@company.com" autocomplete="email" onkeydown="if(event.key==='Enter')doSignIn()"/>
       </div>
       <div class="auth-field">
         <div class="auth-label">Password</div>
-        <input class="auth-input" id="si-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doSignIn()"/>
+        <input class="auth-input" id="si-pass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doSignIn()"/>
       </div>
-      <button class="auth-btn" id="si-btn" onclick="doSignIn()">Sign In →</button>
+      <button class="auth-btn" id="si-btn" type="button" onclick="doSignIn()">Sign In →</button>
+      <div id="auth-debug" style="margin-top:10px;font-size:11px;color:rgba(255,255,255,.2);font-family:monospace;display:none"></div>
     </div>
 
     <!-- SIGN UP -->
@@ -1129,34 +1138,54 @@ function authErr(msg, green) {
 }
 
 async function doSignIn() {
-  const email = document.getElementById('si-email').value.trim();
-  const pass  = document.getElementById('si-pass').value;
-  if (!email || !pass) { authErr('Please enter your email and password.'); return; }
+  // Small delay to let Chrome autofill settle
+  await new Promise(r => setTimeout(r, 80));
+
+  const emailEl = document.getElementById('si-email');
+  const passEl  = document.getElementById('si-pass');
+  const email   = (emailEl.value || '').trim();
+  const pass    = passEl.value || '';
 
   const btn = document.getElementById('si-btn');
+  const dbg = document.getElementById('auth-debug');
+
+  if (!email || !pass) {
+    authErr('Please enter your email and password.');
+    return;
+  }
+
   btn.disabled = true; btn.textContent = 'Signing in...';
   document.getElementById('auth-error').style.display = 'none';
 
-  // ── Admin shortcut: bypass Supabase auth entirely ──
-  if (email === ADMIN_EMAIL && pass === ADMIN_PASS) {
+  // ── Admin: bypass Supabase entirely ──
+  if (email.toLowerCase() === ADMIN_EMAIL.toLowerCase() && pass === ADMIN_PASS) {
     btn.disabled = false; btn.textContent = 'Sign In →';
     await enterAdminMode({ id: 'admin-local', email: ADMIN_EMAIL, user_metadata: { full_name: 'Admin' }, created_at: new Date().toISOString() });
     return;
   }
 
+  // ── Regular user: Supabase auth ──
   try {
     const { user, error } = await sbSignIn(email, pass);
     btn.disabled = false; btn.textContent = 'Sign In →';
     if (error) {
-      if (error.toLowerCase().includes('invalid') || error.toLowerCase().includes('credentials') || error.toLowerCase().includes('wrong')) authErr('Incorrect email or password.');
-      else if (error.toLowerCase().includes('confirm')) authErr('Please confirm your email first, then try again.');
-      else authErr(error);
+      const msg = error.toLowerCase();
+      if (msg.includes('invalid') || msg.includes('credentials') || msg.includes('wrong') || msg.includes('password'))
+        authErr('Incorrect email or password. Please try again.');
+      else if (msg.includes('confirm') || msg.includes('verified'))
+        authErr('Please confirm your email address first, then sign in.');
+      else if (msg.includes('too many') || msg.includes('rate'))
+        authErr('Too many attempts. Please wait a moment and try again.');
+      else
+        authErr('Sign in failed: ' + error);
       return;
     }
+    if (!user) { authErr('Sign in failed — no user returned. Please try again.'); return; }
     await initApp(user);
   } catch(e) {
     btn.disabled = false; btn.textContent = 'Sign In →';
-    authErr('Network error. Please check your connection and try again.');
+    authErr('Network error — could not reach authentication server. Check your connection.');
+    console.error('doSignIn error:', e);
   }
 }
 
@@ -1210,7 +1239,7 @@ async function initApp(user) {
   currentUser = user;
   if (!user) { doSignOut(); return; }
   const role = user.user_metadata?.role || user.role || 'customer';
-  if (user.email === ADMIN_EMAIL) { await enterAdminMode(user); return; }
+  if (user.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase()) { await enterAdminMode(user); return; }
   if (role === 'provider') { await enterVendorMode(user); return; }
   await enterCustomerMode(user);
 }
