@@ -140,6 +140,13 @@ a{text-decoration:none;color:inherit}
   font-size:13px;color:rgba(255,255,255,.3);cursor:pointer;transition:all .15s;
 }
 .sidebar-sign-out:hover{color:rgba(255,255,255,.7);background:rgba(255,255,255,.04)}
+.sidebar-site-link{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 10px;border-radius:var(--r-sm);
+  font-size:13px;color:rgba(255,255,255,.3);
+  text-decoration:none;transition:all .15s;margin-bottom:2px;
+}
+.sidebar-site-link:hover{color:rgba(255,255,255,.7);background:rgba(255,255,255,.04)}
 
 /* ── MAIN CONTENT ── */
 .main{flex:1;overflow-y:auto;background:#111}
@@ -499,6 +506,9 @@ a{text-decoration:none;color:inherit}
       </nav>
 
       <div class="sidebar-bottom">
+        <a href="https://contactrelayops.github.io/relayops-site" class="sidebar-site-link">
+          <span class="nav-icon">🌐</span> Marketing Site
+        </a>
         <div class="sidebar-sign-out" onclick="doSignOut()">
           <span style="font-size:15px">↩</span> Sign Out
         </div>
@@ -1345,12 +1355,19 @@ function renderAdminJobs(jobs) {
     </div>`).join('');
 }
 
-function editAdminJob(id) {
+async function editAdminJob(id) {
   const j=allAdminJobs.find(x=>x.id===id);
   if(!j) return;
+  // Always fetch fresh vendor list so dropdown is never empty
+  if(!allAdminVendors.length) {
+    const {data}=await sb.from('providers').select('*').eq('status','active');
+    allAdminVendors=data||[];
+  }
   document.getElementById('modal-job-title').textContent='Edit Job: '+(j.property_address||id);
-  const vendorOptions = allAdminVendors.filter(v=>v.status==='active')
+  const activeVendors=allAdminVendors.filter(v=>v.status==='active');
+  const vendorOptions = activeVendors
     .map(v=>`<option value="${v.id}" ${j.provider_id===v.id?'selected':''}>${esc(v.full_name)} — ${esc(v.service_types?.join(', ')||'')}</option>`).join('');
+  const noVendors = !activeVendors.length ? '<div style="font-size:12px;color:rgba(255,255,255,.35);margin-top:6px">No active vendors yet — approve vendors in the Vendors tab first.</div>' : '';
 
   document.getElementById('modal-job-content').innerHTML=`
     <div class="modal-section">
@@ -1378,6 +1395,7 @@ function editAdminJob(id) {
             <option value="">— No vendor —</option>
             ${vendorOptions}
           </select>
+          ${noVendors}
         </div>
         <div class="field"><label>Payment Amount ($)</label><input id="edit-payamt" type="number" value="${j.payment_amount||''}" placeholder="0.00"/></div>
       </div>
@@ -1401,7 +1419,12 @@ async function saveAdminJob(id) {
   if(price) updates.quoted_price=parseFloat(price);
   if(notes) updates.admin_notes=notes;
   if(paylink) updates.payment_link=paylink;
-  if(vendor) updates.provider_id=vendor;
+  // Assign vendor and auto-advance status to 'assigned' if still at submitted/priced
+  if(vendor) {
+    updates.provider_id=vendor;
+    if(['submitted','priced'].includes(status)) updates.status='assigned';
+  }
+  if(!vendor) updates.provider_id=null;
   if(payamt) updates.payment_amount=parseFloat(payamt);
 
   const {error}=await sb.from('jobs').update(updates).eq('id',id);
