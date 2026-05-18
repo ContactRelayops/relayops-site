@@ -901,7 +901,10 @@ a{text-decoration:none;color:inherit}
           </div>
           <div class="card">
             <div class="card-title">🌱 Seed Test Data</div>
-            <div style="font-size:13px;color:rgba(255,255,255,.4);margin-bottom:16px;line-height:1.6">Inserts sample vendors and jobs for testing. Safe to run multiple times — checks for duplicates first.</div>
+            <div style="font-size:13px;color:rgba(255,255,255,.4);margin-bottom:12px;line-height:1.6">Inserts sample vendors and jobs for testing. Safe to run multiple times — checks for duplicates first.</div>
+            <div style="font-size:12px;color:rgba(255,212,59,.6);background:rgba(255,212,59,.06);border:1px solid rgba(255,212,59,.15);border-radius:8px;padding:10px 12px;margin-bottom:14px;line-height:1.6">
+              ⚠️ <strong style="color:rgba(255,212,59,.9)">Required first:</strong> In your <a href="https://supabase.com/dashboard/project/qnufazzxoiomgqxydvnf/auth/policies" target="_blank" style="color:#ffd43b;text-decoration:underline">Supabase dashboard → Authentication → Policies</a>, disable RLS on the <code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:3px">jobs</code> and <code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:3px">providers</code> tables, or add an INSERT policy for authenticated users.
+            </div>
             <div id="seed-log" style="font-size:12px;font-family:var(--mono);color:rgba(255,255,255,.5);background:rgba(0,0,0,.3);border-radius:8px;padding:12px;margin-bottom:14px;display:none;max-height:180px;overflow-y:auto;line-height:1.8"></div>
             <button class="btn btn-red" id="seed-btn" onclick="seedTestData()">🌱 Insert Test Data</button>
           </div>
@@ -1876,6 +1879,75 @@ async function seedTestData() {
     log.scrollTop = log.scrollHeight;
   }
 
+  // ── Get a real Supabase token for inserts (RLS requires auth) ──
+  // We use direct fetch so we don't touch the global _accessToken
+  addLog('Authenticating with Supabase...');
+  let seedToken = _accessToken; // use existing if available
+  if (!seedToken) {
+    try {
+      const authRes = await fetch(BASE + '/auth/v1/token?grant_type=password', {
+        method: 'POST',
+        headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASS })
+      });
+      const authData = await authRes.json();
+      if (authData.access_token) {
+        seedToken = authData.access_token;
+        addLog('  ✓ Got auth token');
+      } else {
+        addLog('  ⚠ No Supabase account for admin yet — creating...', true);
+        // Try sign up
+        const suRes = await fetch(BASE + '/auth/v1/signup', {
+          method: 'POST',
+          headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASS, data: { full_name: 'Admin', role: 'admin' } })
+        });
+        const suData = await suRes.json();
+        if (suData.access_token) {
+          seedToken = suData.access_token;
+          addLog('  ✓ Admin account created and authenticated');
+        } else {
+          addLog('  ✗ Could not authenticate. Error: ' + JSON.stringify(suData).slice(0,100), false);
+          addLog('  → Try logging into Supabase dashboard and disabling RLS on jobs/providers tables, then retry.', false);
+          btn.disabled = false; btn.textContent = '🌱 Insert Test Data';
+          return;
+        }
+      }
+    } catch(e) {
+      addLog('  ✗ Auth network error: ' + e.message, false);
+      btn.disabled = false; btn.textContent = '🌱 Insert Test Data';
+      return;
+    }
+  } else {
+    addLog('  ✓ Using existing session token');
+  }
+
+  // Helper: insert with seed token
+  async function seedInsert(table, body) {
+    const r = await fetch(`${BASE}/rest/v1/${table}`, {
+      method: 'POST',
+      headers: {
+        'apikey': ANON_KEY,
+        'Authorization': 'Bearer ' + seedToken,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify(body)
+    });
+    const d = await r.json().catch(() => ({}));
+    return { data: Array.isArray(d) ? d[0] : d, ok: r.ok };
+  }
+
+  // Helper: query with seed token
+  async function seedQuery(table, filter) {
+    const r = await fetch(`${BASE}/rest/v1/${table}?${filter}`, {
+      headers: { 'apikey': ANON_KEY, 'Authorization': 'Bearer ' + seedToken }
+    });
+    if (!r.ok) return [];
+    const d = await r.json().catch(() => []);
+    return Array.isArray(d) ? d : [];
+  }
+
   // ── 1. Seed Vendors ──
   const vendors = [
     { full_name:'Marcus J. Williams', email:'marcus@mjwhandyman.com', phone:'(412) 555-0192', service_types:['Handyman','Painting'], coverage_zips:'Pittsburgh, PA — 25 miles', status:'active' },
@@ -1886,22 +1958,21 @@ async function seedTestData() {
     { full_name:'Philly Multi-Trade', email:'contact@phillytrade.com', phone:'(267) 555-0412', service_types:['Handyman','Cleaning','Painting'], coverage_zips:'Philadelphia, PA — 30 miles', status:'active' },
   ];
 
-  addLog('Inserting vendors...');
+  addLog('\nInserting vendors...');
   let vendorIds = {};
   for (const v of vendors) {
-    // Check if exists
-    const existing = await dbWhere('providers', 'email', v.email);
+    const existing = await seedQuery('providers', `email=eq.${encodeURIComponent(v.email)}`);
     if (existing.length > 0) {
       addLog(`  ⏭ ${v.full_name} already exists`);
       vendorIds[v.full_name] = existing[0].id;
       continue;
     }
-    const { data, ok } = await dbInsert('providers', v);
+    const { data, ok } = await seedInsert('providers', v);
     if (ok && data?.id) {
       vendorIds[v.full_name] = data.id;
       addLog(`  ✓ ${v.full_name}`);
     } else {
-      addLog(`  ✗ Failed: ${v.full_name}`, false);
+      addLog(`  ✗ Failed: ${v.full_name} — ${JSON.stringify(data).slice(0,80)}`, false);
     }
   }
 
@@ -1963,11 +2034,10 @@ async function seedTestData() {
   addLog('\nInserting jobs...');
   let inserted = 0;
   for (const j of jobs) {
-    // Clean undefined provider_ids
-    if (j.provider_id === null || j.provider_id === undefined) delete j.provider_id;
-    const { data, ok } = await dbInsert('jobs', j);
+    if (!j.provider_id) delete j.provider_id;
+    const { data, ok } = await seedInsert('jobs', j);
     if (ok) { inserted++; addLog(`  ✓ [${j.status}] ${j.job_type} — ${j.property_address.split(',')[0]}`); }
-    else { addLog(`  ✗ Failed: ${j.job_type}`, false); }
+    else { addLog(`  ✗ Failed: ${j.job_type} — ${JSON.stringify(data).slice(0,80)}`, false); }
   }
 
   addLog(`\n✅ Done! Inserted ${inserted} jobs and ${Object.keys(vendorIds).length} vendors.`);
