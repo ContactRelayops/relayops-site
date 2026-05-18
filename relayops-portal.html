@@ -1047,24 +1047,34 @@ async function doSignIn() {
   btn.disabled=true; btn.textContent='Signing in...';
   document.getElementById('auth-error').style.display='none';
 
-  // Admin shortcut
-  if(email===ADMIN_EMAIL && pass===ADMIN_PASS) {
-    const {data,error} = await sb.auth.signInWithPassword({email,password:pass}).catch(()=>({error:{message:'Auth error'}}));
+  try {
+    const {data,error} = await sb.auth.signInWithPassword({email,password:pass});
+
     if(error) {
-      // Try anon admin fallback — just show admin UI directly
-      await enterAdminMode({id:'admin',email:ADMIN_EMAIL,user_metadata:{full_name:'Admin'}});
+      // If admin credentials fail Supabase (e.g. account not confirmed), bypass and enter admin directly
+      if(email===ADMIN_EMAIL && pass===ADMIN_PASS) {
+        btn.disabled=false; btn.textContent='Sign In →';
+        await enterAdminMode({id:'admin-local',email:ADMIN_EMAIL,user_metadata:{full_name:'Admin'},created_at:new Date().toISOString()});
+        return;
+      }
+      // Surface the real error to regular users
       btn.disabled=false; btn.textContent='Sign In →';
+      // Make common Supabase errors more readable
+      const msg = error.message || 'Sign in failed';
+      if(msg.toLowerCase().includes('invalid login')) authErr('Incorrect email or password. Please try again.');
+      else if(msg.toLowerCase().includes('email not confirmed')) authErr('Please confirm your email address first, then try again.');
+      else authErr(msg);
       return;
     }
-    await enterAdminMode(data.user);
-    btn.disabled=false; btn.textContent='Sign In →';
-    return;
-  }
 
-  const {data,error} = await sb.auth.signInWithPassword({email,password:pass});
-  btn.disabled=false; btn.textContent='Sign In →';
-  if(error){authErr(error.message);return;}
-  await initApp(data.user);
+    btn.disabled=false; btn.textContent='Sign In →';
+    if(!data?.user) { authErr('Sign in failed — no user returned. Please try again.'); return; }
+    await initApp(data.user);
+
+  } catch(e) {
+    btn.disabled=false; btn.textContent='Sign In →';
+    authErr('Connection error. Please check your internet and try again.');
+  }
 }
 
 async function doSignUp() {
@@ -1077,21 +1087,41 @@ async function doSignUp() {
   btn.disabled=true; btn.textContent='Creating account...';
   document.getElementById('auth-error').style.display='none';
 
-  const {data,error} = await sb.auth.signUp({
-    email, password:pass,
-    options:{data:{full_name:name, role:selectedRole}}
-  });
+  let signUpData, signUpError;
+  try {
+    const res = await sb.auth.signUp({
+      email, password:pass,
+      options:{data:{full_name:name, role:selectedRole}}
+    });
+    signUpData = res.data; signUpError = res.error;
+  } catch(e) {
+    btn.disabled=false; btn.textContent='Create Account →';
+    authErr('Connection error. Please try again.');
+    return;
+  }
   btn.disabled=false; btn.textContent='Create Account →';
-  if(error){authErr(error.message);return;}
+  if(signUpError) {
+    const msg = signUpError.message||'';
+    if(msg.toLowerCase().includes('already registered')) authErr('An account with this email already exists. Try signing in instead.');
+    else authErr(msg||'Sign up failed. Please try again.');
+    return;
+  }
+  if(!signUpData?.user) { authErr('Account creation failed. Please try again.'); return; }
 
   if(selectedRole==='provider') {
-    // Create provider record
     await sb.from('providers').insert({
       full_name:name, email, phone:'', service_types:[], coverage_zips:'', status:'pending',
-      user_id: data.user?.id
+      user_id: signUpData.user.id
     }).catch(()=>{});
   }
-  await initApp(data.user);
+  // Supabase may require email confirmation — handle gracefully
+  if(signUpData.session) {
+    await initApp(signUpData.user);
+  } else {
+    authErr('');
+    document.getElementById('auth-error').style.cssText='display:block;background:rgba(81,207,102,.12);border-color:rgba(81,207,102,.3);color:#51cf66';
+    document.getElementById('auth-error').textContent='✅ Account created! Check your email to confirm, then sign in.';
+  }
 }
 
 async function doSignOut() {
