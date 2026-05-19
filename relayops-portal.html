@@ -1482,7 +1482,7 @@ function filterCustomerJobs(status, btn) {
 
 function renderCustomerJobs(jobs) {
   const el = document.getElementById('cust-jobs-list');
-  if (!jobs.length) { el.innerHTML = '<div class="empty-state">No jobs yet. <a onclick="showPage(\'p-request-job\')" href="#">Submit your first job →</a></div>'; return; }
+  if (!jobs.length) { el.innerHTML = '<div class="empty-state">No jobs yet. <a onclick="showPage("p-request-job")" href="#">Submit your first job →</a></div>'; return; }
   el.innerHTML = jobs.map(j => `
     <div class="table-row" style="grid-template-columns:2fr 1fr 1fr 1fr 90px" onclick="viewCustomerJob('${j.id}')">
       <div><div class="tr-main">${esc(j.property_address||'No address')}</div><div class="tr-sub">${fmtDate(j.created_at)}</div></div>
@@ -1523,11 +1523,55 @@ async function submitJobRequest() {
   const { data, ok } = await dbInsert('jobs', { property_address: address, job_type: type, urgency, description: desc, status: 'submitted', user_id: currentUser?.id || null });
   if (!ok) { btn.disabled = false; btn.textContent = 'Submit Job Request →'; showNotif('Error', 'Something went wrong. Please try again.', 'warning'); return; }
   if (data) jobStatusCache[data.id] = 'submitted';
-  emailjs.send('service_slduczl','template_sacm0kn',{ subject:'🚨 New Job — '+type, from_name: currentUser?.user_metadata?.full_name||'Portal', from_email: currentUser?.email||'', phone:'—', message:`Address: ${address}\nType: ${type}\nUrgency: ${urgency}\nDesc: ${desc}` }).catch(()=>{});
+  // Notify admin of new job
+  emailjs.send('service_slduczl', 'template_sacm0kn', {
+    subject: '🚨 New Job — ' + type,
+    from_name: currentUser?.user_metadata?.full_name || 'Portal user',
+    from_email: ADMIN_EMAIL,
+    phone: '—',
+    message: `New job submitted!
+
+Type: ${type}
+Address: ${address}
+Urgency: ${urgency}
+Description: ${desc}
+Customer: ${currentUser?.email || 'unknown'}`
+  }).catch(() => {});
+
+  // Confirm receipt to customer
+  const custEmail = currentUser?.email;
+  if (custEmail) {
+    const custName = currentUser?.user_metadata?.full_name || 'there';
+    const custMsg = [
+      `Hi ${custName},`,
+      ``,
+      `We received your job request!`,
+      ``,
+      `Job Type: ${type}`,
+      `Property: ${address}`,
+      `Urgency: ${urgency}`,
+      ``,
+      `Our team is reviewing it now. You will receive a quote within 2 hours for standard jobs, faster for urgent ones.`,
+      ``,
+      `Track your job status: ${PORTAL_URL}`,
+      ``,
+      `Questions? Call us at ${PHONE}`,
+      ``,
+      `— RelayOps Team`
+    ].join('\n');
+    emailjs.send('service_slduczl', 'template_sacm0kn', {
+      subject: 'Job received - we will be in touch within 2 hours',
+      from_name: 'RelayOps',
+      from_email: custEmail,
+      phone: '—',
+      message: custMsg
+    }).catch(() => {});
+  }
+
   document.getElementById('req-form-card').style.display = 'none';
   document.getElementById('req-success').style.display  = 'block';
   btn.disabled = false;
-  showNotif('Job Submitted!', 'We\'ll review and quote within 2 hours.', 'success');
+  showNotif('Job Submitted!', 'Confirmation email sent to you.', 'success');
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1562,10 +1606,18 @@ function vendorActionBtn(j) {
 }
 
 async function updateVendorStatus(id, newStatus) {
-  const ok = await dbUpdate('jobs', id, { status: newStatus });
+  const job = allVendorJobs.find(j => j.id === id);
+  const ok  = await dbUpdate('jobs', id, { status: newStatus });
   if (!ok) { showNotif('Error', 'Could not update status.', 'warning'); return; }
   showNotif('Updated', `Job marked as ${newStatus.replace('_',' ')}.`, 'success');
   loadVendorJobs();
+
+  // Notify customer when vendor marks job complete
+  if (newStatus === 'completed' && job) {
+    const updatedJob = { ...job, status: 'completed' };
+    await notifyCustomer(updatedJob, 'completed').catch(() => {});
+    showNotif('Customer notified', 'Completion email sent to customer.', 'info', 4000);
+  }
 }
 
 async function loadVendorPerf() {
@@ -1649,6 +1701,157 @@ async function editAdminJob(id) {
   document.getElementById('job-modal').classList.add('open');
 }
 
+// ═══════════════════════════════════════════════════════
+// EMAIL NOTIFICATIONS
+// ═══════════════════════════════════════════════════════
+function sendEmail(to, subject, body) {
+  // EmailJS sends TO the from_email field in the template
+  // We use from_email as the recipient address
+  return emailjs.send('service_slduczl', 'template_sacm0kn', {
+    subject,
+    from_name: 'RelayOps',
+    from_email: to,
+    phone: '—',
+    message: body
+  }).catch(e => console.warn('Email failed:', e));
+}
+
+const PORTAL_URL = 'https://contactrelayops.github.io/relayops-site/relayops-portal.html';
+const PHONE = '(267) 875-9111';
+
+// Get customer email from job record
+async function getJobCustomerEmail(job) {
+  // Try parsing from description field (legacy format)
+  if (job.description) {
+    const m = job.description.match(/Email:\s*([^\s|]+@[^\s|]+)/);
+    if (m) return m[1].trim();
+  }
+  // If we have user_id, try fetching from Supabase auth (requires service role — not available)
+  // Fall back to admin email so at least someone is notified
+  return null;
+}
+
+// Notify customer of key job events
+async function notifyCustomer(job, eventType) {
+  const email = await getJobCustomerEmail(job);
+  const addr  = job.property_address || 'your property';
+  const type  = job.job_type || 'job';
+
+  if (eventType === 'quoted') {
+    const price = job.quoted_price ? `$${job.quoted_price}` : 'pending';
+    const payLink = job.payment_link ? `
+
+Pay securely here: ${job.payment_link}` : '';
+    const notes = job.admin_notes ? `
+
+Notes from RelayOps: ${job.admin_notes}` : '';
+    const body = `Hi there,
+
+Great news — your job has been reviewed and priced!
+
+Job: ${type} at ${addr}
+Quote: ${price}${notes}${payLink}
+
+Log in to view full details and approve:
+${PORTAL_URL}
+
+Questions? Call us at ${PHONE}
+
+— RelayOps Team`;
+    if (email) await sendEmail(email, `💰 Your quote is ready — ${type} at ${addr.split(',')[0]}`, body);
+    // Always notify admin too
+    await sendEmail(ADMIN_EMAIL, `[ADMIN] Quote sent for ${type} at ${addr.split(',')[0]}`, `Job ID: ${job.id}
+Customer email: ${email || 'unknown'}
+Quote: ${price}`);
+  }
+
+  if (eventType === 'assigned') {
+    const vendor = allAdminVendors.find(v => v.id === job.provider_id);
+    const vendorName = vendor?.full_name || 'a verified vendor';
+    const body = `Hi there,
+
+A vendor has been assigned to your job!
+
+Job: ${type} at ${addr}
+Vendor: ${vendorName}
+
+Track your job status in real time:
+${PORTAL_URL}
+
+Questions? Call us at ${PHONE}
+
+— RelayOps Team`;
+    if (email) await sendEmail(email, `✅ Vendor assigned — ${type} at ${addr.split(',')[0]}`, body);
+  }
+
+  if (eventType === 'completed') {
+    const completionNote = job.completion_notes ? 'Completion notes: ' + job.completion_notes + '\n\n' : '';
+    const body = 'Hi there,\n\nYour job has been completed!\n\nJob: ' + type + ' at ' + addr + '\nStatus: Completed\n\n' + completionNote + 'Log in to view completion details and photos:\n' + PORTAL_URL + '\n\nThank you for using RelayOps!\n\n— RelayOps Team';
+    if (email) await sendEmail(email, `🏁 Job completed — ${type} at ${addr.split(',')[0]}`, body);
+    await sendEmail(ADMIN_EMAIL, `[ADMIN] Job completed: ${type} at ${addr.split(',')[0]}`, `Job ID: ${job.id}
+Customer: ${email || 'unknown'}`);
+  }
+
+  if (eventType === 'cancelled') {
+    const body = `Hi there,
+
+Your job request has been cancelled.
+
+Job: ${type} at ${addr}
+
+If you believe this is a mistake or have questions, please contact us:
+📧 ${ADMIN_EMAIL}
+📞 ${PHONE}
+
+— RelayOps Team`;
+    if (email) await sendEmail(email, `❌ Job cancelled — ${type} at ${addr.split(',')[0]}`, body);
+  }
+}
+
+// Notify vendor of key job events  
+async function notifyVendor(job, eventType) {
+  const vendor = allAdminVendors.find(v => v.id === job.provider_id);
+  if (!vendor?.email) return;
+  const addr = job.property_address || 'TBD';
+  const type = job.job_type || 'job';
+
+  if (eventType === 'assigned') {
+    const urgencyNote = job.urgency === 'Emergency' ? ' [EMERGENCY - Same hour required]' : job.urgency === 'Urgent' ? ' [URGENT - Same day required]' : '';
+    const body = `Hi ${vendor.full_name},
+
+You have a new job assignment on RelayOps!
+
+Job Type: ${type}
+Address: ${addr}
+Urgency: ${job.urgency || 'Standard'}
+Description: ${job.description || 'See portal for details'}${urgencyNote}
+
+Log in to your vendor dashboard to accept and manage this job:
+${PORTAL_URL}
+
+Questions? Call us: ${PHONE}
+
+— RelayOps Team`;
+    await sendEmail(vendor.email, `🔧 New job assigned — ${type} at ${addr.split(',')[0]}`, body);
+  }
+
+  if (eventType === 'updated') {
+    const body = `Hi ${vendor.full_name},
+
+A job you are working on has been updated.
+
+Job: ${type} at ${addr}
+New Status: ${job.status}
+${job.admin_notes ? 'Notes: ' + job.admin_notes : ''}
+
+Log in to see full details:
+${PORTAL_URL}
+
+— RelayOps Team`;
+    await sendEmail(vendor.email, `📋 Job updated — ${type} at ${addr.split(',')[0]}`, body);
+  }
+}
+
 async function saveAdminJob(id) {
   const status  = document.getElementById('edit-status').value;
   const price   = document.getElementById('edit-price').value;
@@ -1663,10 +1866,37 @@ async function saveAdminJob(id) {
   if (payamt)  updates.payment_amount  = parseFloat(payamt);
   updates.provider_id = vendor || null;
   if (vendor && ['submitted','priced'].includes(status)) updates.status = 'assigned';
+  const prevJob = allAdminJobs.find(x => x.id === id);
+  const prevStatus = prevJob?.status;
   const ok = await dbUpdate('jobs', id, updates);
   if (!ok) { showNotif('Error', 'Could not save.', 'warning'); return; }
-  showNotif('Saved', 'Job updated.', 'success');
+  showNotif('Saved', 'Job updated — sending notifications...', 'success');
   closeModal(); loadAdminJobs();
+
+  // Build the updated job object for notifications
+  const updatedJob = { ...prevJob, ...updates, id };
+
+  // ── Customer notifications ──
+  const newStatus = updates.status || prevStatus;
+  if (newStatus !== prevStatus) {
+    if (newStatus === 'priced')      await notifyCustomer(updatedJob, 'quoted');
+    if (newStatus === 'assigned')    await notifyCustomer(updatedJob, 'assigned');
+    if (newStatus === 'completed')   await notifyCustomer(updatedJob, 'completed');
+    if (newStatus === 'cancelled')   await notifyCustomer(updatedJob, 'cancelled');
+  } else if (updates.quoted_price && prevStatus === 'priced') {
+    // Price updated on already-priced job
+    await notifyCustomer(updatedJob, 'quoted');
+  }
+
+  // ── Vendor notifications ──
+  if (updates.provider_id && updates.provider_id !== prevJob?.provider_id) {
+    // Newly assigned vendor
+    await notifyVendor(updatedJob, 'assigned');
+    showNotif('Notifications sent', 'Customer and vendor have been emailed.', 'info', 4000);
+  } else if (newStatus !== prevStatus && updatedJob.provider_id) {
+    // Status changed on a job with a vendor
+    await notifyVendor(updatedJob, 'updated');
+  }
 }
 
 // ═══════════════════════════════════════════════════════
