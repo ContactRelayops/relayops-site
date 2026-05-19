@@ -1843,17 +1843,25 @@ function cpSaveHistory(history) {
 // Save all chat sessions index (for admin logs)
 function cpSaveToLogs(history) {
   if (!currentUser) return;
+  // Skip if only the welcome message
+  const userMsgs = history.filter(m => m.role === 'user');
+  if (userMsgs.length === 0) return;
   try {
     const uid   = currentUser.id || currentUser.email || 'anon';
-    const name  = currentUser.user_metadata?.full_name || currentUser.email || uid;
-    const role  = currentRole || 'unknown';
-    const key   = `relayops_chatlog_${uid}`;
+    const name  = currentUser.user_metadata?.full_name || currentUser.email || String(uid).slice(0,12);
+    const role  = currentRole || 'customer';
+    // Use role+uid so admin and customer logs are separate entries
+    const key   = `relayops_chatlog_${role}_${uid}`;
     const entry = { uid, name, role, history, updated: new Date().toISOString() };
     localStorage.setItem(key, JSON.stringify(entry));
-    // Update index
-    const idx = JSON.parse(localStorage.getItem('relayops_chatlog_index') || '[]');
-    if (!idx.includes(key)) { idx.push(key); localStorage.setItem('relayops_chatlog_index', JSON.stringify(idx)); }
-  } catch(e) {}
+    // Maintain a global index of all log keys
+    const indexRaw = localStorage.getItem('relayops_chatlog_index') || '[]';
+    const idx = JSON.parse(indexRaw);
+    if (!idx.includes(key)) {
+      idx.push(key);
+      localStorage.setItem('relayops_chatlog_index', JSON.stringify(idx));
+    }
+  } catch(e) { console.warn('cpSaveToLogs failed:', e); }
 }
 
 let cpPanelOpen = false;
@@ -2010,49 +2018,86 @@ async function cpSend() {
 function loadChatLogs() {
   const container = document.getElementById('chatlogs-container');
   if (!container) return;
+  container.innerHTML = '<div class="empty-state" style="color:rgba(255,255,255,.25)">Scanning chat logs...</div>';
 
-  const index = JSON.parse(localStorage.getItem('relayops_chatlog_index') || '[]');
+  // Collect ALL relayops_chatlog_* keys from localStorage (not just indexed ones)
+  const allKeys = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith('relayops_chatlog_') && !k.includes('_archive_') && k !== 'relayops_chatlog_index') {
+      allKeys.push(k);
+    }
+  }
 
-  if (!index.length) {
-    container.innerHTML = '<div class="empty-state">No chat logs yet. Users must send at least one message for their chat to appear here.</div>';
+  // Also grab anything in the index that might not be in allKeys
+  try {
+    const idx = JSON.parse(localStorage.getItem('relayops_chatlog_index') || '[]');
+    idx.forEach(k => { if (!allKeys.includes(k)) allKeys.push(k); });
+  } catch(e) {}
+
+  if (!allKeys.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div style="font-size:32px;margin-bottom:12px">💬</div>
+        <div style="color:rgba(255,255,255,.4);font-size:14px;margin-bottom:8px">No chat logs yet</div>
+        <div style="color:rgba(255,255,255,.2);font-size:12px">Logs appear here after customers or vendors send messages in the AI chat.<br>Chat logs are stored per browser — logs from other devices won't show here.</div>
+      </div>`;
     return;
   }
 
-  let html = '';
-  let count = 0;
-  index.forEach(key => {
+  let entries = [];
+  allKeys.forEach(key => {
     try {
-      const entry = JSON.parse(localStorage.getItem(key) || 'null');
-      if (!entry || !entry.history?.length) return;
-      count++;
-      const msgCount = entry.history.filter(m => m.role === 'user').length;
-      const updated  = new Date(entry.updated).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
-      const roleLabel = entry.role === 'provider' ? 'Vendor' : entry.role === 'admin' ? 'Admin' : 'Customer';
-      html += `
-        <div class="chatlog-user">
-          <div class="chatlog-header" onclick="this.nextElementSibling.classList.toggle('open')">
-            <div>
-              <div class="chatlog-user-name">${esc(entry.name)} <span style="font-size:11px;color:rgba(255,255,255,.3);margin-left:8px;font-family:var(--mono)">${roleLabel}</span></div>
-              <div class="chatlog-meta">${msgCount} message${msgCount!==1?'s':''} · Last active ${updated}</div>
-            </div>
-            <span style="color:rgba(255,255,255,.3);font-size:12px">▾</span>
-          </div>
-          <div class="chatlog-msgs">
-            ${entry.history.map(m => `
-              <div class="chatlog-msg">
-                <div class="chatlog-role ${m.role === 'user' ? 'user' : 'ai'}">${m.role === 'user' ? 'User' : 'AI'}</div>
-                <div class="chatlog-text">${esc(m.content).replace(/\n/g,'<br>')}</div>
-              </div>`).join('')}
-          </div>
-        </div>`;
+      const raw = localStorage.getItem(key);
+      if (!raw) return;
+      const entry = JSON.parse(raw);
+      if (!entry || !entry.history) return;
+      const userMsgs = entry.history.filter(m => m.role === 'user');
+      if (userMsgs.length === 0) return; // skip sessions with no real user messages
+      entries.push({ key, ...entry, userMsgCount: userMsgs.length });
     } catch(e) {}
   });
 
-  if (!count) {
-    container.innerHTML = '<div class="empty-state">No chat logs yet.</div>';
-  } else {
-    container.innerHTML = `<div style="font-size:13px;color:rgba(255,255,255,.3);margin-bottom:16px;font-family:var(--mono)">${count} conversation${count!==1?'s':''} on this device</div>` + html;
+  // Sort by most recent first
+  entries.sort((a, b) => new Date(b.updated) - new Date(a.updated));
+
+  if (!entries.length) {
+    container.innerHTML = `<div class="empty-state"><div style="color:rgba(255,255,255,.3);font-size:14px">No conversations with user messages yet.</div></div>`;
+    return;
   }
+
+  const roleColors = { customer: '#74c0fc', provider: '#51cf66', admin: '#ffd43b', unknown: '#9b948d' };
+  let html = `<div style="font-size:12px;color:rgba(255,255,255,.25);margin-bottom:16px;font-family:var(--mono)">${entries.length} conversation${entries.length!==1?'s':''} on this device</div>`;
+
+  entries.forEach(entry => {
+    const roleLabel  = entry.role === 'provider' ? 'Vendor' : entry.role === 'admin' ? 'Admin' : 'Customer';
+    const roleColor  = roleColors[entry.role] || roleColors.unknown;
+    const updated    = new Date(entry.updated).toLocaleString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});
+    const displayName = entry.name || 'Unknown User';
+
+    html += `
+      <div class="chatlog-user">
+        <div class="chatlog-header" onclick="this.nextElementSibling.classList.toggle('open')">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:14px;font-weight:700;color:${roleColor};flex-shrink:0">${displayName[0]?.toUpperCase()}</div>
+            <div>
+              <div class="chatlog-user-name">${esc(displayName)} <span style="font-size:10px;color:${roleColor};margin-left:6px;font-family:var(--mono);background:${roleColor}20;padding:2px 7px;border-radius:999px">${roleLabel}</span></div>
+              <div class="chatlog-meta">${entry.userMsgCount} message${entry.userMsgCount!==1?'s':''} · ${updated}</div>
+            </div>
+          </div>
+          <span style="color:rgba(255,255,255,.25);font-size:11px;font-family:var(--mono)">▾ expand</span>
+        </div>
+        <div class="chatlog-msgs">
+          ${entry.history.filter(m => m.role === 'user' || m.role === 'assistant').map(m => `
+            <div class="chatlog-msg">
+              <div class="chatlog-role ${m.role === 'user' ? 'user' : 'ai'}">${m.role === 'user' ? '👤 User' : '🤖 AI'}</div>
+              <div class="chatlog-text">${esc(m.content).replace(/\n/g,'<br>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')}</div>
+            </div>`).join('')}
+        </div>
+      </div>`;
+  });
+
+  container.innerHTML = html;
 }
 
 // ═══════════════════════════════════════════════════════
