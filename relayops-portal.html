@@ -1348,6 +1348,7 @@ function doSignOut() {
   document.getElementById('app').style.display = 'none';
   document.getElementById('auth-screen').style.display = 'flex';
   sessionStorage.removeItem('relayops_admin');
+  sessionStorage.removeItem('relayops_page');
   document.getElementById('chat-bubble-btn').classList.remove('visible');
   document.getElementById('chat-panel').classList.remove('open');
   // Reset nav
@@ -1374,7 +1375,9 @@ async function enterAdminMode(user) {
   document.getElementById('nav-customer').style.display = 'none';
   document.getElementById('nav-vendor').style.display = 'none';
   setSidebarUser('Admin', 'A', 'ADMIN');
-  showPage('p-admin-jobs');
+  const savedPage = sessionStorage.getItem('relayops_page');
+  const adminPages = ['p-admin-jobs','p-admin-vendors','p-admin-payments','p-admin-customers','p-admin-analytics','p-admin-settings','p-admin-chatlogs'];
+  showPage(savedPage && adminPages.includes(savedPage) ? savedPage : 'p-admin-jobs');
   loadAdminJobs(); loadAdminVendors(); initChatBubble();
 }
 
@@ -1391,7 +1394,10 @@ async function enterCustomerMode(user) {
   document.getElementById('prof-email').textContent = user.email || '—';
   document.getElementById('prof-type').textContent  = 'Property Manager / Customer';
   document.getElementById('prof-since').textContent = new Date(user.created_at || Date.now()).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-  showPage('p-my-jobs'); loadCustomerJobs(); startStatusPolling(); initChatBubble();
+  const savedPageC = sessionStorage.getItem('relayops_page');
+  const custPages = ['p-my-jobs','p-request-job','p-my-profile'];
+  showPage(savedPageC && custPages.includes(savedPageC) ? savedPageC : 'p-my-jobs');
+  loadCustomerJobs(); startStatusPolling(); initChatBubble();
 }
 
 async function enterVendorMode(user) {
@@ -1413,7 +1419,10 @@ async function enterVendorMode(user) {
   document.getElementById('vprof-status').innerHTML     = statusPill(status);
   document.getElementById('vprof-service').textContent  = currentProviderRecord?.service_types?.join(', ') || '—';
   document.getElementById('vprof-coverage').textContent = currentProviderRecord?.coverage_zips || '—';
-  showPage('p-vendor-jobs'); loadVendorJobs(); initChatBubble();
+  const savedPageV = sessionStorage.getItem('relayops_page');
+  const vendorPages = ['p-vendor-jobs','p-vendor-profile'];
+  showPage(savedPageV && vendorPages.includes(savedPageV) ? savedPageV : 'p-vendor-jobs');
+  loadVendorJobs(); initChatBubble();
 }
 
 function setSidebarUser(name, initial, roleLabel) {
@@ -1433,6 +1442,7 @@ function showPage(pageId) {
   const nav = document.querySelector(`[data-page="${pageId}"]`);
   if (nav) nav.classList.add('active');
   document.getElementById('main-content').scrollTop = 0;
+  sessionStorage.setItem('relayops_page', pageId);
   if (pageId === 'p-my-jobs')          loadCustomerJobs();
   if (pageId === 'p-vendor-jobs')      loadVendorJobs();
   if (pageId === 'p-admin-jobs')       loadAdminJobs();
