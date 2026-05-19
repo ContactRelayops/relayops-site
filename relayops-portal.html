@@ -2226,27 +2226,60 @@ async function loadAdminPayments() {
 // ═══════════════════════════════════════════════════════
 async function loadAdminCustomers() {
   if (currentRole !== 'admin') return;
-  const jobs = await dbSelect('jobs', 'select=user_id,description,created_at');
+
+  // Fetch jobs with all customer-related fields
+  const jobs = await dbSelect('jobs', 'select=user_id,description,created_at,customer_email,property_address,job_type,status');
   const el = document.getElementById('admin-customers-list');
   if (!jobs.length) { el.innerHTML = '<div class="empty-state">No customer data yet.</div>'; return; }
+
+  // Group by user_id, collecting email from customer_email column OR description
   const byUser = {};
   jobs.forEach(j => {
-    const uid = j.user_id || 'anon';
-    if (!byUser[uid]) byUser[uid] = { count:0, first:j.created_at, desc:j.description, uid };
+    const uid = j.user_id || 'anon_' + (j.customer_email || '').replace(/[^a-z0-9]/gi,'_');
+    if (!byUser[uid]) {
+      const parsed = parseContact(j.description || '');
+      byUser[uid] = {
+        count: 0,
+        first: j.created_at,
+        uid,
+        // Priority: customer_email column > parsed from description
+        email: j.customer_email || parsed.email || '',
+        name: parsed.name || '',
+        statuses: {}
+      };
+    }
+    // Update email if we find a better source
+    if (!byUser[uid].email && j.customer_email) byUser[uid].email = j.customer_email;
     byUser[uid].count++;
+    byUser[uid].statuses[j.status] = (byUser[uid].statuses[j.status] || 0) + 1;
+    // Keep earliest date
+    if (j.created_at < byUser[uid].first) byUser[uid].first = j.created_at;
   });
-  el.innerHTML = Object.entries(byUser).map(([uid, info]) => {
-    const c = parseContact(info.desc || '');
-    const displayName = c.name || uid.substring(0, 10);
-    const displayEmail = c.email || '—';
+
+  const rows = Object.entries(byUser).map(([uid, info]) => {
+    const displayName  = info.name  || (info.email ? info.email.split('@')[0] : uid.substring(0,10));
+    const displayEmail = info.email || '—';
+    const statusSummary = Object.entries(info.statuses)
+      .map(([s, c]) => `<span style="font-size:10px;padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.4);margin-right:4px">${s} (${c})</span>`)
+      .join('');
+
     return `<div class="table-row" style="grid-template-columns:2fr 2fr 1fr 1fr 90px">
-      <div><div class="tr-main">${esc(displayName)}</div></div>
-      <div class="tr-cell">${esc(displayEmail)}</div>
+      <div>
+        <div class="tr-main">${esc(displayName)}</div>
+        <div style="margin-top:4px">${statusSummary}</div>
+      </div>
+      <div class="tr-cell" style="font-size:12px">${esc(displayEmail)}</div>
       <div class="tr-cell">${info.count}</div>
       <div class="tr-cell">${fmtDate(info.first)}</div>
       <div><button class="btn btn-sm" onclick="removeCustomer('${uid}','${esc(displayName)}','${esc(displayEmail)}')" style="background:transparent;border:1px solid rgba(200,16,46,.3);color:#ff8898;font-size:11px;padding:5px 10px;border-radius:999px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(200,16,46,.12)'" onmouseout="this.style.background='transparent'">🗑 Remove</button></div>
     </div>`;
-  }).join('');
+  });
+
+  if (!rows.length) {
+    el.innerHTML = '<div class="empty-state">No customers yet. They appear here once jobs are submitted.</div>';
+  } else {
+    el.innerHTML = `<div style="font-size:12px;color:rgba(255,255,255,.25);padding:8px 18px;font-family:var(--mono)">${rows.length} customer${rows.length!==1?'s':''} found</div>` + rows.join('');
+  }
 }
 function parseContact(desc) {
   return { name: (desc.match(/Name:\s*([^|]+)/)||[])[1]?.trim()||'', email: (desc.match(/Email:\s*([^|]+)/)||[])[1]?.trim()||'' };
