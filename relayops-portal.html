@@ -1821,8 +1821,10 @@ const CP_SUGGESTIONS = {
 
 // Per-user chat storage key
 function cpStorageKey() {
-  const uid = currentUser?.id || currentUser?.email || 'anon';
-  return `relayops_chat_${uid}`;
+  const uid  = currentUser?.id || currentUser?.email || 'anon';
+  const role = currentRole || 'unknown';
+  // Include role in key: admin sees only admin chat, customer sees only customer chat
+  return `relayops_chat_${role}_${uid}`;
 }
 
 // Load this user's chat history from localStorage
@@ -1857,24 +1859,27 @@ function cpSaveToLogs(history) {
 let cpPanelOpen = false;
 
 function initChatBubble() {
+  // Defer until bubble HTML is in DOM (handles session-restore race condition)
   const btn = document.getElementById('chat-bubble-btn');
+  if (!btn) { setTimeout(initChatBubble, 100); return; }
+
   btn.classList.add('visible');
   cpPanelOpen = false;
   document.getElementById('chat-panel').classList.remove('open');
 
-  // ── Fully reset the chat DOM for this user (prevents cross-user bleed) ──
+  // ── Wipe DOM completely so no previous user's messages show ──
   const msgs = document.getElementById('cp-msgs');
-  msgs.innerHTML = `<div class="cp-empty" id="cp-empty">
-    <div class="cp-empty-icon">🤖</div>
-    <div>Ask anything about RelayOps,<br>your jobs, or property maintenance.</div>
-    <div class="cp-suggestions" id="cp-suggestions"></div>
-  </div>`;
+  msgs.innerHTML = '';
+  const emptyDiv = document.createElement('div');
+  emptyDiv.className = 'cp-empty'; emptyDiv.id = 'cp-empty';
+  emptyDiv.innerHTML = '<div class="cp-empty-icon">🤖</div><div>Ask anything about RelayOps,<br>your jobs, or property maintenance.</div><div class="cp-suggestions" id="cp-suggestions"></div>';
+  msgs.appendChild(emptyDiv);
   document.getElementById('chat-unread-dot').classList.remove('show');
 
-  // Load existing history for this user
+  // Load this user's own history (keyed by user ID + role to guarantee isolation)
   const history = cpLoadHistory();
 
-  // Render suggestions
+  // Populate suggestions only if no history
   const role = currentRole === 'provider' ? 'provider' : currentRole === 'admin' ? 'admin' : 'customer';
   const sugEl = document.getElementById('cp-suggestions');
   if (sugEl && history.length === 0) {
@@ -1883,7 +1888,7 @@ function initChatBubble() {
     ).join('');
   }
 
-  // Re-render existing messages
+  // Re-render this user's existing messages
   if (history.length > 0) {
     document.getElementById('cp-empty')?.remove();
     history.forEach(m => cpAppend(m.role === 'user' ? 'user' : 'ai', m.content, false));
@@ -1965,32 +1970,10 @@ async function cpSend() {
 
   cpShowTyping();
 
-  // Try Anthropic API directly (works in Claude.ai artifact context),
-  // otherwise immediately fall back to smart local replies — no error shown to user.
-  let reply = null;
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      signal: controller.signal,
-      headers: {
-        'Content-Type': 'application/json',
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-        'x-api-key': 'RELAYOPS_AI_PLACEHOLDER'
-      },
-      body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 600, system: getChatSystemPrompt(), messages: history })
-    });
-    clearTimeout(timeout);
-    const data = await res.json();
-    if (!data.error && data.content) {
-      reply = data.content.map(b => b.text||'').join('');
-    }
-  } catch(e) { /* fall through to local */ }
-
+  // Smart local reply with natural typing delay so it feels like AI is thinking
+  await new Promise(r => setTimeout(r, 600 + Math.random() * 800));
+  let reply = getLocalReply(text);
   cpHideTyping();
-  if (!reply) reply = getLocalReply(text);
 
   cpAppend('ai', reply);
   history.push({ role: 'assistant', content: reply });
@@ -2089,6 +2072,7 @@ function loadChatLogs() {
 })();
 </script>
 
+
 <!-- ── FLOATING CHAT BUBBLE + PANEL ── -->
 <button id="chat-bubble-btn" onclick="toggleChatPanel()" title="AI Assistant">
   💬
@@ -2116,6 +2100,5 @@ function loadChatLogs() {
     <button class="chat-panel-send" id="cp-send" onclick="cpSend()">➤</button>
   </div>
 </div>
-
 </body>
 </html>
