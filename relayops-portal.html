@@ -1866,34 +1866,49 @@ function initChatBubble() {
   btn.classList.add('visible');
   cpPanelOpen = false;
   document.getElementById('chat-panel').classList.remove('open');
-
-  // ── Wipe DOM completely so no previous user's messages show ──
-  const msgs = document.getElementById('cp-msgs');
-  msgs.innerHTML = '';
-  const emptyDiv = document.createElement('div');
-  emptyDiv.className = 'cp-empty'; emptyDiv.id = 'cp-empty';
-  emptyDiv.innerHTML = '<div class="cp-empty-icon">🤖</div><div>Ask anything about RelayOps,<br>your jobs, or property maintenance.</div><div class="cp-suggestions" id="cp-suggestions"></div>';
-  msgs.appendChild(emptyDiv);
   document.getElementById('chat-unread-dot').classList.remove('show');
 
-  // Load this user's own history (keyed by user ID + role to guarantee isolation)
-  const history = cpLoadHistory();
+  // ── Wipe DOM for fresh session ──
+  const msgs = document.getElementById('cp-msgs');
+  msgs.innerHTML = '';
 
-  // Populate suggestions only if no history
+  // ── Archive previous session, start a new one ──
+  const prevHistory = cpLoadHistory();
+  if (prevHistory.length > 0) {
+    // Save old session to archive key with timestamp
+    const archiveKey = cpStorageKey() + '_archive_' + Date.now();
+    try { localStorage.setItem(archiveKey, JSON.stringify(prevHistory)); } catch(e) {}
+    // Clear current session so we start fresh
+    try { localStorage.removeItem(cpStorageKey()); } catch(e) {}
+  }
+
+  // ── Build welcome message ──
+  const name = currentUser?.user_metadata?.full_name?.split(' ')[0] || '';
   const role = currentRole === 'provider' ? 'provider' : currentRole === 'admin' ? 'admin' : 'customer';
-  const sugEl = document.getElementById('cp-suggestions');
-  if (sugEl && history.length === 0) {
-    sugEl.innerHTML = (CP_SUGGESTIONS[role] || []).map(s =>
-      `<button class="cp-suggestion" onclick="cpUseSuggestion(this.textContent)">${s}</button>`
-    ).join('');
-  }
+  const isReturn = prevHistory.length > 0;
 
-  // Re-render this user's existing messages
-  if (history.length > 0) {
-    document.getElementById('cp-empty')?.remove();
-    history.forEach(m => cpAppend(m.role === 'user' ? 'user' : 'ai', m.content, false));
-    setTimeout(() => { msgs.scrollTop = msgs.scrollHeight; }, 50);
-  }
+  const welcomeText = isReturn
+    ? `Welcome back${name ? ', ' + name : ''}! 👋 Ready to help whenever you need it.`
+    : `Hey${name ? ' ' + name : ''}! 👋 I am your RelayOps AI assistant. Ask me anything about your jobs, pricing, or how the platform works.`;
+
+  // Show welcome bubble immediately
+  const welcomeDiv = document.createElement('div');
+  welcomeDiv.className = 'cpbubble ai';
+  welcomeDiv.innerHTML = `<div class="cpbody">${welcomeText}</div>`;
+  msgs.appendChild(welcomeDiv);
+
+  // ── Suggested questions ──
+  const suggestionsEl = document.createElement('div');
+  suggestionsEl.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;padding:4px 0 8px 0;justify-content:flex-start;';
+  const suggestions = CP_SUGGESTIONS[role] || [];
+  suggestionsEl.innerHTML = suggestions.map(s =>
+    `<button class="cp-suggestion" onclick="cpUseSuggestion(this.textContent)">${s}</button>`
+  ).join('');
+  msgs.appendChild(suggestionsEl);
+
+  // Save welcome message to new session history
+  const newHistory = [{ role: 'assistant', content: welcomeText }];
+  cpSaveHistory(newHistory);
 }
 
 function toggleChatPanel() {
