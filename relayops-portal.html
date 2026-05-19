@@ -2077,7 +2077,7 @@ function loadChatLogs() {
 
     html += `
       <div class="chatlog-user">
-        <div class="chatlog-header" onclick="this.nextElementSibling.classList.toggle('open')">
+        <div class="chatlog-header" onclick="event.target.closest('button') || this.nextElementSibling.classList.toggle('open')">
           <div style="display:flex;align-items:center;gap:12px">
             <div style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:14px;font-weight:700;color:${roleColor};flex-shrink:0">${displayName[0]?.toUpperCase()}</div>
             <div>
@@ -2085,7 +2085,10 @@ function loadChatLogs() {
               <div class="chatlog-meta">${entry.userMsgCount} message${entry.userMsgCount!==1?'s':''} · ${updated}</div>
             </div>
           </div>
-          <span style="color:rgba(255,255,255,.25);font-size:11px;font-family:var(--mono)">▾ expand</span>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="color:rgba(255,255,255,.2);font-size:11px;font-family:var(--mono)">▾</span>
+            <button onclick="event.stopPropagation();deleteChatLog('${entry.key}',this)" style="padding:5px 11px;border-radius:999px;border:1px solid rgba(200,16,46,.3);background:rgba(200,16,46,.1);color:#ff8898;font-size:11px;font-family:var(--mono);cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(200,16,46,.25)'" onmouseout="this.style.background='rgba(200,16,46,.1)'">🗑 Delete</button>
+          </div>
         </div>
         <div class="chatlog-msgs">
           ${entry.history.filter(m => m.role === 'user' || m.role === 'assistant').map(m => `
@@ -2098,6 +2101,51 @@ function loadChatLogs() {
   });
 
   container.innerHTML = html;
+}
+
+function deleteChatLog(key, el) {
+  if (!confirm('Delete this conversation? This cannot be undone.')) return;
+  try {
+    localStorage.removeItem(key);
+    // Remove from index
+    const idx = JSON.parse(localStorage.getItem('relayops_chatlog_index') || '[]');
+    const newIdx = idx.filter(k => k !== key);
+    localStorage.setItem('relayops_chatlog_index', JSON.stringify(newIdx));
+  } catch(e) {}
+  // Animate out then reload
+  const card = el.closest('.chatlog-user');
+  if (card) {
+    card.style.transition = 'opacity .2s, transform .2s';
+    card.style.opacity = '0';
+    card.style.transform = 'translateX(10px)';
+    setTimeout(() => loadChatLogs(), 220);
+  } else {
+    loadChatLogs();
+  }
+}
+
+function clearMyChatHistory() {
+  if (!confirm('Clear your chat history? This removes all your messages from this device.')) return;
+  try {
+    // Remove current session
+    localStorage.removeItem(cpStorageKey());
+    // Remove log entry
+    const uid  = currentUser?.id || currentUser?.email || 'anon';
+    const role = currentRole || 'customer';
+    const logKey = `relayops_chatlog_${role}_${uid}`;
+    localStorage.removeItem(logKey);
+    // Remove from index
+    const idx = JSON.parse(localStorage.getItem('relayops_chatlog_index') || '[]');
+    localStorage.setItem('relayops_chatlog_index', JSON.stringify(idx.filter(k => k !== logKey)));
+    // Remove archives
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(cpStorageKey() + '_archive_')) localStorage.removeItem(k);
+    }
+  } catch(e) {}
+  // Reset chat panel to fresh state
+  initChatBubble();
+  showNotif('Chat cleared', 'Your conversation history has been removed.', 'info');
 }
 
 // ═══════════════════════════════════════════════════════
@@ -2621,7 +2669,10 @@ What else can I help you with?`;
       <div class="chat-panel-dot"></div>
       RelayOps AI
     </div>
-    <button class="chat-panel-close" onclick="toggleChatPanel()">✕</button>
+    <div style="display:flex;align-items:center;gap:6px">
+      <button onclick="clearMyChatHistory()" title="Clear chat history" style="width:28px;height:28px;border-radius:50%;background:transparent;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.35);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s" onmouseover="this.style.background='rgba(200,16,46,.15)';this.style.color='#ff8898';this.style.borderColor='rgba(200,16,46,.3)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,.35)';this.style.borderColor='rgba(255,255,255,.1)'">🗑</button>
+      <button class="chat-panel-close" onclick="toggleChatPanel()">✕</button>
+    </div>
   </div>
   <div class="chat-panel-msgs" id="cp-msgs">
     <div class="cp-empty" id="cp-empty">
