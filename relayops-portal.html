@@ -2953,33 +2953,36 @@ async function seedTestData() {
     }
   }
 
+  // Only use columns that definitely exist in the jobs table
+  // provider_id assignment done separately after checking actual column name
   const jobs = [
-    { property_address:'347 Amberson Ave, Pittsburgh, PA 15232', job_type:'Cleaning', urgency:'Urgent', status:'submitted', description:'Move-out clean on 2BR/1BA unit. Tenant left yesterday. Need same-day if possible. Access via lockbox code 4412.' },
-    { property_address:'1128 Penn Ave, Pittsburgh, PA 15222', job_type:'Lock Change', urgency:'Emergency', status:'assigned', description:'Emergency rekey needed. All 3 exterior locks. Owner on site.', quoted_price:185, admin_notes:'FastLock confirmed, ETA 45 min.' },
-    { property_address:'512 S 20th St, Philadelphia, PA 19146', job_type:'Handyman', urgency:'Scheduled', status:'priced', description:'Punch-list: fix 2 cabinet doors, patch 3 drywall holes, replace bathroom faucet, touch up baseboards.', quoted_price:320, admin_notes:'Awaiting customer payment to dispatch.', payment_link:'https://buy.stripe.com/test_example' },
-    { property_address:'88 Shady Ave, Pittsburgh, PA 15206', job_type:'Junk Removal', urgency:'Flexible', status:'completed', description:'Full basement cleanout. Previous tenant left furniture and appliances.', quoted_price:450, admin_notes:'Job completed. 1.5 truck loads.', completion_notes:'Cleared full basement. Removed: 1 couch, 2 mattresses, 4 appliances.' },
-    { property_address:'2234 Murray Ave, Pittsburgh, PA 15217', job_type:'Painting', urgency:'Scheduled', status:'in_progress', description:'Full unit repaint 2BR/1BA. Walls only, standard white. Unit is empty.', quoted_price:680, admin_notes:'Marcus started Day 1 of 2 today.' },
-    { property_address:'1901 Chestnut St, Philadelphia, PA 19103', job_type:'Plumbing', urgency:'Urgent', status:'submitted', description:'Kitchen sink drain completely blocked. Tenant reports slow drain in bathroom too.' },
-    { property_address:'443 N Negley Ave, Pittsburgh, PA 15206', job_type:'Turnover', urgency:'Urgent', status:'assigned', description:'Same-day turnover. New tenant moves in tomorrow morning. Full clean + lock rekey.', quoted_price:395, admin_notes:'Clean & Clear confirmed for 3pm today.' },
+    { property_address:'347 Amberson Ave, Pittsburgh, PA 15232', job_type:'Cleaning', urgency:'Urgent', status:'submitted', description:'Move-out clean on 2BR/1BA unit. Tenant left yesterday. Need same-day if possible.' },
+    { property_address:'1128 Penn Ave, Pittsburgh, PA 15222', job_type:'Lock Change', urgency:'Emergency', status:'submitted', description:'Emergency rekey needed. All 3 exterior locks. Owner on site.' },
+    { property_address:'512 S 20th St, Philadelphia, PA 19146', job_type:'Handyman', urgency:'Scheduled', status:'priced', description:'Punch-list: fix 2 cabinet doors, patch 3 drywall holes, replace bathroom faucet.', quoted_price:320, admin_notes:'Awaiting customer payment to dispatch.' },
+    { property_address:'88 Shady Ave, Pittsburgh, PA 15206', job_type:'Junk Removal', urgency:'Flexible', status:'completed', description:'Full basement cleanout. Previous tenant left furniture and appliances.', quoted_price:450, admin_notes:'Job completed. 1.5 truck loads.' },
+    { property_address:'2234 Murray Ave, Pittsburgh, PA 15217', job_type:'Painting', urgency:'Scheduled', status:'in_progress', description:'Full unit repaint 2BR/1BA. Walls only, standard white. Unit is empty.', quoted_price:680, admin_notes:'Started today.' },
+    { property_address:'1901 Chestnut St, Philadelphia, PA 19103', job_type:'Plumbing', urgency:'Urgent', status:'submitted', description:'Kitchen sink drain completely blocked. Slow drain in bathroom too.' },
+    { property_address:'443 N Negley Ave, Pittsburgh, PA 15206', job_type:'Turnover', urgency:'Urgent', status:'submitted', description:'Same-day turnover needed. New tenant moves in tomorrow morning. Full clean + lock rekey.', quoted_price:395, admin_notes:'Quote sent, awaiting approval.' },
     { property_address:'834 South St, Philadelphia, PA 19147', job_type:'Handyman', urgency:'Flexible', status:'submitted', description:'General maintenance: leaking faucet, broken closet rod, 2 outlet covers missing, squeaky door.' },
   ];
-
-  // Attach vendor IDs where applicable
-  jobs[1].provider_id = vendorIds['FastLock Pittsburgh'] || undefined;
-  jobs[3].provider_id = vendorIds['Haul It Away LLC'] || undefined;
-  jobs[4].provider_id = vendorIds['Marcus J. Williams'] || undefined;
-  jobs[6].provider_id = vendorIds['Clean & Clear Crew'] || undefined;
 
   addLog('\nInserting jobs...');
   let inserted = 0;
   for (const j of jobs) {
-    if (!j.provider_id) delete j.provider_id;
+    // Check if this job already exists
+    const existing = await dbWhere('jobs', 'property_address', j.property_address, 'select=id,job_type').catch(() => []);
+    if (existing.some(e => e.job_type === j.job_type)) {
+      addLog('  ⏭ Already exists: ' + j.job_type + ' — ' + j.property_address.split(',')[0]);
+      inserted++;
+      continue;
+    }
     const { data, ok } = await dbInsert('jobs', j);
     if (ok) {
       inserted++;
       addLog('  ✓ [' + j.status + '] ' + j.job_type + ' — ' + j.property_address.split(',')[0]);
     } else {
-      addLog('  ✗ Failed: ' + j.job_type + ' — ' + JSON.stringify(data).slice(0, 80), false);
+      const errMsg = data?.message || data?.hint || JSON.stringify(data).slice(0, 100);
+      addLog('  ✗ Failed: ' + j.job_type + ' — ' + errMsg, false);
     }
   }
 
