@@ -1381,7 +1381,7 @@ async function enterAdminMode(user) {
   const savedPage = sessionStorage.getItem('relayops_page');
   const adminPages = ['p-admin-jobs','p-admin-vendors','p-admin-payments','p-admin-customers','p-admin-analytics','p-admin-settings','p-admin-chatlogs'];
   showPage(savedPage && adminPages.includes(savedPage) ? savedPage : 'p-admin-jobs');
-  loadAdminJobs(); loadAdminVendors(); initChatBubble();
+  loadAdminJobs(); loadAdminVendors(); initChatBubble(); startKeepAlive();
 }
 
 async function enterCustomerMode(user) {
@@ -1400,7 +1400,7 @@ async function enterCustomerMode(user) {
   const savedPageC = sessionStorage.getItem('relayops_page');
   const custPages = ['p-my-jobs','p-request-job','p-my-profile'];
   showPage(savedPageC && custPages.includes(savedPageC) ? savedPageC : 'p-my-jobs');
-  loadCustomerJobs(); startStatusPolling(); initChatBubble();
+  loadCustomerJobs(); startStatusPolling(); initChatBubble(); startKeepAlive();
 }
 
 async function enterVendorMode(user) {
@@ -1425,7 +1425,7 @@ async function enterVendorMode(user) {
   const savedPageV = sessionStorage.getItem('relayops_page');
   const vendorPages = ['p-vendor-jobs','p-vendor-profile'];
   showPage(savedPageV && vendorPages.includes(savedPageV) ? savedPageV : 'p-vendor-jobs');
-  loadVendorJobs(); initChatBubble();
+  loadVendorJobs(); initChatBubble(); startKeepAlive();
 }
 
 function setSidebarUser(name, initial, roleLabel) {
@@ -3169,6 +3169,19 @@ async function seedTestData() {
     sbSignOut(); // token expired
   }
 })();
+
+
+// ── KEEP BACKEND WARM (prevents Render free tier cold starts) ──
+function startKeepAlive() {
+  // Ping every 10 minutes so the backend never spins down
+  const ping = () => {
+    fetch(BACKEND_URL + '/', { method: 'GET' })
+      .then(() => console.log('Backend keep-alive ping sent'))
+      .catch(() => {}); // silent fail
+  };
+  ping(); // immediate first ping on login
+  setInterval(ping, 10 * 60 * 1000); // then every 10 min
+}
 </script>
 
 
