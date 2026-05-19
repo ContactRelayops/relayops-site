@@ -970,8 +970,8 @@ a{text-decoration:none;color:inherit}
           <button class="btn btn-ghost btn-sm" onclick="loadAdminCustomers()">↻ Refresh</button>
         </div>
         <div class="table-wrap">
-          <div class="table-head" style="grid-template-columns:2fr 2fr 1fr 1fr 90px">
-            <div class="th">Customer</div><div class="th">Email</div><div class="th">Jobs</div><div class="th">Joined</div><div class="th">Action</div>
+          <div class="table-head" style="grid-template-columns:2fr 2fr 1fr 1fr 140px">
+            <div class="th">Customer</div><div class="th">Email</div><div class="th">Jobs</div><div class="th">Joined</div><div class="th">Actions</div>
           </div>
           <div id="admin-customers-list"><div class="empty-state">Loading...</div></div>
         </div>
@@ -2151,38 +2151,65 @@ function renderAdminVendors(vendors) {
 
 function editAdminVendor(id) {
   const v = allAdminVendors.find(x => x.id === id); if (!v) return;
-  document.getElementById('modal-job-title').textContent = 'Vendor: ' + v.full_name;
+  document.getElementById('modal-job-title').textContent = 'Edit Vendor: ' + v.full_name;
   document.getElementById('modal-job-content').innerHTML = `
-    <div class="modal-section"><div class="job-detail-grid">
-      <div><div class="detail-label">Name</div><div class="detail-val">${esc(v.full_name)}</div></div>
-      <div><div class="detail-label">Email</div><div class="detail-val">${esc(v.email)}</div></div>
-      <div><div class="detail-label">Phone</div><div class="detail-val">${esc(v.phone||'—')}</div></div>
-      <div><div class="detail-label">Services</div><div class="detail-val">${esc(v.service_types?.join(', ')||'—')}</div></div>
-      <div><div class="detail-label">Coverage</div><div class="detail-val">${esc(v.coverage_zips||'—')}</div></div>
-      <div><div class="detail-label">Applied</div><div class="detail-val">${fmtDate(v.created_at)}</div></div>
-    </div></div>
     <div class="modal-section">
-      <div class="field"><label>Status</label>
-        <select id="vedit-status">
-          <option value="pending"  ${v.status==='pending' ?'selected':''}>Pending</option>
-          <option value="active"   ${v.status==='active'  ?'selected':''}>Active</option>
-          <option value="inactive" ${v.status==='inactive'?'selected':''}>Inactive</option>
-        </select>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="field"><label>Full Name</label>
+          <input id="vedit-name" type="text" value="${esc(v.full_name||'')}"/>
+        </div>
+        <div class="field"><label>Email</label>
+          <input id="vedit-email" type="email" value="${esc(v.email||'')}"/>
+        </div>
+        <div class="field"><label>Phone</label>
+          <input id="vedit-phone" type="tel" value="${esc(v.phone||'')}"/>
+        </div>
+        <div class="field"><label>Status</label>
+          <select id="vedit-status">
+            <option value="pending"  ${v.status==='pending' ?'selected':''}>Pending</option>
+            <option value="active"   ${v.status==='active'  ?'selected':''}>Active</option>
+            <option value="inactive" ${v.status==='inactive'?'selected':''}>Inactive</option>
+            <option value="removed"  ${v.status==='removed' ?'selected':''}>Removed</option>
+          </select>
+        </div>
+        <div class="field" style="grid-column:1/-1"><label>Service Types (comma separated)</label>
+          <input id="vedit-services" type="text" value="${esc(v.service_types?.join(', ')||'')}"/>
+        </div>
+        <div class="field" style="grid-column:1/-1"><label>Coverage Area</label>
+          <input id="vedit-coverage" type="text" value="${esc(v.coverage_zips||'')}"/>
+        </div>
       </div>
-      <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
-        <button class="btn btn-red" onclick="saveAdminVendor('${v.id}')">Save Changes</button>
-        ${v.status==='pending' ? `<button class="btn btn-ghost" onclick="activateVendor('${v.id}')">✅ Approve Vendor</button>` : ''}
-        <button onclick="removeVendor('${v.id}','${esc(v.full_name)}')" style="margin-left:auto;padding:8px 14px;border-radius:999px;border:1px solid rgba(200,16,46,.35);background:transparent;color:#ff8898;font-size:12px;font-family:var(--sans);cursor:pointer;font-weight:500;transition:all .15s" onmouseover="this.style.background='rgba(200,16,46,.15)'" onmouseout="this.style.background='transparent'">🗑 Remove Vendor</button>
+      <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:4px">Applied: ${fmtDate(v.created_at)}</div>
+    </div>
+    <div class="modal-section">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-red" onclick="saveAdminVendor('${v.id}')">💾 Save Changes</button>
+        ${v.status==='pending' ? `<button class="btn btn-ghost" onclick="activateVendor('${v.id}')">✅ Approve</button>` : ''}
+        <button onclick="removeVendor('${v.id}','${esc(v.full_name)}')" style="margin-left:auto;padding:8px 14px;border-radius:999px;border:1px solid rgba(200,16,46,.35);background:transparent;color:#ff8898;font-size:12px;cursor:pointer;font-weight:500;transition:all .15s" onmouseover="this.style.background='rgba(200,16,46,.15)'" onmouseout="this.style.background='transparent'">🗑 Remove</button>
       </div>
     </div>`;
   document.getElementById('job-modal').classList.add('open');
 }
 
 async function saveAdminVendor(id) {
-  const status = document.getElementById('vedit-status').value;
-  const ok = await dbUpdate('providers', id, { status });
+  const name     = document.getElementById('vedit-name')?.value.trim();
+  const email    = document.getElementById('vedit-email')?.value.trim();
+  const phone    = document.getElementById('vedit-phone')?.value.trim();
+  const status   = document.getElementById('vedit-status')?.value;
+  const services = document.getElementById('vedit-services')?.value.trim();
+  const coverage = document.getElementById('vedit-coverage')?.value.trim();
+
+  const updates = { status };
+  if (name)     updates.full_name      = name;
+  if (email)    updates.email          = email;
+  if (phone)    updates.phone          = phone;
+  if (services) updates.service_types  = services.split(',').map(s => s.trim()).filter(Boolean);
+  if (coverage) updates.coverage_zips  = coverage;
+
+  const ok = await dbUpdate('providers', id, updates);
   if (!ok) { showNotif('Error', 'Could not update vendor.', 'warning'); return; }
-  showNotif('Saved', 'Vendor updated.', 'success'); closeModal(); loadAdminVendors();
+  showNotif('✅ Saved', 'Vendor updated successfully.', 'success');
+  closeModal(); loadAdminVendors();
 }
 
 async function removeVendor(id, name) {
@@ -2263,7 +2290,7 @@ async function loadAdminCustomers() {
       .map(([s, c]) => `<span style="font-size:10px;padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.4);margin-right:4px">${s} (${c})</span>`)
       .join('');
 
-    return `<div class="table-row" style="grid-template-columns:2fr 2fr 1fr 1fr 90px">
+    return `<div class="table-row" style="grid-template-columns:2fr 2fr 1fr 1fr 140px">
       <div>
         <div class="tr-main">${esc(displayName)}</div>
         <div style="margin-top:4px">${statusSummary}</div>
@@ -2271,7 +2298,10 @@ async function loadAdminCustomers() {
       <div class="tr-cell" style="font-size:12px">${esc(displayEmail)}</div>
       <div class="tr-cell">${info.count}</div>
       <div class="tr-cell">${fmtDate(info.first)}</div>
-      <div><button class="btn btn-sm" onclick="removeCustomer('${uid}','${esc(displayName)}','${esc(displayEmail)}')" style="background:transparent;border:1px solid rgba(200,16,46,.3);color:#ff8898;font-size:11px;padding:5px 10px;border-radius:999px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(200,16,46,.12)'" onmouseout="this.style.background='transparent'">🗑 Remove</button></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button onclick="editCustomer('${uid}','${esc(displayName)}','${esc(displayEmail)}')" style="background:transparent;border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.6);font-size:11px;padding:5px 10px;border-radius:999px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(255,255,255,.08)'" onmouseout="this.style.background='transparent'">✏️ Edit</button>
+        <button onclick="removeCustomer('${uid}','${esc(displayName)}','${esc(displayEmail)}')" style="background:transparent;border:1px solid rgba(200,16,46,.3);color:#ff8898;font-size:11px;padding:5px 10px;border-radius:999px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(200,16,46,.12)'" onmouseout="this.style.background='transparent'">🗑 Remove</button>
+      </div>
     </div>`;
   });
 
@@ -2283,6 +2313,59 @@ async function loadAdminCustomers() {
 }
 function parseContact(desc) {
   return { name: (desc.match(/Name:\s*([^|]+)/)||[])[1]?.trim()||'', email: (desc.match(/Email:\s*([^|]+)/)||[])[1]?.trim()||'' };
+}
+
+function editCustomer(uid, name, email) {
+  document.getElementById('modal-job-title').textContent = 'Edit Customer';
+  document.getElementById('modal-job-content').innerHTML = `
+    <div class="modal-section">
+      <div style="font-size:12px;color:rgba(255,255,255,.3);margin-bottom:16px;font-family:var(--mono)">Customer ID: ${uid.substring(0,16)}...</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="field"><label>Display Name</label>
+          <input id="cedit-name" type="text" value="${esc(name)}" placeholder="Customer name"/>
+        </div>
+        <div class="field"><label>Email Address</label>
+          <input id="cedit-email" type="email" value="${esc(email==='—'?'':email)}" placeholder="customer@email.com"/>
+        </div>
+        <div class="field"><label>Phone Number</label>
+          <input id="cedit-phone" type="tel" value="" placeholder="(267) 555-0000"/>
+        </div>
+        <div class="field"><label>Company / Portfolio Name</label>
+          <input id="cedit-company" type="text" value="" placeholder="Company name"/>
+        </div>
+        <div class="field" style="grid-column:1/-1"><label>Internal Notes (admin only)</label>
+          <textarea id="cedit-notes" placeholder="Notes about this customer..." style="min-height:70px"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-section">
+      <div style="font-size:12px;color:rgba(255,255,255,.3);margin-bottom:12px">
+        Note: Name/email updates here are for admin reference. To update the customer's actual login email, they need to contact support.
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-red" onclick="saveCustomer('${uid}')">💾 Save Changes</button>
+        <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      </div>
+    </div>`;
+  document.getElementById('job-modal').classList.add('open');
+}
+
+async function saveCustomer(uid) {
+  const name    = document.getElementById('cedit-name')?.value.trim();
+  const email   = document.getElementById('cedit-email')?.value.trim();
+  const notes   = document.getElementById('cedit-notes')?.value.trim();
+
+  // Update all jobs for this customer with the new email
+  if (email) {
+    const theirJobs = await dbWhere('jobs', 'customer_id', uid, 'select=id');
+    for (const j of theirJobs) {
+      await dbUpdate('jobs', j.id, { customer_email: email });
+    }
+  }
+
+  showNotif('✅ Customer Updated', `${name || 'Customer'} info saved successfully.`, 'success', 4000);
+  closeModal();
+  loadAdminCustomers();
 }
 
 async function removeCustomer(uid, name, email) {
