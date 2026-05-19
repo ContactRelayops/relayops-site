@@ -1016,9 +1016,7 @@ a{text-decoration:none;color:inherit}
           <div class="card">
             <div class="card-title">🌱 Seed Test Data</div>
             <div style="font-size:13px;color:rgba(255,255,255,.4);margin-bottom:12px;line-height:1.6">Inserts sample vendors and jobs for testing. Safe to run multiple times — checks for duplicates first.</div>
-            <div style="font-size:12px;color:rgba(255,212,59,.6);background:rgba(255,212,59,.06);border:1px solid rgba(255,212,59,.15);border-radius:8px;padding:10px 12px;margin-bottom:14px;line-height:1.6">
-              ⚠️ <strong style="color:rgba(255,212,59,.9)">Required first:</strong> In your <a href="https://supabase.com/dashboard/project/qnufazzxoiomgqxydvnf/auth/policies" target="_blank" style="color:#ffd43b;text-decoration:underline">Supabase dashboard → Authentication → Policies</a>, disable RLS on the <code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:3px">jobs</code> and <code style="background:rgba(255,255,255,.08);padding:1px 5px;border-radius:3px">providers</code> tables, or add an INSERT policy for authenticated users.
-            </div>
+
             <div id="seed-log" style="font-size:12px;font-family:var(--mono);color:rgba(255,255,255,.5);background:rgba(0,0,0,.3);border-radius:8px;padding:12px;margin-bottom:14px;display:none;max-height:180px;overflow-y:auto;line-height:1.8"></div>
             <button class="btn btn-red" id="seed-btn" onclick="seedTestData()">🌱 Insert Test Data</button>
           </div>
@@ -2911,6 +2909,83 @@ Or check your **My Profile** and **My Assigned Jobs** tabs for account and job d
 - Call **(267) 875-9111** for anything urgent
 
 What else can I help you with?`;
+}
+
+
+// ═══════════════════════════════════════════════════════
+// SEED TEST DATA
+// ═══════════════════════════════════════════════════════
+async function seedTestData() {
+  const btn = document.getElementById('seed-btn');
+  const log = document.getElementById('seed-log');
+  btn.disabled = true; btn.textContent = 'Seeding...';
+  log.style.display = 'block'; log.innerHTML = '';
+
+  function addLog(msg, ok=true) {
+    log.innerHTML += '<div style="color:' + (ok ? '#51cf66' : '#ff8898') + '">' + msg + '</div>';
+    log.scrollTop = log.scrollHeight;
+  }
+
+  const vendors = [
+    { full_name:'Marcus J. Williams', email:'marcus@mjwhandyman.com', phone:'(412) 555-0192', service_types:['Handyman','Painting'], coverage_zips:'Pittsburgh, PA — 25 miles', status:'active' },
+    { full_name:'Clean & Clear Crew', email:'ops@clearcrew.com', phone:'(412) 555-0847', service_types:['Cleaning','Turnover'], coverage_zips:'Pittsburgh, PA — 20 miles', status:'active' },
+    { full_name:'FastLock Pittsburgh', email:'dispatch@fastlockpgh.com', phone:'(412) 555-0334', service_types:['Lock Change'], coverage_zips:'Pittsburgh, PA — 15 miles', status:'active' },
+    { full_name:'Haul It Away LLC', email:'info@haulitaway.com', phone:'(412) 555-0561', service_types:['Junk Removal'], coverage_zips:'Pittsburgh & Philadelphia, PA', status:'active' },
+    { full_name:'Rivera Plumbing Co.', email:'service@riveraplumbing.com', phone:'(267) 555-0728', service_types:['Plumbing'], coverage_zips:'Philadelphia, PA — 20 miles', status:'pending' },
+    { full_name:'Philly Multi-Trade', email:'contact@phillytrade.com', phone:'(267) 555-0412', service_types:['Handyman','Cleaning','Painting'], coverage_zips:'Philadelphia, PA — 30 miles', status:'active' },
+  ];
+
+  addLog('Inserting vendors...');
+  const vendorIds = {};
+  for (const v of vendors) {
+    const existing = await dbWhere('providers', 'email', v.email);
+    if (existing.length > 0) {
+      addLog('  ⏭ ' + v.full_name + ' already exists');
+      vendorIds[v.full_name] = existing[0].id;
+      continue;
+    }
+    const { data, ok } = await dbInsert('providers', v);
+    if (ok && data?.id) {
+      vendorIds[v.full_name] = data.id;
+      addLog('  ✓ ' + v.full_name);
+    } else {
+      addLog('  ✗ Failed: ' + v.full_name + ' — ' + JSON.stringify(data).slice(0, 80), false);
+    }
+  }
+
+  const jobs = [
+    { property_address:'347 Amberson Ave, Pittsburgh, PA 15232', job_type:'Cleaning', urgency:'Urgent', status:'submitted', description:'Move-out clean on 2BR/1BA unit. Tenant left yesterday. Need same-day if possible. Access via lockbox code 4412.' },
+    { property_address:'1128 Penn Ave, Pittsburgh, PA 15222', job_type:'Lock Change', urgency:'Emergency', status:'assigned', description:'Emergency rekey needed. All 3 exterior locks. Owner on site.', quoted_price:185, admin_notes:'FastLock confirmed, ETA 45 min.' },
+    { property_address:'512 S 20th St, Philadelphia, PA 19146', job_type:'Handyman', urgency:'Scheduled', status:'priced', description:'Punch-list: fix 2 cabinet doors, patch 3 drywall holes, replace bathroom faucet, touch up baseboards.', quoted_price:320, admin_notes:'Awaiting customer payment to dispatch.', payment_link:'https://buy.stripe.com/test_example' },
+    { property_address:'88 Shady Ave, Pittsburgh, PA 15206', job_type:'Junk Removal', urgency:'Flexible', status:'completed', description:'Full basement cleanout. Previous tenant left furniture and appliances.', quoted_price:450, admin_notes:'Job completed. 1.5 truck loads.', completion_notes:'Cleared full basement. Removed: 1 couch, 2 mattresses, 4 appliances.' },
+    { property_address:'2234 Murray Ave, Pittsburgh, PA 15217', job_type:'Painting', urgency:'Scheduled', status:'in_progress', description:'Full unit repaint 2BR/1BA. Walls only, standard white. Unit is empty.', quoted_price:680, admin_notes:'Marcus started Day 1 of 2 today.' },
+    { property_address:'1901 Chestnut St, Philadelphia, PA 19103', job_type:'Plumbing', urgency:'Urgent', status:'submitted', description:'Kitchen sink drain completely blocked. Tenant reports slow drain in bathroom too.' },
+    { property_address:'443 N Negley Ave, Pittsburgh, PA 15206', job_type:'Turnover', urgency:'Urgent', status:'assigned', description:'Same-day turnover. New tenant moves in tomorrow morning. Full clean + lock rekey.', quoted_price:395, admin_notes:'Clean & Clear confirmed for 3pm today.' },
+    { property_address:'834 South St, Philadelphia, PA 19147', job_type:'Handyman', urgency:'Flexible', status:'submitted', description:'General maintenance: leaking faucet, broken closet rod, 2 outlet covers missing, squeaky door.' },
+  ];
+
+  // Attach vendor IDs where applicable
+  jobs[1].provider_id = vendorIds['FastLock Pittsburgh'] || undefined;
+  jobs[3].provider_id = vendorIds['Haul It Away LLC'] || undefined;
+  jobs[4].provider_id = vendorIds['Marcus J. Williams'] || undefined;
+  jobs[6].provider_id = vendorIds['Clean & Clear Crew'] || undefined;
+
+  addLog('\nInserting jobs...');
+  let inserted = 0;
+  for (const j of jobs) {
+    if (!j.provider_id) delete j.provider_id;
+    const { data, ok } = await dbInsert('jobs', j);
+    if (ok) {
+      inserted++;
+      addLog('  ✓ [' + j.status + '] ' + j.job_type + ' — ' + j.property_address.split(',')[0]);
+    } else {
+      addLog('  ✗ Failed: ' + j.job_type + ' — ' + JSON.stringify(data).slice(0, 80), false);
+    }
+  }
+
+  addLog('\n' + (inserted === jobs.length ? '✅' : '⚠️') + ' Done! ' + inserted + '/' + jobs.length + ' jobs and ' + Object.keys(vendorIds).length + ' vendors.');
+  btn.disabled = false; btn.textContent = '🌱 Insert Test Data';
+  loadAdminJobs(); loadAdminVendors();
 }
 
 // ═══════════════════════════════════════════════════════
