@@ -1066,6 +1066,8 @@ const ANON_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIs
 const ADMIN_EMAIL = 'contactrelayops@gmail.com';
 const ADMIN_PASS  = 'Relay2025';
 const STRIPE_PK   = 'pk_test_51TJFeZJuoVXV97b9hDSuJciXvyoSqjuhMAO7q6MvTtZE2tKt56drJHSMgN7HG1dLyEKx2njDc538mCyo07NTyiLQ00fRXxpFHg';
+// Set this to your Render.com backend URL after deploying
+const BACKEND_URL = 'https://relayops-backend.onrender.com'; // ✅ Live
 
 // ═══════════════════════════════════════════════════════
 // RAW SUPABASE HELPERS  (no SDK — pure fetch)
@@ -1739,38 +1741,52 @@ async function editAdminJob(id) {
 // ═══════════════════════════════════════════════════════
 // STRIPE PAYMENT AUTOMATION
 // ═══════════════════════════════════════════════════════
-// ── Open Stripe dashboard to create payment link, pre-filled with amount ──
-// Full automation requires a backend (secret key can't be in browser).
-// This opens Stripe dashboard Payment Links page so admin can create one in 10 seconds.
-function generateStripePaymentLink(job) {
-  const amount  = job.quoted_price || 0;
-  const jobType = job.job_type || 'Property Maintenance';
-  const address = (job.property_address || '').split(',')[0];
-  const desc    = jobType + ' at ' + address + ' (RelayOps)';
-  // Can't auto-create with publishable key only - open Stripe dashboard instead
-  return null;
+async function generateStripePaymentLink(job) {
+  // Call our secure backend to create the Stripe payment link
+  try {
+    const res = await fetch(BACKEND_URL + '/create-payment-link', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        amount: job.quoted_price,
+        jobType: job.job_type,
+        address: job.property_address,
+        jobId: job.id,
+        customerEmail: job.customer_email || null
+      })
+    });
+    const data = await res.json();
+    if (data.url) return data.url;
+    console.warn('Backend error:', data.error);
+    return null;
+  } catch(e) {
+    console.warn('Backend unreachable:', e.message);
+    return null;
+  }
 }
 
 async function regeneratePaymentLink(jobId) {
   const job = allAdminJobs.find(j => j.id === jobId);
   if (!job) return;
 
-  const amount  = job.quoted_price || 0;
+  const amount = job.quoted_price || 0;
   if (!amount) {
     showNotif('Set a price first', 'Enter a quoted price before generating a payment link.', 'warning');
     return;
   }
 
-  const jobType = job.job_type || 'Maintenance';
-  const address = (job.property_address || '').split(',')[0];
-
-  // Show a modal-within-modal style instruction with the Stripe link pre-filled
-  const amountCents = Math.round(amount * 100);
-  const productName = encodeURIComponent(jobType + ' at ' + address + ' (RelayOps)');
-
-  // Open Stripe Payment Links creation page in a new tab
-  // Stripe doesn't support pre-filling amount via URL, so show a helper panel
-  showStripeHelper(jobId, job, amount);
+  showNotif('Generating...', 'Creating Stripe payment link...', 'info', 4000);
+  const link = await generateStripePaymentLink(job);
+  if (link) {
+    await dbUpdate('jobs', jobId, { payment_link: link });
+    const payInput = document.getElementById('edit-paylink');
+    if (payInput) payInput.value = link;
+    showNotif('✅ Payment link created!', 'Saved to job. Customer will receive it on next save.', 'success', 5000);
+    loadAdminJobs();
+  } else {
+    // Backend failed - fall back to helper
+    showStripeHelper(jobId, job, amount);
+  }
 }
 
 function showStripeHelper(jobId, job, amount) {
