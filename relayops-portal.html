@@ -1530,7 +1530,15 @@ async function submitJobRequest() {
   const desc    = document.getElementById('rj-desc').value.trim();
   if (!address || !type || !urgency || !desc) { showNotif('Missing Fields', 'Please fill in all required fields.', 'warning'); return; }
   const btn = document.getElementById('rj-btn'); btn.disabled = true; btn.textContent = 'Submitting...';
-  const { data, ok } = await dbInsert('jobs', { property_address: address, job_type: type, urgency, description: desc, status: 'submitted', user_id: currentUser?.id || null });
+  const { data, ok } = await dbInsert('jobs', {
+    property_address: address,
+    job_type: type,
+    urgency,
+    description: desc,
+    status: 'submitted',
+    user_id: currentUser?.id || null,
+    customer_email: currentUser?.email || null
+  });
   if (!ok) { btn.disabled = false; btn.textContent = 'Submit Job Request →'; showNotif('Error', 'Something went wrong. Please try again.', 'warning'); return; }
   if (data) jobStatusCache[data.id] = 'submitted';
   // Notify admin of new job
@@ -1731,13 +1739,13 @@ const PHONE = '(267) 875-9111';
 
 // Get customer email from job record
 async function getJobCustomerEmail(job) {
-  // Try parsing from description field (legacy format)
+  // First check the dedicated column (portal submissions)
+  if (job.customer_email) return job.customer_email;
+  // Fall back to parsing from description (marketing site submissions)
   if (job.description) {
     const m = job.description.match(/Email:\s*([^\s|]+@[^\s|]+)/);
     if (m) return m[1].trim();
   }
-  // If we have user_id, try fetching from Supabase auth (requires service role — not available)
-  // Fall back to admin email so at least someone is notified
   return null;
 }
 
