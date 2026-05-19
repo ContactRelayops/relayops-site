@@ -2029,6 +2029,10 @@ ${PORTAL_URL}
 }
 
 async function saveAdminJob(id) {
+  // Visual feedback on button
+  const saveBtn = document.querySelector(`button[onclick="saveAdminJob('${id}')"]`);
+  if (saveBtn) { saveBtn.textContent = '⏳ Saving...'; saveBtn.disabled = true; }
+
   const status  = document.getElementById('edit-status').value;
   const price   = document.getElementById('edit-price').value;
   const notes   = document.getElementById('edit-notes').value;
@@ -2045,9 +2049,16 @@ async function saveAdminJob(id) {
   const prevJob = allAdminJobs.find(x => x.id === id);
   const prevStatus = prevJob?.status;
   const ok = await dbUpdate('jobs', id, updates);
-  if (!ok) { showNotif('Error', 'Could not save.', 'warning'); return; }
-  showNotif('Saved', 'Job updated — sending notifications...', 'success');
-  closeModal(); loadAdminJobs();
+  if (saveBtn) { saveBtn.disabled = false; }
+  if (!ok) {
+    if (saveBtn) saveBtn.textContent = '💾 Save Changes';
+    showNotif('Error', 'Could not save. Check connection.', 'warning');
+    return;
+  }
+  // Flash success on button before closing
+  if (saveBtn) { saveBtn.textContent = '✅ Saved!'; saveBtn.style.background = '#51cf66'; saveBtn.style.color = '#000'; }
+  showNotif('✅ Job saved!', 'Changes saved — sending notifications...', 'success', 4000);
+  setTimeout(() => { closeModal(); loadAdminJobs(); }, 800);
 
   // Build the updated job object for notifications
   const updatedJob = { ...prevJob, ...updates, id };
