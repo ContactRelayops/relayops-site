@@ -261,14 +261,15 @@ a{text-decoration:none;color:inherit}
 
 /* ── MODAL ── */
 .modal-overlay{
-  position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);
-  z-index:1000;display:none;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto;
+  position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(6px);
+  z-index:1000;display:none;align-items:flex-start;justify-content:center;
+  padding:24px 16px;overflow-y:auto;
 }
 .modal-overlay.open{display:flex}
 .modal{
-  background:#1a1a1a;border:1px solid rgba(255,255,255,.1);
-  border-radius:var(--r-xl);padding:36px;width:100%;max-width:580px;
-  position:relative;
+  background:#1c1c1c;border:1px solid rgba(255,255,255,.12);
+  border-radius:24px;padding:32px;width:100%;max-width:660px;
+  position:relative;margin:auto;
 }
 .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
 .modal-title{font-family:var(--display);font-size:22px;font-weight:800;letter-spacing:-.02em;color:var(--white)}
@@ -1688,39 +1689,48 @@ async function editAdminJob(id) {
   document.getElementById('modal-job-title').textContent = 'Edit Job: ' + (j.property_address || id);
   document.getElementById('modal-job-content').innerHTML = `
     <div class="modal-section">
-      <div class="job-detail-grid">
-        <div><div class="detail-label">Address</div><div class="detail-val">${esc(j.property_address||'—')}</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
         <div><div class="detail-label">Type</div><div class="detail-val">${esc(j.job_type||'—')}</div></div>
         <div><div class="detail-label">Urgency</div><div class="detail-val">${esc(j.urgency||'—')}</div></div>
+        <div style="grid-column:1/-1"><div class="detail-label">Address</div><div class="detail-val">${esc(j.property_address||'—')}</div></div>
         <div><div class="detail-label">Submitted</div><div class="detail-val">${fmtDate(j.created_at)}</div></div>
+        <div><div class="detail-label">Customer Email</div><div class="detail-val" style="font-size:12px">${esc(j.customer_email||'—')}</div></div>
       </div>
-      <div class="detail-label" style="margin-top:12px">Description</div>
+      <div class="detail-label">Description</div>
       <div class="detail-desc">${esc(j.description||'No description.')}</div>
     </div>
     <div class="modal-section">
-      <div class="form-grid-2">
-        <div class="field"><label>Status</label>
-          <select id="edit-status">${['submitted','priced','assigned','in_progress','completed','cancelled'].map(s=>`<option value="${s}" ${j.status===s?'selected':''}>${s}</option>`).join('')}</select>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="field">
+          <label>Status</label>
+          <select id="edit-status">${['submitted','priced','assigned','in_progress','completed','cancelled'].map(s=>`<option value="${s}" ${j.status===s?'selected':''}>${s.replace('_',' ')}</option>`).join('')}</select>
         </div>
-        <div class="field"><label>Quoted Price ($)</label><input id="edit-price" type="number" value="${j.quoted_price||''}" placeholder="0.00"/></div>
-        <div class="field form-full"><label>Notes to Customer</label><textarea id="edit-notes" style="min-height:70px">${j.admin_notes||''}</textarea></div>
-        <div class="field form-full">
-          <label>Payment Link (Stripe URL)</label>
-          <div style="display:flex;gap:8px;align-items:center">
-            <input id="edit-paylink" type="url" value="${j.payment_link||''}" placeholder="Auto-generated or paste manually..." style="flex:1"/>
-            <button type="button" onclick="regeneratePaymentLink('${j.id}')" style="flex-shrink:0;padding:10px 14px;border-radius:8px;background:rgba(99,91,255,.2);border:1px solid rgba(99,91,255,.4);color:#a78bfa;font-size:12px;cursor:pointer;white-space:nowrap;transition:all .15s" onmouseover="this.style.background='rgba(99,91,255,.35)'" onmouseout="this.style.background='rgba(99,91,255,.2)'">⚡ Generate</button>
-          </div>
-          <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:5px">Set a price above first, then click Generate to auto-create a Stripe payment link.</div>
+        <div class="field">
+          <label>Quoted Price ($)</label>
+          <input id="edit-price" type="number" value="${j.quoted_price||''}" placeholder="0.00"/>
         </div>
-        <div class="field"><label>Assign Vendor</label>
+        <div class="field" style="grid-column:1/-1">
+          <label>Assign Vendor</label>
           <select id="edit-vendor"><option value="">— No vendor —</option>${vendorOptions}</select>
           ${noVendors}
         </div>
-        <div class="field"><label>Payment Amount ($)</label><input id="edit-payamt" type="number" value="${j.payment_amount||''}" placeholder="0.00"/></div>
+        <div class="field" style="grid-column:1/-1">
+          <label>Notes to Customer</label>
+          <textarea id="edit-notes" style="min-height:60px">${j.admin_notes||''}</textarea>
+        </div>
+        <div class="field" style="grid-column:1/-1">
+          <label>Payment Link (Stripe URL)</label>
+          <div style="display:flex;gap:8px;align-items:stretch">
+            <input id="edit-paylink" type="url" value="${j.payment_link||''}" placeholder="Set price + click ⚡ to auto-generate..." style="flex:1;min-width:0"/>
+            <button type="button" onclick="regeneratePaymentLink('${j.id}')" title="Auto-generate Stripe payment link" style="flex-shrink:0;padding:0 14px;border-radius:8px;background:rgba(99,91,255,.25);border:1px solid rgba(99,91,255,.5);color:#c4b5fd;font-size:13px;cursor:pointer;white-space:nowrap;transition:all .15s;font-weight:600" onmouseover="this.style.background='rgba(99,91,255,.4)'" onmouseout="this.style.background='rgba(99,91,255,.25)'">⚡ Generate</button>
+          </div>
+          <div style="font-size:11px;color:rgba(255,255,255,.2);margin-top:4px">Enter price above → click ⚡ Generate → Stripe link auto-created and emailed to customer</div>
+        </div>
       </div>
-      <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap">
-        <button class="btn btn-red" onclick="saveAdminJob('${j.id}')">Save Changes</button>
-        ${j.payment_link ? `<button class="btn btn-ghost" onclick="navigator.clipboard?.writeText('${j.payment_link}');showNotif('Copied','Payment link copied to clipboard.','info')">📋 Copy Payment Link</button>` : ''}
+      <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;align-items:center">
+        <button class="btn btn-red" onclick="saveAdminJob('${j.id}')">💾 Save Changes</button>
+        ${j.payment_link ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();navigator.clipboard?.writeText('${j.payment_link}');showNotif('Copied','Payment link copied.','info')">📋 Copy Link</button>` : ''}
+        <div style="margin-left:auto;font-size:11px;color:rgba(255,255,255,.2)">Job ID: ${j.id.slice(0,8)}...</div>
       </div>
     </div>`;
   document.getElementById('job-modal').classList.add('open');
