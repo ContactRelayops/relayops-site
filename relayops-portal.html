@@ -1739,64 +1739,100 @@ async function editAdminJob(id) {
 // ═══════════════════════════════════════════════════════
 // STRIPE PAYMENT AUTOMATION
 // ═══════════════════════════════════════════════════════
-async function generateStripePaymentLink(job) {
-  try {
-    const stripe = Stripe(STRIPE_PK);
-    const amount = Math.round((job.quoted_price || 0) * 100); // cents
-    if (!amount) return null;
-
-    const jobType  = job.job_type || 'Property Maintenance';
-    const address  = job.property_address || 'Property';
-    const desc     = jobType + ' — ' + address.split(',')[0];
-
-    // Create a Stripe Checkout Session via Payment Links API
-    // Since we only have publishable key, we use Stripe's hosted checkout
-    // by creating a checkout session through their public-facing endpoint
-    // The real automation uses corsproxy to hit /v1/payment_links
-    const res = await fetch('https://corsproxy.io/?' + encodeURIComponent('https://api.stripe.com/v1/payment_links'), {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + STRIPE_PK,
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: new URLSearchParams({
-        'line_items[0][price_data][currency]': 'usd',
-        'line_items[0][price_data][product_data][name]': desc,
-        'line_items[0][price_data][product_data][description]': 'RelayOps job coordination fee — ' + jobType,
-        'line_items[0][price_data][unit_amount]': amount,
-        'line_items[0][quantity]': '1',
-        'after_completion[type]': 'redirect',
-        'after_completion[redirect][url]': PORTAL_URL + '?payment=success'
-      }).toString()
-    });
-
-    const data = await res.json();
-    if (data.url) {
-      console.log('Stripe payment link created:', data.url);
-      return data.url;
-    } else {
-      console.warn('Stripe link failed:', data);
-      return null;
-    }
-  } catch(e) {
-    console.warn('generateStripePaymentLink error:', e);
-    return null;
-  }
+// ── Open Stripe dashboard to create payment link, pre-filled with amount ──
+// Full automation requires a backend (secret key can't be in browser).
+// This opens Stripe dashboard Payment Links page so admin can create one in 10 seconds.
+function generateStripePaymentLink(job) {
+  const amount  = job.quoted_price || 0;
+  const jobType = job.job_type || 'Property Maintenance';
+  const address = (job.property_address || '').split(',')[0];
+  const desc    = jobType + ' at ' + address + ' (RelayOps)';
+  // Can't auto-create with publishable key only - open Stripe dashboard instead
+  return null;
 }
 
-// Allow admin to manually regenerate payment link
 async function regeneratePaymentLink(jobId) {
   const job = allAdminJobs.find(j => j.id === jobId);
   if (!job) return;
-  showNotif('Generating...', 'Creating Stripe payment link...', 'info', 3000);
-  const link = await generateStripePaymentLink(job);
-  if (link) {
-    await dbUpdate('jobs', jobId, { payment_link: link });
-    showNotif('Done!', 'Payment link created and saved.', 'success');
-    closeModal();
+
+  const amount  = job.quoted_price || 0;
+  if (!amount) {
+    showNotif('Set a price first', 'Enter a quoted price before generating a payment link.', 'warning');
+    return;
+  }
+
+  const jobType = job.job_type || 'Maintenance';
+  const address = (job.property_address || '').split(',')[0];
+
+  // Show a modal-within-modal style instruction with the Stripe link pre-filled
+  const amountCents = Math.round(amount * 100);
+  const productName = encodeURIComponent(jobType + ' at ' + address + ' (RelayOps)');
+
+  // Open Stripe Payment Links creation page in a new tab
+  // Stripe doesn't support pre-filling amount via URL, so show a helper panel
+  showStripeHelper(jobId, job, amount);
+}
+
+function showStripeHelper(jobId, job, amount) {
+  const existing = document.getElementById('stripe-helper-overlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'stripe-helper-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML = `
+    <div style="background:#1c1c1c;border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:32px;max-width:480px;width:100%">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+        <div style="font-family:var(--display);font-size:20px;font-weight:800;color:#fff">⚡ Generate Payment Link</div>
+        <button onclick="document.getElementById('stripe-helper-overlay').remove()" style="background:rgba(255,255,255,.08);border:none;color:rgba(255,255,255,.5);width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px">✕</button>
+      </div>
+      <div style="background:rgba(99,91,255,.1);border:1px solid rgba(99,91,255,.3);border-radius:12px;padding:16px;margin-bottom:20px">
+        <div style="font-size:12px;color:#c4b5fd;font-family:var(--mono);letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px">Job Details</div>
+        <div style="font-size:15px;font-weight:600;color:#fff;margin-bottom:4px">${esc(job.job_type)} — ${esc((job.property_address||'').split(',')[0])}</div>
+        <div style="font-size:28px;font-weight:800;color:#51cf66;font-family:var(--display)">$${amount}</div>
+      </div>
+      <div style="font-size:13px;color:rgba(255,255,255,.6);line-height:1.7;margin-bottom:20px">
+        <strong style="color:#fff">Two quick steps:</strong><br>
+        1. Click <strong style="color:#c4b5fd">Open Stripe</strong> below — the Payment Links page opens<br>
+        2. Create a link for <strong style="color:#51cf66">$${amount}</strong>, copy the URL, paste it back here
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <a href="https://dashboard.stripe.com/test/payment-links/create" target="_blank"
+          style="display:block;text-align:center;padding:13px;background:#635bff;color:#fff;border-radius:10px;font-weight:600;font-size:14px;text-decoration:none">
+          🔗 Open Stripe Payment Links →
+        </a>
+        <div style="display:flex;gap:8px">
+          <input id="stripe-paste-input" type="url" placeholder="Paste Stripe link here (https://buy.stripe.com/...)"
+            style="flex:1;padding:11px 13px;background:#242424;border:1px solid rgba(255,255,255,.15);border-radius:8px;color:#fff;font-size:13px;outline:none"/>
+          <button onclick="saveManualStripeLink('${jobId}')"
+            style="padding:11px 16px;background:#51cf66;border:none;border-radius:8px;color:#000;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap">
+            ✓ Save
+          </button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  setTimeout(() => document.getElementById('stripe-paste-input')?.focus(), 100);
+}
+
+async function saveManualStripeLink(jobId) {
+  const input = document.getElementById('stripe-paste-input');
+  const link  = input?.value.trim();
+  if (!link || !link.startsWith('http')) {
+    input.style.borderColor = '#ff8898';
+    setTimeout(() => { if(input) input.style.borderColor = 'rgba(255,255,255,.15)'; }, 2000);
+    return;
+  }
+  const ok = await dbUpdate('jobs', jobId, { payment_link: link });
+  if (ok) {
+    document.getElementById('stripe-helper-overlay')?.remove();
+    // Update the input in the main modal
+    const payInput = document.getElementById('edit-paylink');
+    if (payInput) payInput.value = link;
+    showNotif('Payment link saved!', 'Link saved to job. Customer will be notified on next save.', 'success', 5000);
     loadAdminJobs();
   } else {
-    showNotif('Failed', 'Could not generate link. Enter it manually.', 'warning');
+    showNotif('Error', 'Could not save link. Try again.', 'warning');
   }
 }
 
