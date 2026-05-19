@@ -1162,13 +1162,21 @@ async function dbInsert(table, body) {
 
 // DB: update by id
 async function dbUpdate(table, id, body) {
-  const r = await fetch(`${BASE}/rest/v1/${table}?id=eq.${id}`, {
-    method: 'PATCH',
-    headers: authHeaders({ 'Prefer': 'return=minimal' }),
-    body: JSON.stringify(body)
-  });
-  if (!r.ok) console.error('dbUpdate', table, id, r.status, await r.text().catch(()=>''));
-  return r.ok;
+  try {
+    const r = await fetch(`${BASE}/rest/v1/${table}?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: authHeaders({ 'Prefer': 'return=minimal' }),
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) {
+      const errText = await r.text().catch(() => '');
+      console.error('dbUpdate failed:', table, id, r.status, errText);
+    }
+    return r.ok;
+  } catch(e) {
+    console.error('dbUpdate error:', e.message);
+    return false;
+  }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -2029,8 +2037,11 @@ ${PORTAL_URL}
 }
 
 async function saveAdminJob(id) {
-  // Visual feedback on button
-  const saveBtn = document.querySelector(`button[onclick="saveAdminJob('${id}')"]`);
+  // Visual feedback - find button by text content
+  let saveBtn = null;
+  document.querySelectorAll('button').forEach(b => {
+    if (b.textContent.includes('Save Changes') || b.textContent.includes('Saving')) saveBtn = b;
+  });
   if (saveBtn) { saveBtn.textContent = '⏳ Saving...'; saveBtn.disabled = true; }
 
   const status  = document.getElementById('edit-status').value;
@@ -2048,17 +2059,24 @@ async function saveAdminJob(id) {
   if (vendor && ['submitted','priced'].includes(status)) updates.status = 'assigned';
   const prevJob = allAdminJobs.find(x => x.id === id);
   const prevStatus = prevJob?.status;
+  // Add timeout so button never stays stuck
+  const saveTimeout = setTimeout(() => {
+    if (saveBtn) { saveBtn.textContent = '💾 Save Changes'; saveBtn.disabled = false; }
+    showNotif('Timeout', 'Save took too long. Please try again.', 'warning');
+  }, 10000);
+
   const ok = await dbUpdate('jobs', id, updates);
+  clearTimeout(saveTimeout);
   if (saveBtn) { saveBtn.disabled = false; }
+
   if (!ok) {
     if (saveBtn) saveBtn.textContent = '💾 Save Changes';
     showNotif('Error', 'Could not save. Check connection.', 'warning');
     return;
   }
-  // Flash success on button before closing
   if (saveBtn) { saveBtn.textContent = '✅ Saved!'; saveBtn.style.background = '#51cf66'; saveBtn.style.color = '#000'; }
-  showNotif('✅ Job saved!', 'Changes saved — sending notifications...', 'success', 4000);
-  setTimeout(() => { closeModal(); loadAdminJobs(); }, 800);
+  showNotif('✅ Job saved!', 'Changes saved successfully.', 'success', 3000);
+  setTimeout(() => { closeModal(); loadAdminJobs(); }, 700);
 
   // Build the updated job object for notifications
   const updatedJob = { ...prevJob, ...updates, id };
