@@ -1970,22 +1970,25 @@ async function cpSend() {
 
   cpShowTyping();
 
-  // Smart local reply with natural typing delay so it feels like AI is thinking
-  await new Promise(r => setTimeout(r, 600 + Math.random() * 800));
-  let reply = getLocalReply(text);
-  cpHideTyping();
-
-  cpAppend('ai', reply);
-  history.push({ role: 'assistant', content: reply });
-  cpSaveHistory(history);
-  cpSaveToLogs(history);
-
-  if (!cpPanelOpen) {
-    document.getElementById('chat-unread-dot').classList.add('show');
-  }
-
-  btn.disabled = false;
-  document.getElementById('cp-input').focus();
+  // Yield to browser to paint typing dots, then reply instantly
+  setTimeout(() => {
+    try {
+      const reply = getLocalReply(text);
+      cpHideTyping();
+      cpAppend('ai', reply);
+      history.push({ role: 'assistant', content: reply });
+      cpSaveHistory(history);
+      cpSaveToLogs(history);
+    } catch(e) {
+      cpHideTyping();
+      cpAppend('ai', `Sorry, I hit an error: ${e.message}. Please try again.`);
+    }
+    if (!cpPanelOpen) {
+      document.getElementById('chat-unread-dot').classList.add('show');
+    }
+    btn.disabled = false;
+    document.getElementById('cp-input').focus();
+  }, 350);
 }
 
 // ── ADMIN: CHAT LOGS ──
@@ -2035,6 +2038,479 @@ function loadChatLogs() {
   } else {
     container.innerHTML = `<div style="font-size:13px;color:rgba(255,255,255,.3);margin-bottom:16px;font-family:var(--mono)">${count} conversation${count!==1?'s':''} on this device</div>` + html;
   }
+}
+
+// ═══════════════════════════════════════════════════════
+// LOCAL AI REPLY ENGINE
+// ═══════════════════════════════════════════════════════
+function getLocalReply(text) {
+  const t = text.toLowerCase().trim();
+  const r = currentRole || 'customer';
+
+  // ── Greetings ──
+  if (/^(hi|hey|hello|sup|yo|howdy|what'?s up|good (morning|afternoon|evening))[\s!?.]*$/.test(t)) {
+    const name = currentUser?.user_metadata?.full_name?.split(' ')[0] || '';
+    if (r === 'admin') return `Hey${name?' '+name:''}! What do you need help with today? I can help with pricing, vendor management, drafting messages, or operational questions.`;
+    if (r === 'provider') return `Hey${name?' '+name:''}! I can help you understand how jobs work, payment timing, or anything about being a RelayOps vendor.`;
+    return `Hey${name?' '+name:''}! I can help with your jobs, pricing, or anything about how RelayOps works. What do you need?`;
+  }
+
+  // ── How it works ──
+  if (t.match(/how.*(work|use|start|begin|submit|request|get started)/)) {
+    if (r === 'provider') return `Here is how RelayOps works for vendors:
+
+1. **Apply** — Submit your vendor application on the marketing site
+2. **Get approved** — We review and activate your account within 24 hours
+3. **Receive jobs** — We match jobs to you based on your trade and availability
+4. **Accept and complete** — Start the job in your dashboard, mark it done when finished
+5. **Get paid** — Payment via Stripe after completion is confirmed
+
+Your reputation builds with every job you complete.`;
+    return `Here is how RelayOps works:
+
+1. **Submit** — Fill out the job request form in 60 seconds
+2. **Quote** — We review and send you a price within 2 hours
+3. **Approve** — You confirm and get a Stripe payment link
+4. **Track** — Watch your job status update in real time
+5. **Done** — You get completion confirmation and photos`;
+  }
+
+  // ── Pricing ──
+  if (t.match(/pric|cost|fee|charge|rate|how much|expensive|cheap/)) {
+    if (t.match(/turnover|cleaning|clean/)) return `Turnover cleaning pricing:
+
+- **Studio / 1BR**: $120–$180
+- **2BR**: $160–$240
+- **3BR+**: $200–$350
+
+Same-day turnovers add a 20–30% rush premium. RelayOps adds a 15% coordination fee on top of the vendor quote.`;
+    if (t.match(/handyman|repair/)) return `Handyman pricing varies by scope:
+
+- **Small punch-list (1–3 items)**: $80–$150
+- **Medium (4–8 items)**: $150–$300
+- **Large/full day**: $300–$600
+
+RelayOps adds a 15% coordination fee. You see the full price before approving.`;
+    if (t.match(/lock|rekey/)) return `Lock change and rekey pricing:
+
+- **Single lock rekey**: $75–$120
+- **Full unit rekey (3–5 locks)**: $120–$200
+- **Smart lock installation**: $150–$250
+
+Emergency same-hour calls add a rush fee.`;
+    if (t.match(/junk|haul|removal/)) return `Junk removal pricing:
+
+- **Small load (1/4 truck)**: $150–$250
+- **Medium load (1/2 truck)**: $250–$400
+- **Full truck load**: $400–$600
+- **Full unit cleanout**: $500–$900
+
+Final price depends on volume and stairs/access.`;
+    if (t.match(/paint/)) return `Painting pricing:
+
+- **Single room touch-up**: $100–$200
+- **Full room repaint**: $250–$450
+- **Full 1BR unit**: $500–$800
+- **Full 2BR unit**: $700–$1,200
+
+Includes labor. Paint/supplies extra unless specified.`;
+    if (t.match(/plumb/)) return `Plumbing pricing:
+
+- **Drain unclog**: $100–$200
+- **Faucet replacement**: $150–$300
+- **Minor leak repair**: $100–$250
+- **Fixture installation**: $200–$400
+
+Emergency calls add a rush fee on top.`;
+    if (r === 'admin') return `RelayOps take rates:
+
+- **Standard jobs**: 15% of job total
+- **Priority Plan operators**: 10% per job + $199/mo
+- **Pro Plan operators**: 8% per job + $499/mo
+- **Emergency/rush jobs**: 20–25% take rate + flat rush fee
+
+Vendors receive the job total minus the RelayOps fee, paid via Stripe after completion.`;
+    return `RelayOps pricing plans:
+
+- **Per-Job Fill**: 15% of job total — no monthly fee, pay when you use it
+- **Priority Plan**: $199/month + 10% per job — guaranteed 2hr response, dedicated contact
+- **Pro Plan**: $499/month + 8% per job — multi-property, same-day guarantee
+
+You always see the full price before approving any job.`;
+  }
+
+  // ── Payment ──
+  if (t.match(/pay|stripe|invoice|bill|charge|transaction|money/)) {
+    if (r === 'provider') return `As a vendor, here is how payment works:
+
+1. RelayOps sends the customer a Stripe payment link when the job is approved
+2. The customer pays before or on completion
+3. After you mark the job complete and we confirm, your payment is released
+4. Funds arrive via Stripe — typically within 1–3 business days
+
+No chasing invoices. No cash on site.`;
+    return `Payment on RelayOps is handled through **Stripe**:
+
+1. After you approve a quote, you receive a secure Stripe payment link
+2. You pay through the link — no cash, no invoices via email
+3. Payment is held until the job is confirmed complete
+4. You get a receipt and completion confirmation
+
+Your payment info is never stored in our system.`;
+  }
+
+  // ── Job status ──
+  if (t.match(/status|track|update|where.*job|my job|progress/)) {
+    if (r === 'provider') return `Check your **My Assigned Jobs** tab to see all jobs assigned to you. Each job shows its current status.
+
+When you are ready to start, click **Start** to move it to In Progress. When done, click **Mark Done**.
+
+Your customer gets notified automatically when you update the status.`;
+    return `Check the **My Jobs** tab to track all your submitted jobs. Statuses:
+
+- **Submitted** — We received it, reviewing now
+- **Quoted** — We sent you a price, check your dashboard
+- **Assigned** — A vendor is confirmed
+- **In Progress** — Vendor is on site
+- **Completed** — Job done, confirmation sent
+
+You get notified in the portal when status changes.`;
+  }
+
+  // ── Emergency / urgent ──
+  if (t.match(/emergency|urgent|asap|right now|immediately|same.?hour|fast|quick/)) {
+    return `For emergency jobs:
+
+1. Click **+ Request a Job** in your dashboard
+2. Select **Emergency — Same Hour** as the urgency
+3. Describe the issue clearly (lockout, active leak, etc.)
+
+We target a **30-minute response** for emergencies. An additional rush fee applies.
+
+You can also call us directly: **(267) 875-9111**`;
+  }
+
+  // ── Vendor assignment ──
+  if (t.match(/vendor|assign|who.*doing|who.*coming|contractor|worker|technician/)) {
+    if (r === 'admin') return `To assign a vendor to a job:
+
+1. Go to **Job Queue**
+2. Click **Edit** on the job
+3. Use the **Assign Vendor** dropdown — only active vendors appear
+4. Save — status auto-advances to Assigned
+
+If the dropdown is empty, go to **Vendors** and approve pending applications first.`;
+    if (r === 'provider') return `Jobs are assigned to you by the RelayOps team based on your trade, coverage area, and availability. You will see them appear in **My Assigned Jobs**.
+
+Once assigned, accept by clicking **Start** when you are ready to begin.`;
+    return `After you approve a quote, a vetted vendor from our network is assigned and dispatched. You will see their info in your job details.
+
+All vendors are manually vetted before activation — no random contractors.`;
+  }
+
+  // ── Submitting a job ──
+  if (t.match(/submit|request|create.*job|add.*job|new job|how do i.*job/)) {
+    return `To submit a job:
+
+1. Click **+ Request a Job** in the top right
+2. Enter the property address
+3. Select the service type (cleaning, handyman, lock change, etc.)
+4. Choose urgency level
+5. Describe the work needed
+6. Hit **Submit**
+
+We review and send you a quote within **2 hours** for standard jobs, faster for urgent ones.`;
+  }
+
+  // ── Cancellation ──
+  if (t.match(/cancel|stop|change.*mind|no longer need/)) {
+    return `To cancel a job, contact us directly:
+
+- 📧 **contactrelayops@gmail.com**
+- 📞 **(267) 875-9111**
+
+Please cancel as early as possible — cancellations after a vendor is dispatched may still incur a partial fee.`;
+  }
+
+  // ── Service types ──
+  if (t.match(/what.*service|what.*offer|what.*do|service.*available|what.*can/)) {
+    return `RelayOps handles 8 service categories:
+
+- 🔨 **Handyman** — Repairs, punch-lists, general maintenance
+- 🧹 **Turnover Cleaning** — Move-out cleans, deep cleans, same-day turnovers
+- 🔐 **Lock Changes** — Rekey, smart locks, emergency locksmith
+- 🗑️ **Junk Removal** — Hauls, appliance removal, full cleanouts
+- 🎨 **Painting** — Touch-ups, full repaints, unit refreshes
+- 🪠 **Plumbing** — Leaks, clogs, fixture replacements
+- 🔄 **Same-Day Turnovers** — Full-service fast flips
+- 🚨 **Emergency Backup** — Urgent dispatch when speed is critical`;
+  }
+
+  // ── Timeline / how long ──
+  if (t.match(/how long|when.*done|timeline|turnaround|response time|sla|wait/)) {
+    return `Response time targets:
+
+- 🚨 **Emergency**: Under 30 minutes
+- ⚡ **Urgent (same-day)**: Under 2 hours
+- 📅 **Standard (next day)**: Quote within 2–4 hours
+- 🗓️ **Flexible (within week)**: Same business day quote
+
+**Priority Plan** subscribers get a guaranteed 2hr response on standard jobs.`;
+  }
+
+  // ── Service area / location ──
+  if (t.match(/where|area|city|location|cover|pittsburgh|philadelphia|philly|pgh|pa/)) {
+    return `RelayOps currently operates in:
+
+- 📍 **Pittsburgh, PA** — Greater Pittsburgh area, ~30 mile radius
+- 📍 **Philadelphia, PA** — Greater Philadelphia area, ~30 mile radius
+
+Expanding to more cities soon. Email **contactrelayops@gmail.com** to get your city on the waitlist.`;
+  }
+
+  // ── Contact ──
+  if (t.match(/contact|phone|call|email|reach|talk.*someone|speak.*person|human/)) {
+    return `Reach RelayOps directly:
+
+- 📧 **contactrelayops@gmail.com**
+- 📞 **(267) 875-9111**
+- 🕐 Response time: within 2 hours during business hours
+
+For emergencies, call — do not email.`;
+  }
+
+  // ── Vendor-specific: joining ──
+  if (r === 'provider' && t.match(/profile|account|info|update|setting/)) {
+    return `Your profile info is in the **My Profile** tab in the sidebar. It shows your account status, service types, coverage area, and job performance stats.
+
+To update your service area or trade type, email **contactrelayops@gmail.com** and we will update it manually.`;
+  }
+
+  // ── Vendor: getting more jobs ──
+  if (r === 'provider' && t.match(/more job|more work|busy|slow|available|open slot/)) {
+    return `To get more jobs on RelayOps:
+
+1. **Keep availability updated** — Let us know if you have open slots
+2. **Complete jobs quickly** — Faster completions lead to more assignments
+3. **Maintain quality** — Strong performance history gets you priority routing
+4. **Expand your trade list** — Email us to add additional service types to your profile
+
+We route jobs to vendors with the best match and track record first.`;
+  }
+
+  // ── Vendor: marking complete ──
+  if (r === 'provider' && t.match(/complet|finish|done|mark|update.*status/)) {
+    return `To complete a job:
+
+1. Go to **My Assigned Jobs**
+2. Click **Start** when you begin (moves to In Progress)
+3. Click **Mark Done** when the work is finished
+
+The customer gets notified automatically. Payment is released after completion is confirmed.
+
+Tip: take before and after photos — customers love the documentation.`;
+  }
+
+  // ── Admin: draft message ──
+  if (r === 'admin' && t.match(/draft|write|message|email.*customer|template/)) {
+    return `Here is a quote message template:
+
+---
+*Hi [Name],*
+
+Thanks for submitting your job request. We have reviewed the scope and here is your quote:
+
+**Job**: [Type] at [Address]
+**Quote**: $[Amount]
+**Vendor**: [Vendor Name]
+**Estimated time**: [Timeline]
+
+To confirm, please pay via the link below. Once payment is received, the vendor will be dispatched.
+
+[STRIPE PAYMENT LINK]
+
+Questions? Reply here or call (267) 875-9111.
+
+— RelayOps Team
+
+---
+Customize and paste into your email.`;
+  }
+
+  // ── Admin: vendor management ──
+  if (r === 'admin' && t.match(/approv|activat|vendor.*pending|pending.*vendor/)) {
+    return `To approve a vendor:
+
+1. Go to **Vendors** in the sidebar
+2. Filter by **Pending** to see applications
+3. Click on a vendor card to open their profile
+4. Click **Approve Vendor** — this activates their account and sends them a confirmation email automatically
+
+Once active, they appear in the Assign Vendor dropdown when editing jobs.`;
+  }
+
+  // ── Guarantee / trust ──
+  if (t.match(/guarant|trust|safe|insur|licens|background|vetted|quality/)) {
+    return `RelayOps trust and safety:
+
+- ✅ **Vetted vendors only** — Every vendor is manually reviewed before activation
+- 📸 **Completion photos** — Vendors upload before/after photos on every job
+- 💳 **Secure payments** — All payments through Stripe, never cash
+- 📍 **End-to-end tracking** — Every status update is logged
+- ⚡ **SLA-backed response times** — Committed response windows for urgent jobs
+
+We are not a directory. Every job is actively managed.`;
+  }
+
+  // ── Refund / dispute ──
+  if (t.match(/refund|dispute|unhappy|bad.*job|problem|issue|complain|not.*right|wrong/)) {
+    return `If there is an issue with a completed job:
+
+1. **Contact us immediately** — Email contactrelayops@gmail.com or call (267) 875-9111
+2. **Describe the issue** — Photos and details help us resolve it faster
+3. **We will make it right** — Options include a return visit, partial refund, or full refund depending on the situation
+
+We stand behind every job we coordinate.`;
+  }
+
+  // ── Multiple properties ──
+  if (t.match(/multiple|portfolio|several|many.*propert|multi|all.*propert/)) {
+    return `For operators with multiple properties:
+
+- **Pro Plan** ($499/mo + 8%) includes multi-property coordination
+- Submit separate job requests per property — each tracked independently
+- We can coordinate simultaneous jobs across properties
+- Coming soon: custom vendor panels for repeat operators
+
+Email us at contactrelayops@gmail.com to discuss portfolio pricing.`;
+  }
+
+  // ── Photos / documentation ──
+  if (t.match(/photo|picture|proof|document|record|before.*after/)) {
+    return `Documentation on every job:
+
+- Vendors upload **before and after photos** on completion
+- Photos are attached to your job record in the dashboard
+- You can reference them for security deposit disputes, insurance claims, or contractor records
+
+This is built into every job — no extra steps needed.`;
+  }
+
+  // ── Account / login / password ──
+  if (t.match(/account|login|sign.*in|password|forgot|reset|create.*account/)) {
+    return `Account help:
+
+- **Sign in**: Use your email and password at the login page
+- **Forgot password**: Email contactrelayops@gmail.com and we will reset it manually
+- **New account**: Click "Create Account" on the login page
+- **Change email/password**: Email us to update your account details
+
+For security, we do not store or display passwords.`;
+  }
+
+  // ── Turnover / vacancy ──
+  if (t.match(/turnover|vacant|vacancy|tenant.*left|move.*out|new.*tenant|flip.*unit/)) {
+    return `RelayOps specializes in fast turnovers:
+
+- **Same-day turnover** service available for urgent flips
+- We can coordinate **cleaning + lock change + punch-list** in a single job request
+- Average turnover time: 4–8 hours depending on unit size
+- Select **Same-Day Turnover** as the job type for full-service coordination
+
+For a turnover with multiple needs, describe everything in the job description and we will bundle it.`;
+  }
+
+  // ── Scheduling ──
+  if (t.match(/schedul|when.*available|book|appointment|time|date|tomorrow|weekend/)) {
+    return `Scheduling on RelayOps:
+
+- **Emergency**: Same hour dispatch
+- **Urgent**: Same day, usually within 2–4 hours
+- **Scheduled**: Next day, you specify the time window
+- **Flexible**: Within 1 week, we find the best vendor slot
+
+Mention specific timing needs in the job description (e.g. "Must be done before 3pm" or "Tenant home after 10am").`;
+  }
+
+  // ── Access / lockbox ──
+  if (t.match(/access|lockbox|key|entry|get in|building.*code/)) {
+    return `Access instructions for vendors:
+
+- Include lockbox codes, key locations, or access instructions in the **job description** when you submit
+- If access changes after submission, call us at **(267) 875-9111** immediately
+- For lock changes, the vendor will need access to the unit — coordinate with any current tenants
+
+All access info is kept confidential and only shared with the assigned vendor.`;
+  }
+
+  // ── Notifications ──
+  if (t.match(/notif|alert|updat|email.*me|text|sms|let.*know/)) {
+    return `Job notifications:
+
+- Status changes appear in your **My Jobs** dashboard in real time
+- The portal shows a badge when your job is quoted or updated
+- Email notifications are sent at key milestones (quote sent, vendor assigned, job complete)
+- For urgent updates, we also call or text directly
+
+Make sure your email is correct in your profile.`;
+  }
+
+  // ── Expansion / new markets ──
+  if (t.match(/expand|new city|new market|other.*city|nationwide|national/)) {
+    return `RelayOps is currently live in **Pittsburgh and Philadelphia, PA**.
+
+We are expanding to more cities. To get your city added to the waitlist, email **contactrelayops@gmail.com** with your location and property count.
+
+If you are a vendor in another city and want to join when we expand there, apply now and we will activate you when your market goes live.`;
+  }
+
+  // ── Thanks / positive ──
+  if (t.match(/thank|thanks|great|awesome|perfect|good|love|helpful|appreciate/)) {
+    return `You are welcome! Is there anything else I can help you with? You can ask me about job status, pricing, scheduling, services, or anything else about RelayOps.`;
+  }
+
+  // ── Confusion / not sure ──
+  if (t.match(/what|help|confused|not sure|idk|i don.?t know|explain|clarify/)) {
+    if (r === 'provider') return `No problem — here are the things vendors ask about most:
+
+- How do I mark a job complete?
+- When do I get paid?
+- How do I get more jobs?
+- How do I update my profile?
+
+Just type your question and I will answer it.`;
+    return `No problem — here are the most common questions:
+
+- How do I submit a job?
+- What does each status mean?
+- How does pricing work?
+- What services do you offer?
+- How do I reach someone at RelayOps?
+
+Just type your question and I will answer it.`;
+  }
+
+  // ── Default fallback ──
+  if (r === 'admin') return `For that question I would need more context. You can also check:
+
+- **Supabase dashboard** for raw database access
+- **Stripe dashboard** for payment details
+- **contactrelayops@gmail.com** for escalations
+
+What specifically do you need help with?`;
+  if (r === 'provider') return `Good question. For the most accurate answer, reach out to us directly:
+
+- 📧 **contactrelayops@gmail.com**
+- 📞 **(267) 875-9111**
+
+Or check your **My Profile** and **My Assigned Jobs** tabs for account and job details.`;
+  return `Good question! Here is how to get the fastest answer:
+
+- Check your **My Jobs** tab for live job status
+- Email **contactrelayops@gmail.com** for billing or account questions
+- Call **(267) 875-9111** for anything urgent
+
+What else can I help you with?`;
 }
 
 // ═══════════════════════════════════════════════════════
