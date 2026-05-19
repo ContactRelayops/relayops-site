@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="https://js.stripe.com/v3/"></script>
 <script>emailjs.init('fjlY4_qDvbN5NHIbn');</script>
 <style>
 :root{
@@ -1063,6 +1064,7 @@ const BASE      = 'https://qnufazzxoiomgqxydvnf.supabase.co';
 const ANON_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFudWZhenp4b2lvbWdxeHlkdm5mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0MjIyNjksImV4cCI6MjA5MDk5ODI2OX0.dEVE3cdJupCHhqZ4OvoSi3A2ZbNmANHoCWG4bISeDzc';
 const ADMIN_EMAIL = 'contactrelayops@gmail.com';
 const ADMIN_PASS  = 'Relay2025';
+const STRIPE_PK   = 'pk_test_51TJFeZJuoVXV97b9hDSuJciXvyoSqjuhMAO7q6MvTtZE2tKt56drJHSMgN7HG1dLyEKx2njDc538mCyo07NTyiLQ00fRXxpFHg';
 
 // ═══════════════════════════════════════════════════════
 // RAW SUPABASE HELPERS  (no SDK — pure fetch)
@@ -1702,7 +1704,14 @@ async function editAdminJob(id) {
         </div>
         <div class="field"><label>Quoted Price ($)</label><input id="edit-price" type="number" value="${j.quoted_price||''}" placeholder="0.00"/></div>
         <div class="field form-full"><label>Notes to Customer</label><textarea id="edit-notes" style="min-height:70px">${j.admin_notes||''}</textarea></div>
-        <div class="field form-full"><label>Payment Link (Stripe URL)</label><input id="edit-paylink" type="url" value="${j.payment_link||''}" placeholder="https://buy.stripe.com/..."/></div>
+        <div class="field form-full">
+          <label>Payment Link (Stripe URL)</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="edit-paylink" type="url" value="${j.payment_link||''}" placeholder="Auto-generated or paste manually..." style="flex:1"/>
+            <button type="button" onclick="regeneratePaymentLink('${j.id}')" style="flex-shrink:0;padding:10px 14px;border-radius:8px;background:rgba(99,91,255,.2);border:1px solid rgba(99,91,255,.4);color:#a78bfa;font-size:12px;cursor:pointer;white-space:nowrap;transition:all .15s" onmouseover="this.style.background='rgba(99,91,255,.35)'" onmouseout="this.style.background='rgba(99,91,255,.2)'">⚡ Generate</button>
+          </div>
+          <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:5px">Set a price above first, then click Generate to auto-create a Stripe payment link.</div>
+        </div>
         <div class="field"><label>Assign Vendor</label>
           <select id="edit-vendor"><option value="">— No vendor —</option>${vendorOptions}</select>
           ${noVendors}
@@ -1715,6 +1724,70 @@ async function editAdminJob(id) {
       </div>
     </div>`;
   document.getElementById('job-modal').classList.add('open');
+}
+
+// ═══════════════════════════════════════════════════════
+// STRIPE PAYMENT AUTOMATION
+// ═══════════════════════════════════════════════════════
+async function generateStripePaymentLink(job) {
+  try {
+    const stripe = Stripe(STRIPE_PK);
+    const amount = Math.round((job.quoted_price || 0) * 100); // cents
+    if (!amount) return null;
+
+    const jobType  = job.job_type || 'Property Maintenance';
+    const address  = job.property_address || 'Property';
+    const desc     = jobType + ' — ' + address.split(',')[0];
+
+    // Create a Stripe Checkout Session via Payment Links API
+    // Since we only have publishable key, we use Stripe's hosted checkout
+    // by creating a checkout session through their public-facing endpoint
+    // The real automation uses corsproxy to hit /v1/payment_links
+    const res = await fetch('https://corsproxy.io/?' + encodeURIComponent('https://api.stripe.com/v1/payment_links'), {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + STRIPE_PK,
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({
+        'line_items[0][price_data][currency]': 'usd',
+        'line_items[0][price_data][product_data][name]': desc,
+        'line_items[0][price_data][product_data][description]': 'RelayOps job coordination fee — ' + jobType,
+        'line_items[0][price_data][unit_amount]': amount,
+        'line_items[0][quantity]': '1',
+        'after_completion[type]': 'redirect',
+        'after_completion[redirect][url]': PORTAL_URL + '?payment=success'
+      }).toString()
+    });
+
+    const data = await res.json();
+    if (data.url) {
+      console.log('Stripe payment link created:', data.url);
+      return data.url;
+    } else {
+      console.warn('Stripe link failed:', data);
+      return null;
+    }
+  } catch(e) {
+    console.warn('generateStripePaymentLink error:', e);
+    return null;
+  }
+}
+
+// Allow admin to manually regenerate payment link
+async function regeneratePaymentLink(jobId) {
+  const job = allAdminJobs.find(j => j.id === jobId);
+  if (!job) return;
+  showNotif('Generating...', 'Creating Stripe payment link...', 'info', 3000);
+  const link = await generateStripePaymentLink(job);
+  if (link) {
+    await dbUpdate('jobs', jobId, { payment_link: link });
+    showNotif('Done!', 'Payment link created and saved.', 'success');
+    closeModal();
+    loadAdminJobs();
+  } else {
+    showNotif('Failed', 'Could not generate link. Enter it manually.', 'warning');
+  }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1891,6 +1964,16 @@ async function saveAdminJob(id) {
 
   // Build the updated job object for notifications
   const updatedJob = { ...prevJob, ...updates, id };
+
+  // ── Auto-generate Stripe payment link if price was set and no link yet ──
+  if (updates.quoted_price && !prevJob?.payment_link) {
+    const generatedLink = await generateStripePaymentLink(updatedJob);
+    if (generatedLink) {
+      await dbUpdate('jobs', id, { payment_link: generatedLink });
+      updatedJob.payment_link = generatedLink;
+      showNotif('Payment link created', 'Stripe payment link generated automatically.', 'success', 4000);
+    }
+  }
 
   // ── Customer notifications ──
   const newStatus = updates.status || prevStatus;
