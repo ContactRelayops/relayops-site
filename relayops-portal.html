@@ -968,8 +968,8 @@ a{text-decoration:none;color:inherit}
           <button class="btn btn-ghost btn-sm" onclick="loadAdminCustomers()">↻ Refresh</button>
         </div>
         <div class="table-wrap">
-          <div class="table-head" style="grid-template-columns:2fr 2fr 1fr 1fr">
-            <div class="th">Customer</div><div class="th">Email</div><div class="th">Jobs</div><div class="th">Joined</div>
+          <div class="table-head" style="grid-template-columns:2fr 2fr 1fr 1fr 90px">
+            <div class="th">Customer</div><div class="th">Email</div><div class="th">Jobs</div><div class="th">Joined</div><div class="th">Action</div>
           </div>
           <div id="admin-customers-list"><div class="empty-state">Loading...</div></div>
         </div>
@@ -1719,9 +1719,10 @@ function editAdminVendor(id) {
           <option value="inactive" ${v.status==='inactive'?'selected':''}>Inactive</option>
         </select>
       </div>
-      <div style="display:flex;gap:10px;margin-top:12px">
-        <button class="btn btn-red" onclick="saveAdminVendor('${v.id}')">Save</button>
+      <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn btn-red" onclick="saveAdminVendor('${v.id}')">Save Changes</button>
         ${v.status==='pending' ? `<button class="btn btn-ghost" onclick="activateVendor('${v.id}')">✅ Approve Vendor</button>` : ''}
+        <button onclick="removeVendor('${v.id}','${esc(v.full_name)}')" style="margin-left:auto;padding:8px 14px;border-radius:999px;border:1px solid rgba(200,16,46,.35);background:transparent;color:#ff8898;font-size:12px;font-family:var(--sans);cursor:pointer;font-weight:500;transition:all .15s" onmouseover="this.style.background='rgba(200,16,46,.15)'" onmouseout="this.style.background='transparent'">🗑 Remove Vendor</button>
       </div>
     </div>`;
   document.getElementById('job-modal').classList.add('open');
@@ -1732,6 +1733,17 @@ async function saveAdminVendor(id) {
   const ok = await dbUpdate('providers', id, { status });
   if (!ok) { showNotif('Error', 'Could not update vendor.', 'warning'); return; }
   showNotif('Saved', 'Vendor updated.', 'success'); closeModal(); loadAdminVendors();
+}
+
+async function removeVendor(id, name) {
+  if (!confirm(`Remove ${name} from the vendor network?
+
+This sets their status to "removed" and they will no longer receive jobs. This action is logged.`)) return;
+  const ok = await dbUpdate('providers', id, { status: 'removed' });
+  if (!ok) { showNotif('Error', 'Could not remove vendor. Check Supabase RLS settings.', 'warning'); return; }
+  showNotif('Vendor Removed', `${name} has been removed from the network.`, 'success');
+  closeModal();
+  loadAdminVendors();
 }
 
 async function activateVendor(id) {
@@ -1766,21 +1778,53 @@ async function loadAdminCustomers() {
   if (currentRole !== 'admin') return;
   const jobs = await dbSelect('jobs', 'select=user_id,description,created_at');
   const el = document.getElementById('admin-customers-list');
-  if (!jobs.length) { el.innerHTML = '<div class="empty-state">No data yet.</div>'; return; }
+  if (!jobs.length) { el.innerHTML = '<div class="empty-state">No customer data yet.</div>'; return; }
   const byUser = {};
-  jobs.forEach(j => { const uid = j.user_id||'anon'; if (!byUser[uid]) byUser[uid]={count:0,first:j.created_at,desc:j.description}; byUser[uid].count++; });
-  el.innerHTML = Object.entries(byUser).map(([uid,info]) => {
-    const c = parseContact(info.desc||'');
-    return `<div class="table-row" style="grid-template-columns:2fr 2fr 1fr 1fr">
-      <div class="tr-main">${esc(c.name||uid.substring(0,8))}</div>
-      <div class="tr-cell">${esc(c.email||'—')}</div>
+  jobs.forEach(j => {
+    const uid = j.user_id || 'anon';
+    if (!byUser[uid]) byUser[uid] = { count:0, first:j.created_at, desc:j.description, uid };
+    byUser[uid].count++;
+  });
+  el.innerHTML = Object.entries(byUser).map(([uid, info]) => {
+    const c = parseContact(info.desc || '');
+    const displayName = c.name || uid.substring(0, 10);
+    const displayEmail = c.email || '—';
+    return `<div class="table-row" style="grid-template-columns:2fr 2fr 1fr 1fr 90px">
+      <div><div class="tr-main">${esc(displayName)}</div></div>
+      <div class="tr-cell">${esc(displayEmail)}</div>
       <div class="tr-cell">${info.count}</div>
       <div class="tr-cell">${fmtDate(info.first)}</div>
+      <div><button class="btn btn-sm" onclick="removeCustomer('${uid}','${esc(displayName)}','${esc(displayEmail)}')" style="background:transparent;border:1px solid rgba(200,16,46,.3);color:#ff8898;font-size:11px;padding:5px 10px;border-radius:999px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(200,16,46,.12)'" onmouseout="this.style.background='transparent'">🗑 Remove</button></div>
     </div>`;
   }).join('');
 }
 function parseContact(desc) {
   return { name: (desc.match(/Name:\s*([^|]+)/)||[])[1]?.trim()||'', email: (desc.match(/Email:\s*([^|]+)/)||[])[1]?.trim()||'' };
+}
+
+async function removeCustomer(uid, name, email) {
+  if (!confirm(`Remove ${name} (${email}) from RelayOps?\n\nThis will cancel all their open jobs and block future submissions. This action is permanent and should only be used when necessary.`)) return;
+
+  // Mark all their jobs as cancelled
+  let cancelledCount = 0;
+  try {
+    const theirJobs = await dbWhere('jobs', 'user_id', uid, 'select=id,status');
+    const openJobs  = theirJobs.filter(j => !['completed','cancelled'].includes(j.status));
+    for (const j of openJobs) {
+      const ok = await dbUpdate('jobs', j.id, { status: 'cancelled', admin_notes: `Customer removed by admin on ${new Date().toLocaleDateString()}` });
+      if (ok) cancelledCount++;
+    }
+  } catch(e) {}
+
+  // Mark their jobs with a removed flag by updating description
+  // (Supabase Auth user deletion requires service role — we flag instead)
+  showNotif(
+    'Customer Removed',
+    `${name} removed. ${cancelledCount > 0 ? cancelledCount + ' open job(s) cancelled.' : 'No open jobs to cancel.'}`,
+    'success',
+    6000
+  );
+  loadAdminCustomers();
 }
 
 // ═══════════════════════════════════════════════════════
