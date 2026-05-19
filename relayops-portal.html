@@ -2050,14 +2050,18 @@ async function saveAdminJob(id) {
   const paylink = document.getElementById('edit-paylink')?.value || '';
   const vendor  = document.getElementById('edit-vendor')?.value || '';
   const payamt  = document.getElementById('edit-payamt')?.value || '';
-  const updates = { status };
+  // Auto-advance status when vendor is assigned
+  let finalStatus = status;
+  if (vendor && ['submitted','priced'].includes(status)) finalStatus = 'assigned';
+
+  // Build update object - only include fields that have values
+  const updates = { status: finalStatus };
   if (price)   updates.quoted_price = parseFloat(price);
   if (notes)   updates.admin_notes  = notes;
-  // Only include payment_link if the field has a value
   if (paylink && paylink.startsWith('http')) updates.payment_link = paylink;
   if (payamt && parseFloat(payamt) > 0) updates.payment_amount = parseFloat(payamt);
-  updates.provider_id = vendor || null;
-  if (vendor && ['submitted','priced'].includes(status)) updates.status = 'assigned';
+  // Handle provider_id separately to avoid FK constraint issues
+  if (vendor) updates.provider_id = vendor;
   const prevJob = allAdminJobs.find(x => x.id === id);
   const prevStatus = prevJob?.status;
   // Add timeout so button never stays stuck
