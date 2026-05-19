@@ -2044,17 +2044,18 @@ async function saveAdminJob(id) {
   });
   if (saveBtn) { saveBtn.textContent = '⏳ Saving...'; saveBtn.disabled = true; }
 
-  const status  = document.getElementById('edit-status').value;
-  const price   = document.getElementById('edit-price').value;
-  const notes   = document.getElementById('edit-notes').value;
-  const paylink = document.getElementById('edit-paylink').value;
-  const vendor  = document.getElementById('edit-vendor').value;
-  const payamt  = document.getElementById('edit-payamt').value;
+  const status  = document.getElementById('edit-status')?.value || '';
+  const price   = document.getElementById('edit-price')?.value || '';
+  const notes   = document.getElementById('edit-notes')?.value || '';
+  const paylink = document.getElementById('edit-paylink')?.value || '';
+  const vendor  = document.getElementById('edit-vendor')?.value || '';
+  const payamt  = document.getElementById('edit-payamt')?.value || '';
   const updates = { status };
-  if (price)   updates.quoted_price    = parseFloat(price);
-  if (notes)   updates.admin_notes     = notes;
-  if (paylink) updates.payment_link    = paylink;
-  if (payamt)  updates.payment_amount  = parseFloat(payamt);
+  if (price)   updates.quoted_price = parseFloat(price);
+  if (notes)   updates.admin_notes  = notes;
+  // Only include payment_link if the field has a value
+  if (paylink && paylink.startsWith('http')) updates.payment_link = paylink;
+  if (payamt && parseFloat(payamt) > 0) updates.payment_amount = parseFloat(payamt);
   updates.provider_id = vendor || null;
   if (vendor && ['submitted','priced'].includes(status)) updates.status = 'assigned';
   const prevJob = allAdminJobs.find(x => x.id === id);
