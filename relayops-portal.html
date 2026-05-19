@@ -1224,7 +1224,7 @@ const STATUS_NOTIF_TYPE = { priced: 'warning', assigned: 'info', in_progress: 'i
 async function pollJobStatuses() {
   if (!currentUser || currentRole !== 'customer') return;
   try {
-    const jobs = await dbWhere('jobs', 'user_id', currentUser.id, 'select=id,status,property_address,job_type');
+    const jobs = await dbWhere('jobs', 'customer_id', currentUser.id, 'select=id,status,property_address,job_type');
     jobs.forEach(j => {
       const prev = jobStatusCache[j.id];
       if (prev && prev !== j.status) {
@@ -1481,7 +1481,7 @@ function closeModal() { document.getElementById('job-modal').classList.remove('o
 // ═══════════════════════════════════════════════════════
 async function loadCustomerJobs() {
   if (!currentUser || currentRole !== 'customer') return;
-  const jobs = await dbWhere('jobs', 'user_id', currentUser.id);
+  const jobs = await dbWhere('jobs', 'customer_id', currentUser.id);
   allCustomerJobs = jobs;
   jobs.forEach(j => { if (!jobStatusCache[j.id]) jobStatusCache[j.id] = j.status; });
   const total = jobs.length, active = jobs.filter(j => ['assigned','in_progress'].includes(j.status)).length;
@@ -1547,7 +1547,7 @@ async function submitJobRequest() {
     urgency,
     description: desc,
     status: 'submitted',
-    user_id: currentUser?.id || null,
+    customer_id: currentUser?.id || null,
     customer_email: currentUser?.email || null
   });
   if (!ok) { btn.disabled = false; btn.textContent = 'Submit Job Request →'; showNotif('Error', 'Something went wrong. Please try again.', 'warning'); return; }
@@ -2228,14 +2228,14 @@ async function loadAdminCustomers() {
   if (currentRole !== 'admin') return;
 
   // Fetch jobs with all customer-related fields
-  const jobs = await dbSelect('jobs', 'select=user_id,description,created_at,customer_email,property_address,job_type,status');
+  const jobs = await dbSelect('jobs', 'select=customer_id,description,created_at,customer_email,property_address,job_type,status');
   const el = document.getElementById('admin-customers-list');
   if (!jobs.length) { el.innerHTML = '<div class="empty-state">No customer data yet.</div>'; return; }
 
   // Group by user_id, collecting email from customer_email column OR description
   const byUser = {};
   jobs.forEach(j => {
-    const uid = j.user_id || 'anon_' + (j.customer_email || '').replace(/[^a-z0-9]/gi,'_');
+    const uid = j.customer_id || 'anon_' + (j.customer_email || '').replace(/[^a-z0-9]/gi,'_');
     if (!byUser[uid]) {
       const parsed = parseContact(j.description || '');
       byUser[uid] = {
@@ -2291,7 +2291,7 @@ async function removeCustomer(uid, name, email) {
   // Mark all their jobs as cancelled
   let cancelledCount = 0;
   try {
-    const theirJobs = await dbWhere('jobs', 'user_id', uid, 'select=id,status');
+    const theirJobs = await dbWhere('jobs', 'customer_id', uid, 'select=id,status');
     const openJobs  = theirJobs.filter(j => !['completed','cancelled'].includes(j.status));
     for (const j of openJobs) {
       const ok = await dbUpdate('jobs', j.id, { status: 'cancelled', admin_notes: `Customer removed by admin on ${new Date().toLocaleDateString()}` });
