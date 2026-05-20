@@ -1505,7 +1505,25 @@ async function enterVendorMode(user) {
   document.getElementById('nav-customer').style.display = 'none';
   document.getElementById('nav-admin').style.display = 'none';
   setSidebarUser(name, name[0].toUpperCase(), 'VENDOR');
-  const providers = await dbWhere('providers', 'email', user.email);
+  // Try to find provider record by email first, then by user_id
+  let providers = await dbWhere('providers', 'email', user.email);
+  if (!providers.length && user.id) {
+    providers = await dbWhere('providers', 'user_id', user.id);
+  }
+  // If still not found, create a pending record automatically
+  if (!providers.length) {
+    const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Vendor';
+    const { data } = await dbInsert('providers', {
+      full_name: name,
+      email: user.email,
+      phone: '',
+      service_types: [],
+      coverage_zips: '',
+      status: 'pending',
+      user_id: user.id || null
+    });
+    if (data) providers = [data];
+  }
   currentProviderRecord = providers[0] || null;
   const status = currentProviderRecord?.status || 'pending';
   const isPending = status === 'pending';
@@ -1635,7 +1653,17 @@ async function submitJobRequest() {
     customer_id: currentUser?.id || null,
     customer_email: currentUser?.email || null
   });
-  if (!ok) { btn.disabled = false; btn.textContent = 'Submit Job Request →'; showNotif('Error', 'Something went wrong. Please try again.', 'warning'); return; }
+  if (!ok) {
+    btn.disabled = false; btn.textContent = 'Submit Job Request →';
+    const errMsg = data?.message || data?.hint || 'Could not submit job.';
+    console.error('Job submit failed:', data);
+    if (errMsg.includes('job_status_history')) {
+      showNotif('Database Error', 'Run this SQL in Supabase: ALTER TABLE job_status_history DISABLE ROW LEVEL SECURITY;', 'warning', 10000);
+    } else {
+      showNotif('Error', errMsg, 'warning');
+    }
+    return;
+  }
   if (data) jobStatusCache[data.id] = 'submitted';
   // Notify admin of new job
   emailjs.send('service_slduczl', 'template_sacm0kn', {
@@ -1693,7 +1721,21 @@ Customer: ${currentUser?.email || 'unknown'}`
 // ═══════════════════════════════════════════════════════
 async function loadVendorJobs() {
   if (!currentUser || currentRole !== 'provider') return;
-  if (!currentProviderRecord?.id) { document.getElementById('vendor-jobs-list').innerHTML = '<div class="empty-state">⏳ Account pending approval.</div>'; return; }
+  // Re-fetch provider record in case status changed since login
+  if (currentUser.email) {
+    const fresh = await dbWhere('providers', 'email', currentUser.email);
+    if (fresh.length) {
+      currentProviderRecord = fresh[0];
+      // Update pending notice
+      const isPending = currentProviderRecord.status === 'pending';
+      document.getElementById('vendor-pending-notice').style.display = isPending ? 'block' : 'none';
+      document.getElementById('vprof-status').innerHTML = statusPill(currentProviderRecord.status);
+    }
+  }
+  if (!currentProviderRecord?.id || currentProviderRecord?.status === 'pending') {
+    document.getElementById('vendor-jobs-list').innerHTML = '<div class="empty-state">⏳ Account pending approval. Refresh after admin activates your account.</div>';
+    return;
+  }
   const jobs = await dbWhere('jobs', 'provider_id', currentProviderRecord.id);
   allVendorJobs = jobs;
   document.getElementById('vs-assigned').textContent = jobs.filter(j => j.status === 'assigned').length;
@@ -3665,6 +3707,14 @@ async function submitNewPassword(token) {
     const BASE     = 'https://qnufazzxoiomgqxydvnf.supabase.co';
     const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFudWZhenp4b2lvbWdxeHlkdm5mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0MjIyNjksImV4cCI6MjA5MDk5ODI2OX0.dEVE3cdJupCHhqZ4OvoSi3A2ZbNmANHoCWG4bISeDzc';
 
+    // First set the session using the recovery token
+    const sessionRes = await fetch(BASE + '/auth/v1/token?grant_type=recovery', {
+      method: 'POST',
+      headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ access_token: token })
+    }).catch(() => null);
+
+    // Use the token directly as the bearer for password update
     const res = await fetch(BASE + '/auth/v1/user', {
       method: 'PUT',
       headers: {
@@ -3703,10 +3753,13 @@ async function submitNewPassword(token) {
 // ═══════════════════════════════════════════════════════
 (async () => {
   // ── Handle password reset redirect from Supabase email ──
-  const hashParams  = new URLSearchParams(window.location.hash.replace('#', ''));
+  const rawHash     = window.location.hash.replace(/^#/, '');
+  const hashParams  = new URLSearchParams(rawHash);
   const resetToken  = hashParams.get('access_token');
   const resetType   = hashParams.get('type');
-  if (resetToken && resetType === 'recovery') {
+  if (resetToken && (resetType === 'recovery' || resetType === 'magiclink')) {
+    // Clear the hash from URL so it's not reused on refresh
+    history.replaceState(null, '', window.location.pathname);
     showResetPasswordScreen(resetToken);
     return;
   }
