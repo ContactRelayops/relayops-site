@@ -3606,10 +3606,108 @@ async function submitJobCompletion(jobId) {
 }
 
 // ═══════════════════════════════════════════════════════
+// PASSWORD RESET SCREEN
+// ═══════════════════════════════════════════════════════
+function showResetPasswordScreen(token) {
+  // Hide everything and show a clean reset form
+  document.body.innerHTML = `
+    <div style="min-height:100vh;background:#0d0d0d;display:flex;align-items:center;justify-content:center;padding:20px;font-family:'DM Sans',sans-serif">
+      <div style="background:#1a1a1a;border:1px solid rgba(255,255,255,.1);border-radius:24px;padding:40px;width:100%;max-width:420px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:28px">
+          <div style="width:36px;height:36px;background:#c8102e;border-radius:8px;display:flex;align-items:center;justify-content:center">
+            <svg width="20" height="20" viewBox="0 0 260 260" fill="none"><path d="M74 78C74 67.5 82.5 59 93 59H178C188.5 59 197 67.5 197 78V93C197 103.5 188.5 112 178 112H127V154H167C177.5 154 186 162.5 186 173V188C186 198.5 177.5 207 167 207H93C82.5 207 74 198.5 74 188V78Z" fill="white"/></svg>
+          </div>
+          <span style="font-family:'Barlow Condensed',sans-serif;font-weight:800;font-size:20px;color:#fff">RelayOps</span>
+        </div>
+
+        <div style="font-size:22px;font-weight:700;color:#fff;margin-bottom:6px">Set New Password</div>
+        <div style="font-size:14px;color:rgba(255,255,255,.4);margin-bottom:24px">Enter your new password below.</div>
+
+        <div id="reset-error" style="display:none;padding:12px;background:rgba(200,16,46,.12);border:1px solid rgba(200,16,46,.3);border-radius:10px;color:#ff8898;font-size:13px;margin-bottom:16px"></div>
+
+        <div style="margin-bottom:14px">
+          <div style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:6px;font-family:'DM Mono',monospace;letter-spacing:.05em;text-transform:uppercase">New Password</div>
+          <input id="new-password" type="password" placeholder="At least 8 characters"
+            style="width:100%;padding:13px 14px;background:#242424;border:1px solid rgba(255,255,255,.1);border-radius:10px;color:#fff;font-size:14px;outline:none;font-family:'DM Sans',sans-serif;box-sizing:border-box"/>
+        </div>
+        <div style="margin-bottom:24px">
+          <div style="font-size:12px;color:rgba(255,255,255,.4);margin-bottom:6px;font-family:'DM Mono',monospace;letter-spacing:.05em;text-transform:uppercase">Confirm Password</div>
+          <input id="confirm-password" type="password" placeholder="Repeat your new password"
+            style="width:100%;padding:13px 14px;background:#242424;border:1px solid rgba(255,255,255,.1);border-radius:10px;color:#fff;font-size:14px;outline:none;font-family:'DM Sans',sans-serif;box-sizing:border-box"/>
+        </div>
+
+        <button id="reset-submit-btn" onclick="submitNewPassword('${token}')"
+          style="width:100%;padding:14px;background:#c8102e;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .2s"
+          onmouseover="this.style.background='#9b0e24'" onmouseout="this.style.background='#c8102e'">
+          Set New Password →
+        </button>
+      </div>
+    </div>`;
+}
+
+async function submitNewPassword(token) {
+  const newPass  = document.getElementById('new-password').value;
+  const confirm  = document.getElementById('confirm-password').value;
+  const errEl    = document.getElementById('reset-error');
+  const btn      = document.getElementById('reset-submit-btn');
+
+  const showErr = (msg) => { errEl.style.display='block'; errEl.textContent=msg; };
+
+  if (!newPass || newPass.length < 8) { showErr('Password must be at least 8 characters.'); return; }
+  if (newPass !== confirm) { showErr('Passwords do not match.'); return; }
+
+  btn.disabled = true; btn.textContent = 'Saving...';
+
+  try {
+    const BASE     = 'https://qnufazzxoiomgqxydvnf.supabase.co';
+    const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFudWZhenp4b2lvbWdxeHlkdm5mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0MjIyNjksImV4cCI6MjA5MDk5ODI2OX0.dEVE3cdJupCHhqZ4OvoSi3A2ZbNmANHoCWG4bISeDzc';
+
+    const res = await fetch(BASE + '/auth/v1/user', {
+      method: 'PUT',
+      headers: {
+        'apikey': ANON_KEY,
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ password: newPass })
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      document.body.innerHTML = `
+        <div style="min-height:100vh;background:#0d0d0d;display:flex;align-items:center;justify-content:center;padding:20px;font-family:'DM Sans',sans-serif">
+          <div style="text-align:center">
+            <div style="font-size:48px;margin-bottom:16px">✅</div>
+            <div style="font-size:24px;font-weight:700;color:#fff;margin-bottom:10px">Password updated!</div>
+            <div style="font-size:15px;color:rgba(255,255,255,.4);margin-bottom:28px">You can now sign in with your new password.</div>
+            <a href="relayops-portal.html" style="display:inline-block;padding:13px 28px;background:#c8102e;color:#fff;border-radius:10px;font-size:15px;font-weight:600;text-decoration:none">Go to Sign In →</a>
+          </div>
+        </div>`;
+    } else {
+      btn.disabled = false; btn.textContent = 'Set New Password →';
+      showErr(data.msg || data.error_description || 'Could not update password. Link may have expired — request a new one.');
+    }
+  } catch(e) {
+    btn.disabled = false; btn.textContent = 'Set New Password →';
+    showErr('Network error. Please try again.');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
 // BOOT
 
 // ═══════════════════════════════════════════════════════
 (async () => {
+  // ── Handle password reset redirect from Supabase email ──
+  const hashParams  = new URLSearchParams(window.location.hash.replace('#', ''));
+  const resetToken  = hashParams.get('access_token');
+  const resetType   = hashParams.get('type');
+  if (resetToken && resetType === 'recovery') {
+    showResetPasswordScreen(resetToken);
+    return;
+  }
+
   const params    = new URLSearchParams(location.search);
   const emailP    = params.get('email');
   const tabP      = params.get('tab');
