@@ -558,6 +558,25 @@ a{text-decoration:none;color:inherit}
 .chatlog-role.ai{color:#51cf66}
 .chatlog-text{color:rgba(255,255,255,.7);flex:1}
 
+
+/* ── VENDOR VERIFIED BADGE ── */
+.verified-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:10px;padding:2px 8px;border-radius:999px;
+  background:rgba(81,207,102,.12);border:1px solid rgba(81,207,102,.3);
+  color:#51cf66;font-family:var(--mono);font-weight:600;
+}
+.checklist-item{
+  display:flex;align-items:center;gap:10px;padding:10px 0;
+  border-bottom:1px solid rgba(255,255,255,.05);font-size:13px;
+  color:rgba(255,255,255,.7);
+}
+.checklist-item:last-child{border-bottom:none}
+.checklist-item input[type=checkbox]{
+  width:16px;height:16px;accent-color:#51cf66;cursor:pointer;flex-shrink:0;
+}
+.checklist-item.checked{color:rgba(255,255,255,.4);text-decoration:line-through}
+
 </style>
 </head>
 <body>
@@ -2140,20 +2159,37 @@ function filterAdminVendors(status, btn) {
 function renderAdminVendors(vendors) {
   const el = document.getElementById('admin-vendors-list');
   if (!vendors.length) { el.innerHTML = '<div class="empty-state">No vendors found.</div>'; return; }
-  el.innerHTML = `<div class="vendor-grid">${vendors.map(v => `
+  el.innerHTML = `<div class="vendor-grid">${vendors.map(v => {
+    const checkKey = 'vendor_verify_' + v.id;
+    const checks = JSON.parse(localStorage.getItem(checkKey) || '{}');
+    const checkCount = Object.values(checks).filter(Boolean).length;
+    return `
     <div class="vendor-card" onclick="editAdminVendor('${v.id}')">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><div class="vendor-name">${esc(v.full_name)}</div>${statusPill(v.status)}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="vendor-name">${esc(v.full_name)}</div>
+        ${v.verified ? '<span class="verified-badge">✓ Verified</span>' : statusPill(v.status)}
+      </div>
       <div class="vendor-meta">${esc(v.service_types?.join(', ')||'—')}</div>
       <div class="vendor-meta" style="margin-top:3px">${esc(v.coverage_zips||'—')}</div>
       <div class="vendor-meta" style="margin-top:3px">${esc(v.email)}</div>
-    </div>`).join('')}</div>`;
+      ${!v.verified && v.status === 'pending' ? `<div style="margin-top:8px;font-size:10px;color:rgba(255,212,59,.6);font-family:var(--mono)">${checkCount}/7 checks complete</div>` : ''}
+    </div>`;
+  }).join('')}</div>`;
 }
 
 function editAdminVendor(id) {
   const v = allAdminVendors.find(x => x.id === id); if (!v) return;
+  // Load saved verification checklist from localStorage
+  const checkKey = 'vendor_verify_' + v.id;
+  const savedChecks = JSON.parse(localStorage.getItem(checkKey) || '{}');
+
   document.getElementById('modal-job-title').textContent = 'Edit Vendor: ' + v.full_name;
   document.getElementById('modal-job-content').innerHTML = `
     <div class="modal-section">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        ${v.verified ? '<span class="verified-badge">✓ VERIFIED</span>' : '<span style="font-size:11px;color:rgba(255,212,59,.7);background:rgba(255,212,59,.08);border:1px solid rgba(255,212,59,.2);padding:2px 8px;border-radius:999px;font-family:var(--mono)">⏳ PENDING VERIFICATION</span>'}
+        <span style="font-size:11px;color:rgba(255,255,255,.25);font-family:var(--mono)">Applied: ${fmtDate(v.created_at)}</span>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
         <div class="field"><label>Full Name</label>
           <input id="vedit-name" type="text" value="${esc(v.full_name||'')}"/>
@@ -2179,12 +2215,36 @@ function editAdminVendor(id) {
           <input id="vedit-coverage" type="text" value="${esc(v.coverage_zips||'')}"/>
         </div>
       </div>
-      <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:4px">Applied: ${fmtDate(v.created_at)}</div>
     </div>
+
+    <div class="modal-section">
+      <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,.8);margin-bottom:14px">🔍 Verification Checklist</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:12px">Check off each step as you verify. Progress saves automatically to this device.</div>
+      <div id="vendor-checklist">
+        ${[
+          {id:'call', label:'Called vendor — confirmed real phone number and person'},
+          {id:'google', label:'Googled business — found listing (Google Business, Yelp, Facebook, or website)'},
+          {id:'area', label:'Confirmed service area — Pittsburgh (15xxx) or Philadelphia (19xxx) zip code'},
+          {id:'insurance', label:'Received proof of insurance (COI emailed or photographed)'},
+          {id:'license', label:'Verified license number via PA licensing board (if applicable)'},
+          {id:'references', label:'Called at least 1 property manager reference — confirmed positive'},
+          {id:'trial', label:'Completed a trial job successfully'},
+        ].map(item => `
+          <div class="checklist-item ${savedChecks[item.id] ? 'checked' : ''}" id="chk-row-${item.id}">
+            <input type="checkbox" id="chk-${item.id}" ${savedChecks[item.id] ? 'checked' : ''}
+              onchange="saveVendorCheck('${v.id}','${item.id}',this.checked)"/>
+            <label for="chk-${item.id}" style="cursor:pointer;flex:1">${item.label}</label>
+          </div>`).join('')}
+      </div>
+      <div style="margin-top:14px;padding:10px 14px;background:rgba(255,255,255,.03);border-radius:8px;font-size:12px;color:rgba(255,255,255,.3)">
+        Complete all 7 checks before activating. Click <strong style="color:rgba(255,255,255,.5)">✅ Approve & Verify</strong> to activate and mark as verified.
+      </div>
+    </div>
+
     <div class="modal-section">
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         <button class="btn btn-red" onclick="saveAdminVendor('${v.id}')">💾 Save Changes</button>
-        ${v.status==='pending' ? `<button class="btn btn-ghost" onclick="activateVendor('${v.id}')">✅ Approve</button>` : ''}
+        ${v.status==='pending' || !v.verified ? `<button class="btn btn-ghost" onclick="approveAndVerify('${v.id}')">✅ Approve & Verify</button>` : '<span class="verified-badge" style="padding:8px 14px">✓ VERIFIED & ACTIVE</span>'}
         <button onclick="removeVendor('${v.id}','${esc(v.full_name)}')" style="margin-left:auto;padding:8px 14px;border-radius:999px;border:1px solid rgba(200,16,46,.35);background:transparent;color:#ff8898;font-size:12px;cursor:pointer;font-weight:500;transition:all .15s" onmouseover="this.style.background='rgba(200,16,46,.15)'" onmouseout="this.style.background='transparent'">🗑 Remove</button>
       </div>
     </div>`;
@@ -2221,6 +2281,39 @@ This sets their status to "removed" and they will no longer receive jobs. This a
   showNotif('Vendor Removed', `${name} has been removed from the network.`, 'success');
   closeModal();
   loadAdminVendors();
+}
+
+function saveVendorCheck(vendorId, checkId, checked) {
+  const key = 'vendor_verify_' + vendorId;
+  const checks = JSON.parse(localStorage.getItem(key) || '{}');
+  checks[checkId] = checked;
+  localStorage.setItem(key, JSON.stringify(checks));
+  // Update row style
+  const row = document.getElementById('chk-row-' + checkId);
+  if (row) row.classList.toggle('checked', checked);
+  // Count completed checks
+  const total = Object.values(checks).filter(Boolean).length;
+  showNotif('Checklist updated', total + '/7 verification steps complete', 'info', 2000);
+}
+
+async function approveAndVerify(id) {
+  const key = 'vendor_verify_' + id;
+  const checks = JSON.parse(localStorage.getItem(key) || '{}');
+  const completed = Object.values(checks).filter(Boolean).length;
+  if (completed < 7) {
+    const proceed = confirm(`Only ${completed}/7 verification steps are checked.\n\nAre you sure you want to approve this vendor without completing all checks?`);
+    if (!proceed) return;
+  }
+  const ok = await dbUpdate('providers', id, { status: 'active', verified: true });
+  if (!ok) { showNotif('Error', 'Could not activate vendor.', 'warning'); return; }
+  const v = allAdminVendors.find(x => x.id === id);
+  emailjs.send('service_slduczl','template_sacm0kn',{
+    subject:'✅ Your RelayOps vendor account is approved!',
+    from_name:'RelayOps', from_email:ADMIN_EMAIL, phone:'—',
+    message:`Hi ${v?.full_name||'there'},\n\nYour vendor account has been verified and approved!\n\nYou can now log in to receive jobs:\nhttps://contactrelayops.github.io/relayops-site/relayops-portal.html\n\nWelcome to the RelayOps network!\n\n— RelayOps Team`
+  }).catch(()=>{});
+  showNotif('✅ Vendor Approved & Verified', 'Account activated and welcome email sent.', 'success', 5000);
+  closeModal(); loadAdminVendors();
 }
 
 async function activateVendor(id) {
