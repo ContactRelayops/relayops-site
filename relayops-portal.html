@@ -1330,7 +1330,10 @@ async function doPasswordReset() {
     const res = await fetch(BASE + '/auth/v1/recover', {
       method: 'POST',
       headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
+      body: JSON.stringify({
+        email,
+        redirect_to: 'https://contactrelayops.github.io/relayops-site/relayops-portal.html'
+      })
     });
 
     btn.disabled = false; btn.textContent = 'Send Reset Link →';
