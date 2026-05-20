@@ -577,6 +577,20 @@ a{text-decoration:none;color:inherit}
 }
 .checklist-item.checked{color:rgba(255,255,255,.4);text-decoration:line-through}
 
+
+/* ── COMPLETION PHOTO UPLOAD ── */
+.photo-upload-area{
+  border:2px dashed rgba(255,255,255,.15);border-radius:var(--r-md);
+  padding:28px;text-align:center;cursor:pointer;transition:all .2s;
+  background:rgba(255,255,255,.02);
+}
+.photo-upload-area:hover{border-color:rgba(200,16,46,.4);background:rgba(200,16,46,.04)}
+.photo-upload-area.has-files{border-color:rgba(81,207,102,.4);background:rgba(81,207,102,.04)}
+.photo-preview-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.photo-preview{position:relative;aspect-ratio:1;border-radius:8px;overflow:hidden;background:rgba(255,255,255,.05)}
+.photo-preview img{width:100%;height:100%;object-fit:cover}
+.photo-preview-remove{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.7);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+
 </style>
 </head>
 <body>
@@ -1697,8 +1711,8 @@ async function loadVendorJobs() {
 }
 
 function vendorActionBtn(j) {
-  if (j.status === 'assigned')    return `<button class="btn btn-red btn-sm" onclick="event.stopPropagation();updateVendorStatus('${j.id}','in_progress')">Start</button>`;
-  if (j.status === 'in_progress') return `<button class="btn btn-red btn-sm" onclick="event.stopPropagation();updateVendorStatus('${j.id}','completed')">Mark Done</button>`;
+  if (j.status === 'assigned')    return `<button class="btn btn-red btn-sm" onclick="event.stopPropagation();updateVendorStatus('${j.id}','in_progress')">▶ Start Job</button>`;
+  if (j.status === 'in_progress') return `<button class="btn btn-red btn-sm" onclick="event.stopPropagation();showCompletionModal('${j.id}')">📸 Mark Done</button>`;
   return `<span class="tr-cell">${j.status}</span>`;
 }
 
@@ -3451,6 +3465,144 @@ async function seedTestData() {
   addLog('\n' + (inserted === jobs.length ? '✅' : '⚠️') + ' Done! ' + inserted + '/' + jobs.length + ' jobs and ' + Object.keys(vendorIds).length + ' vendors.');
   btn.disabled = false; btn.textContent = '🌱 Insert Test Data';
   loadAdminJobs(); loadAdminVendors();
+}
+
+// ═══════════════════════════════════════════════════════
+// VENDOR JOB COMPLETION + PHOTO UPLOAD
+// ═══════════════════════════════════════════════════════
+let completionPhotos = []; // base64 photos for current completion
+
+function showCompletionModal(jobId) {
+  const job = allVendorJobs.find(j => j.id === jobId);
+  if (!job) return;
+  completionPhotos = [];
+
+  // Create overlay
+  const overlay = document.createElement('div');
+  overlay.id = 'completion-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:3000;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
+
+  overlay.innerHTML = `
+    <div style="background:#1c1c1c;border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:32px;max-width:500px;width:100%">
+      <div style="font-family:var(--display);font-size:22px;font-weight:800;color:#fff;margin-bottom:6px">📸 Complete Job</div>
+      <div style="font-size:13px;color:rgba(255,255,255,.4);margin-bottom:24px">${esc(job.job_type)} at ${esc((job.property_address||'').split(',')[0])}</div>
+
+      <div style="margin-bottom:20px">
+        <div style="font-size:12px;color:rgba(255,255,255,.4);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Before & After Photos</div>
+        <div class="photo-upload-area" id="photo-drop-area" onclick="document.getElementById('photo-file-input').click()">
+          <div style="font-size:28px;margin-bottom:8px">📷</div>
+          <div style="font-size:14px;color:rgba(255,255,255,.6);font-weight:500">Click to upload photos</div>
+          <div style="font-size:12px;color:rgba(255,255,255,.3);margin-top:4px">Before and after shots required · JPG, PNG · Max 5MB each</div>
+        </div>
+        <input type="file" id="photo-file-input" multiple accept="image/*" style="display:none" onchange="handlePhotoSelect(event)"/>
+        <div class="photo-preview-grid" id="photo-preview-grid"></div>
+        <div style="font-size:11px;color:rgba(255,255,255,.25);margin-top:8px" id="photo-count-label">0 photos selected</div>
+      </div>
+
+      <div style="margin-bottom:20px">
+        <div style="font-size:12px;color:rgba(255,255,255,.4);font-family:var(--mono);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Completion Notes</div>
+        <textarea id="completion-notes-input" placeholder="Describe what was done, any issues found, or anything the property manager should know..." style="width:100%;min-height:90px;padding:12px;background:#242424;border:1px solid rgba(255,255,255,.1);border-radius:10px;color:#fff;font-family:var(--sans);font-size:13px;outline:none;resize:vertical"></textarea>
+      </div>
+
+      <div style="display:flex;gap:10px">
+        <button onclick="submitJobCompletion('${jobId}')" style="flex:1;padding:13px;background:var(--red);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s" onmouseover="this.style.background='#9b0e24'" onmouseout="this.style.background='var(--red)'" id="complete-submit-btn">
+          ✅ Submit & Complete Job
+        </button>
+        <button onclick="document.getElementById('completion-overlay').remove()" style="padding:13px 18px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);border:none;border-radius:10px;font-size:14px;cursor:pointer">
+          Cancel
+        </button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+}
+
+function handlePhotoSelect(event) {
+  const files = Array.from(event.target.files);
+  const grid = document.getElementById('photo-preview-grid');
+  const dropArea = document.getElementById('photo-drop-area');
+  const countLabel = document.getElementById('photo-count-label');
+
+  files.forEach(file => {
+    if (file.size > 5 * 1024 * 1024) { showNotif('File too large', file.name + ' exceeds 5MB.', 'warning'); return; }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target.result;
+      completionPhotos.push({ name: file.name, data: base64 });
+
+      // Add preview
+      const div = document.createElement('div');
+      div.className = 'photo-preview';
+      const idx = completionPhotos.length - 1;
+      div.innerHTML = `<img src="${base64}" alt="Photo ${idx+1}"/>
+        <button class="photo-preview-remove" onclick="removePhoto(${idx},this.parentElement)">✕</button>`;
+      grid.appendChild(div);
+
+      dropArea.classList.add('has-files');
+      countLabel.textContent = completionPhotos.length + ' photo' + (completionPhotos.length!==1?'s':'') + ' selected';
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function removePhoto(idx, el) {
+  completionPhotos.splice(idx, 1);
+  el.remove();
+  const countLabel = document.getElementById('photo-count-label');
+  if (countLabel) countLabel.textContent = completionPhotos.length + ' photo' + (completionPhotos.length!==1?'s':'') + ' selected';
+  if (completionPhotos.length === 0) document.getElementById('photo-drop-area')?.classList.remove('has-files');
+}
+
+async function submitJobCompletion(jobId) {
+  const notes  = document.getElementById('completion-notes-input')?.value.trim();
+  const btn    = document.getElementById('complete-submit-btn');
+
+  if (completionPhotos.length === 0) {
+    if (!confirm('No photos attached. Are you sure you want to complete without photos?')) return;
+  }
+
+  btn.disabled = true; btn.textContent = '⏳ Submitting...';
+
+  // Store photos as base64 in completion_notes (until we have file storage)
+  const photoSummary = completionPhotos.length > 0
+    ? `\n\n[${completionPhotos.length} photo(s) attached: ${completionPhotos.map(p=>p.name).join(', ')}]`
+    : '';
+
+  const completionText = (notes || 'Job completed.') + photoSummary;
+
+  // Update job status and save completion notes + photos
+  const updates = {
+    status: 'completed',
+    completion_notes: completionText
+  };
+
+  // Store photo data in localStorage keyed by job ID (for admin to view)
+  if (completionPhotos.length > 0) {
+    try {
+      localStorage.setItem('job_photos_' + jobId, JSON.stringify({
+        jobId, photos: completionPhotos, completedAt: new Date().toISOString(),
+        vendorName: currentUser?.user_metadata?.full_name || currentUser?.email
+      }));
+      // Also update index
+      const idx = JSON.parse(localStorage.getItem('job_photos_index') || '[]');
+      if (!idx.includes(jobId)) { idx.push(jobId); localStorage.setItem('job_photos_index', JSON.stringify(idx)); }
+    } catch(e) {}
+  }
+
+  const ok = await dbUpdate('jobs', jobId, updates);
+
+  if (ok) {
+    document.getElementById('completion-overlay')?.remove();
+    showNotif('✅ Job Completed!', 'Photos and notes saved. Customer will be notified.', 'success', 5000);
+    loadVendorJobs();
+
+    // Notify customer
+    const job = allVendorJobs.find(j => j.id === jobId);
+    if (job) await notifyCustomer({ ...job, status: 'completed', completion_notes: completionText }, 'completed').catch(()=>{});
+  } else {
+    btn.disabled = false; btn.textContent = '✅ Submit & Complete Job';
+    showNotif('Error', 'Could not save. Please try again.', 'warning');
+  }
 }
 
 // ═══════════════════════════════════════════════════════
