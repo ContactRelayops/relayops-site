@@ -936,6 +936,8 @@ a{text-decoration:none;color:inherit}
             <div class="profile-grid">
               <div class="profile-stat"><div class="profile-stat-n" id="vperf-total">—</div><div class="profile-stat-l">Total Jobs</div></div>
               <div class="profile-stat"><div class="profile-stat-n" id="vperf-done">—</div><div class="profile-stat-l">Completed</div></div>
+              <div class="profile-stat"><div class="profile-stat-n" id="vperf-rating" style="color:#ffd43b">—</div><div class="profile-stat-l">Avg Rating</div></div>
+              <div class="profile-stat"><div class="profile-stat-n" id="vperf-reviews">—</div><div class="profile-stat-l">Reviews</div></div>
             </div>
           </div>
           <div class="card">
@@ -995,6 +997,7 @@ a{text-decoration:none;color:inherit}
           <button class="filter-btn active" onclick="filterAdminVendors('all',this)">All</button>
           <button class="filter-btn" onclick="filterAdminVendors('pending',this)">Pending</button>
           <button class="filter-btn" onclick="filterAdminVendors('active',this)">Active</button>
+          <button class="filter-btn" onclick="filterAdminVendors('rated',this)">⭐ Top Rated</button>
         </div>
         <div id="admin-vendors-list"><div class="empty-state">Loading...</div></div>
         <div style="margin-top:28px">
@@ -2479,8 +2482,28 @@ async function saveAdminJob(id) {
 async function loadAdminVendors() {
   loadAdminVendorInvites();
   if (currentRole !== 'admin') return;
-  const vendors = await dbSelect('providers');
+  const [vendors, ratedJobs] = await Promise.all([
+    dbSelect('providers'),
+    dbSelect('jobs', 'select=provider_id,vendor_rating,status&vendor_rating=not.is.null')
+  ]);
   allAdminVendors = vendors;
+  // Build rating map: provider_id -> { total, count, completed }
+  window._vendorRatingMap = {};
+  window._vendorJobMap = {};
+  (ratedJobs || []).forEach(j => {
+    if (!j.provider_id) return;
+    if (!window._vendorRatingMap[j.provider_id]) window._vendorRatingMap[j.provider_id] = { total: 0, count: 0 };
+    window._vendorRatingMap[j.provider_id].total += j.vendor_rating;
+    window._vendorRatingMap[j.provider_id].count += 1;
+  });
+  // Also count completed jobs per vendor
+  const allJobs = await dbSelect('jobs', 'select=provider_id,status');
+  (allJobs || []).forEach(j => {
+    if (!j.provider_id) return;
+    if (!window._vendorJobMap[j.provider_id]) window._vendorJobMap[j.provider_id] = { total: 0, completed: 0 };
+    window._vendorJobMap[j.provider_id].total += 1;
+    if (j.status === 'completed') window._vendorJobMap[j.provider_id].completed += 1;
+  });
   const pending = vendors.filter(v => v.status === 'pending').length;
   const badge = document.getElementById('badge-pending-vendors');
   pending > 0 ? (badge.textContent = pending, badge.classList.add('visible')) : badge.classList.remove('visible');
@@ -2489,7 +2512,19 @@ async function loadAdminVendors() {
 
 function filterAdminVendors(status, btn) {
   document.querySelectorAll('#p-admin-vendors .filter-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active');
-  renderAdminVendors(status === 'all' ? allAdminVendors : allAdminVendors.filter(v => v.status === status));
+  if (status === 'rated') {
+    const sorted = [...allAdminVendors].filter(v => {
+      const r = window._vendorRatingMap?.[v.id];
+      return r && r.count > 0;
+    }).sort((a, b) => {
+      const ra = window._vendorRatingMap?.[a.id] || { total: 0, count: 1 };
+      const rb = window._vendorRatingMap?.[b.id] || { total: 0, count: 1 };
+      return (rb.total / rb.count) - (ra.total / ra.count);
+    });
+    renderAdminVendors(sorted);
+  } else {
+    renderAdminVendors(status === 'all' ? allAdminVendors : allAdminVendors.filter(v => v.status === status));
+  }
 }
 
 function renderAdminVendors(vendors) {
@@ -2525,6 +2560,14 @@ function editAdminVendor(id) {
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
         ${v.verified ? '<span class="verified-badge">✓ VERIFIED</span>' : '<span style="font-size:11px;color:rgba(255,212,59,.7);background:rgba(255,212,59,.08);border:1px solid rgba(255,212,59,.2);padding:2px 8px;border-radius:999px;font-family:var(--mono)">⏳ PENDING VERIFICATION</span>'}
         <span style="font-size:11px;color:rgba(255,255,255,.25);font-family:var(--mono)">Applied: ${fmtDate(v.created_at)}</span>
+        ${(() => {
+          const r = window._vendorRatingMap?.[v.id];
+          const jm = window._vendorJobMap?.[v.id];
+          if (!r || !r.count) return '<span style="font-size:11px;color:rgba(255,255,255,.2);font-family:var(--mono)">No ratings yet</span>';
+          const avg = (r.total / r.count).toFixed(1);
+          const stars = '★'.repeat(Math.round(r.total/r.count)) + '☆'.repeat(5 - Math.round(r.total/r.count));
+          return `<span style="color:#ffd43b;font-size:14px">${stars}</span><span style="font-size:12px;color:rgba(255,255,255,.4);font-family:var(--mono);margin-left:4px">${avg} avg · ${r.count} rating${r.count>1?'s':''} · ${jm?.completed||0} jobs done</span>`;
+        })()}
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
         <div class="field"><label>Full Name</label>
