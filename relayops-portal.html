@@ -752,6 +752,9 @@ a{text-decoration:none;color:inherit}
         <div class="nav-item" onclick="showPage('p-admin-chatlogs')" data-page="p-admin-chatlogs">
           <span class="nav-icon">💬</span> AI Chat Logs
         </div>
+        <div class="nav-item" onclick="showPage('p-admin-referrals')" data-page="p-admin-referrals">
+          <span class="nav-icon">🔗</span> Referrals
+        </div>
       </nav>
 
       <div class="sidebar-bottom">
@@ -1086,6 +1089,41 @@ a{text-decoration:none;color:inherit}
         </div>
       </div>
 
+
+
+      <!-- ══════════════════════════════════════════
+           ADMIN REFERRAL TRACKING
+      ══════════════════════════════════════════ -->
+      <div class="page" id="p-admin-referrals">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Referral Tracking</div>
+            <div class="page-sub">All referrals across customers and vendors</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="loadAdminReferrals()">↻ Refresh</button>
+        </div>
+        <div class="stats-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:20px">
+          <div class="stat-card"><div class="stat-n" id="ref-total">—</div><div class="stat-l">Total Referrals</div></div>
+          <div class="stat-card"><div class="stat-n" id="ref-pending">—</div><div class="stat-l">Pending</div></div>
+          <div class="stat-card"><div class="stat-n" id="ref-rewarded">—</div><div class="stat-l">Reward Earned</div></div>
+        </div>
+        <div class="filter-bar">
+          <button class="filter-btn active" onclick="filterAdminReferrals('all',this)">All</button>
+          <button class="filter-btn" onclick="filterAdminReferrals('customer',this)">Customers</button>
+          <button class="filter-btn" onclick="filterAdminReferrals('vendor',this)">Vendors</button>
+          <button class="filter-btn" onclick="filterAdminReferrals('rewarded',this)">Reward Earned</button>
+        </div>
+        <div class="table-wrap">
+          <div class="table-head" style="grid-template-columns:1.5fr 1.5fr 1fr 1fr 100px">
+            <div class="th">Referred</div>
+            <div class="th">Referrer Code</div>
+            <div class="th">Role</div>
+            <div class="th">Date</div>
+            <div class="th">Status</div>
+          </div>
+          <div id="admin-referrals-list"><div class="empty-state">Loading...</div></div>
+        </div>
+      </div>
 
       <!-- ══════════════════════════════════════════
            CUSTOMER REFERRAL PAGE
@@ -1576,7 +1614,7 @@ async function enterAdminMode(user) {
   document.getElementById('nav-vendor').style.display = 'none';
   setSidebarUser('Admin', 'A', 'ADMIN');
   const savedPage = sessionStorage.getItem('relayops_page');
-  const adminPages = ['p-admin-jobs','p-admin-vendors','p-admin-payments','p-admin-customers','p-admin-analytics','p-admin-settings','p-admin-chatlogs'];
+  const adminPages = ['p-admin-jobs','p-admin-vendors','p-admin-payments','p-admin-customers','p-admin-analytics','p-admin-settings','p-admin-chatlogs','p-admin-referrals'];
   showPage(savedPage && adminPages.includes(savedPage) ? savedPage : 'p-admin-jobs');
   loadAdminJobs(); loadAdminVendors(); initChatBubble(); startKeepAlive();
 }
@@ -1670,6 +1708,7 @@ function showPage(pageId) {
   if (pageId === 'p-admin-analytics')  loadAdminAnalytics();
   if (pageId === 'p-vendor-profile')   loadVendorPerf();
   if (pageId === 'p-customer-referral') loadCustomerReferral();
+  if (pageId === 'p-admin-referrals')   loadAdminReferrals();
   if (pageId === 'p-vendor-referral')   loadVendorReferral();
 }
 
@@ -4048,6 +4087,69 @@ async function sbFetch(method, path, body) {
     headers: authHeaders({ 'Prefer': 'return=minimal' }),
     body: body ? JSON.stringify(body) : undefined
   });
+}
+
+
+// ═══════════════════════════════════════════════════════
+// ADMIN REFERRAL TRACKING
+// ═══════════════════════════════════════════════════════
+let allAdminReferrals = [];
+
+async function loadAdminReferrals() {
+  document.getElementById('admin-referrals-list').innerHTML = '<div class="empty-state">Loading...</div>';
+  const refs = await dbAll('referrals');
+  allAdminReferrals = refs || [];
+  const total    = allAdminReferrals.length;
+  const rewarded = allAdminReferrals.filter(r => r.first_job_done).length;
+  const pending  = total - rewarded;
+  document.getElementById('ref-total').textContent    = total;
+  document.getElementById('ref-pending').textContent  = pending;
+  document.getElementById('ref-rewarded').textContent = rewarded;
+  renderAdminReferrals(allAdminReferrals);
+}
+
+function filterAdminReferrals(type, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  let filtered = allAdminReferrals;
+  if (type === 'customer') filtered = allAdminReferrals.filter(r => r.referred_role === 'customer');
+  if (type === 'vendor')   filtered = allAdminReferrals.filter(r => r.referred_role === 'vendor');
+  if (type === 'rewarded') filtered = allAdminReferrals.filter(r => r.first_job_done);
+  renderAdminReferrals(filtered);
+}
+
+function renderAdminReferrals(refs) {
+  const el = document.getElementById('admin-referrals-list');
+  if (!refs.length) {
+    el.innerHTML = '<div class="empty-state">No referrals found</div>';
+    return;
+  }
+  el.innerHTML = refs.map(r => `
+    <div class="table-row" style="grid-template-columns:1.5fr 1.5fr 1fr 1fr 100px">
+      <div class="td" style="font-weight:500">${esc(r.referred_email || '—')}</div>
+      <div class="td"><span style="font-family:var(--mono);font-size:12px;color:rgba(255,255,255,.5)">${esc(r.referrer_code || '—')}</span></div>
+      <div class="td"><span style="text-transform:capitalize">${esc(r.referred_role || 'customer')}</span></div>
+      <div class="td">${fmtDate(r.created_at)}</div>
+      <div class="td">
+        ${r.first_job_done
+          ? '<span style="background:rgba(34,197,94,.15);color:#4ade80;padding:3px 10px;border-radius:20px;font-size:12px">✓ Rewarded</span>'
+          : '<span style="background:rgba(255,255,255,.06);color:rgba(255,255,255,.4);padding:3px 10px;border-radius:20px;font-size:12px">Pending</span>'
+        }
+        ${!r.first_job_done ? `<button onclick="markReferralRewarded('${r.id}')" style="margin-left:6px;background:none;border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.4);padding:2px 8px;border-radius:6px;font-size:11px;cursor:pointer">Mark rewarded</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+async function markReferralRewarded(id) {
+  await sbFetch('PATCH', '/rest/v1/referrals?id=eq.' + id, { first_job_done: true });
+  loadAdminReferrals();
+}
+
+async function dbAll(table) {
+  const r = await fetch(BASE + '/rest/v1/' + table + '?order=created_at.desc', { headers: authHeaders() });
+  if (!r.ok) return [];
+  return r.json();
 }
 
 </script>
