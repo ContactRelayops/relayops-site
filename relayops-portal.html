@@ -705,6 +705,9 @@ a{text-decoration:none;color:inherit}
         <div class="nav-item" onclick="showPage('p-customer-referral')" data-page="p-customer-referral">
           <span class="nav-icon">🔗</span> Refer & Earn
         </div>
+        <div class="nav-item" onclick="showPage('p-invite-vendor')" data-page="p-invite-vendor">
+          <span class="nav-icon">➕</span> Invite a Vendor
+        </div>
       </nav>
 
       <!-- VENDOR NAV -->
@@ -1122,6 +1125,46 @@ a{text-decoration:none;color:inherit}
             <div class="th">Status</div>
           </div>
           <div id="admin-referrals-list"><div class="empty-state">Loading...</div></div>
+        </div>
+      </div>
+
+
+      <!-- ══════════════════════════════════════════
+           CUSTOMER: INVITE A VENDOR
+      ══════════════════════════════════════════ -->
+      <div class="page" id="p-invite-vendor">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Invite a Vendor</div>
+            <div class="page-sub">Know a great contractor? Invite them to join your RelayOps network</div>
+          </div>
+        </div>
+        <div style="max-width:540px">
+          <div class="card">
+            <div class="card-title">Send an Invite</div>
+            <div style="font-size:14px;color:rgba(255,255,255,.5);margin-bottom:18px">We'll send them an email with instructions to apply as a vendor. Once verified, they'll be available for your jobs.</div>
+            <div class="auth-field">
+              <div class="auth-label">Vendor Name</div>
+              <input class="auth-input" id="inv-name" type="text" placeholder="John Smith" />
+            </div>
+            <div class="auth-field">
+              <div class="auth-label">Vendor Email</div>
+              <input class="auth-input" id="inv-email" type="email" placeholder="john@example.com" />
+            </div>
+            <div class="auth-field">
+              <div class="auth-label">Trade / Service Type</div>
+              <input class="auth-input" id="inv-trade" type="text" placeholder="e.g. Plumber, Handyman, Cleaner" />
+            </div>
+            <div class="auth-field">
+              <div class="auth-label">Personal Note (optional)</div>
+              <textarea class="auth-input" id="inv-note" rows="3" placeholder="Add a personal message to the invite..." style="resize:vertical"></textarea>
+            </div>
+            <button class="btn btn-red" id="inv-btn" onclick="sendVendorInvite()" style="margin-top:8px">Send Invite →</button>
+          </div>
+          <div class="card">
+            <div class="card-title">Invites Sent</div>
+            <div id="invite-sent-list"><div class="empty-state">No invites sent yet</div></div>
+          </div>
         </div>
       </div>
 
@@ -1569,7 +1612,15 @@ async function doSignUp() {
       await dbInsert('providers', { full_name: name, email, phone: '', service_types: [], coverage_zips: '', status: 'pending', user_id: user?.id || null });
     }
     if (_accessToken) {
-      await initApp(user);
+      // Trigger onboarding email sequence
+    scheduleOnboardingEmails(email, name, selectedRole);
+    // Record referral if came via referral link
+    const refCode = sessionStorage.getItem('pending_ref_code');
+    if (refCode) {
+      await recordReferralSignup(email);
+      sendReferralConfirmationEmail(refCode, email, selectedRole);
+    }
+    await initApp(user);
     } else {
       authErr('✅ Account created! Check your email to confirm it, then sign in.', true);
     }
@@ -1633,7 +1684,7 @@ async function enterCustomerMode(user) {
   document.getElementById('prof-type').textContent  = 'Property Manager / Customer';
   document.getElementById('prof-since').textContent = new Date(user.created_at || Date.now()).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const savedPageC = sessionStorage.getItem('relayops_page');
-  const custPages = ['p-my-jobs','p-request-job','p-my-profile','p-customer-referral'];
+  const custPages = ['p-my-jobs','p-request-job','p-my-profile','p-customer-referral','p-invite-vendor'];
   showPage(savedPageC && custPages.includes(savedPageC) ? savedPageC : 'p-my-jobs');
   loadCustomerJobs(); startStatusPolling(); initChatBubble(); startKeepAlive();
 }
@@ -1708,6 +1759,7 @@ function showPage(pageId) {
   if (pageId === 'p-admin-analytics')  loadAdminAnalytics();
   if (pageId === 'p-vendor-profile')   loadVendorPerf();
   if (pageId === 'p-customer-referral') loadCustomerReferral();
+  if (pageId === 'p-invite-vendor')      loadInvitesSent();
   if (pageId === 'p-admin-referrals')   loadAdminReferrals();
   if (pageId === 'p-vendor-referral')   loadVendorReferral();
 }
@@ -1774,7 +1826,17 @@ function viewCustomerJob(id) {
   <div class="modal-section"><div class="detail-label">Description</div><div class="detail-desc">${esc(j.description||'No description.')}</div></div>`;
   if (j.quoted_price) html += `<div class="modal-section"><div class="detail-label">Quote</div><div class="detail-val" style="font-size:22px;font-weight:700;color:#51cf66">$${j.quoted_price}</div>${j.admin_notes ? `<div style="margin-top:8px;font-size:13px;color:rgba(255,255,255,.5)">${esc(j.admin_notes)}</div>` : ''}</div>`;
   if (j.payment_link) html += `<div class="modal-section"><div class="detail-label">Payment</div><a href="${j.payment_link}" target="_blank" class="btn btn-red" style="margin-top:4px">💳 Pay Now →</a></div>`;
-  if (j.status === 'completed' && j.completion_notes) html += `<div class="modal-section"><div class="detail-label">Completion Notes</div><div class="detail-desc">${esc(j.completion_notes)}</div></div>`;
+  if (j.status === 'completed') {
+    if (j.completion_notes) html += `<div class="modal-section"><div class="detail-label">Completion Notes</div><div class="detail-desc">${esc(j.completion_notes)}</div></div>`;
+    if (j.completion_photos && j.completion_photos.length) {
+      html += `<div class="modal-section"><div class="detail-label">Completion Photos</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px">${j.completion_photos.map(p=>`<a href="${p}" target="_blank"><img src="${p}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;cursor:pointer"/></a>`).join('')}</div></div>`;
+    }
+    if (!j.vendor_rating) {
+      html += `<div class="modal-section"><div class="detail-label">Rate Your Vendor</div><div style="display:flex;gap:8px;margin-top:8px" id="star-row">${[1,2,3,4,5].map(n=>`<span onclick="submitRating('${j.id}',${n})" style="font-size:28px;cursor:pointer;opacity:.4;transition:opacity .15s" onmouseover="hoverStars(${n})" onmouseout="resetStars()" data-star="${n}">★</span>`).join('')}</div><div id="rating-msg" style="font-size:13px;color:rgba(255,255,255,.4);margin-top:6px"></div></div>`;
+    } else {
+      html += `<div class="modal-section"><div class="detail-label">Your Rating</div><div style="font-size:22px;color:#ffd43b;margin-top:4px">${'★'.repeat(j.vendor_rating)}${'☆'.repeat(5-j.vendor_rating)}</div></div>`;
+    }
+  }
   document.getElementById('modal-job-content').innerHTML = html;
   document.getElementById('job-modal').classList.add('open');
 }
@@ -2744,20 +2806,69 @@ async function removeCustomer(uid, name, email) {
 // ═══════════════════════════════════════════════════════
 async function loadAdminAnalytics() {
   if (currentRole !== 'admin') return;
-  const [jobs, vendors] = await Promise.all([dbSelect('jobs','select=status,job_type,quoted_price'), dbSelect('providers','select=status')]);
+  const [jobs, vendors] = await Promise.all([dbSelect('jobs','select=status,job_type,quoted_price,created_at'), dbSelect('providers','select=status')]);
   const total = jobs.length, completed = jobs.filter(j=>j.status==='completed').length;
-  const revenue = jobs.reduce((s,j)=>s+(parseFloat(j.quoted_price)||0),0);
+  const revenue = jobs.filter(j=>j.status==='completed').reduce((s,j)=>s+(parseFloat(j.quoted_price)||0),0);
+  const pending_rev = jobs.filter(j=>j.status!=='completed').reduce((s,j)=>s+(parseFloat(j.quoted_price)||0),0);
   const activeV = vendors.filter(v=>v.status==='active').length;
   document.getElementById('an-total').textContent     = total;
   document.getElementById('an-completed').textContent = completed;
   document.getElementById('an-revenue').textContent   = '$'+revenue.toLocaleString('en-US');
   document.getElementById('an-vendors').textContent   = activeV;
+
+  // Revenue by month
+  const monthlyRev = {};
+  jobs.filter(j=>j.status==='completed'&&j.quoted_price).forEach(j=>{
+    const d = new Date(j.created_at);
+    const key = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+    monthlyRev[key] = (monthlyRev[key]||0)+(parseFloat(j.quoted_price)||0);
+  });
+  const months = Object.keys(monthlyRev).sort().slice(-6);
+  const maxRev = Math.max(...months.map(m=>monthlyRev[m]),1);
+
   const byType={}, byStatus={};
   jobs.forEach(j=>{byType[j.job_type||'Other']=(byType[j.job_type||'Other']||0)+1; byStatus[j.status||'submitted']=(byStatus[j.status||'submitted']||0)+1;});
+
+  const chartBars = months.length ? months.map(m=>{
+    const pct = Math.round((monthlyRev[m]/maxRev)*100);
+    const label = m.split('-')[1]+'/'+m.split('-')[0].slice(2);
+    return `<div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1">
+      <div style="font-size:12px;font-family:var(--mono);color:rgba(255,255,255,.5)">$${Math.round(monthlyRev[m]).toLocaleString()}</div>
+      <div style="width:100%;background:rgba(255,255,255,.06);border-radius:4px;height:120px;display:flex;align-items:flex-end">
+        <div style="width:100%;height:${pct}%;background:var(--red);border-radius:4px;transition:height .3s"></div>
+      </div>
+      <div style="font-size:11px;color:rgba(255,255,255,.4)">${label}</div>
+    </div>`;
+  }).join('') : '<div style="font-size:13px;color:rgba(255,255,255,.3);padding:20px">No completed jobs yet</div>';
+
   document.getElementById('admin-analytics-detail').innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px">
-      <div class="card"><div class="card-title">Jobs by Type</div>${Object.entries(byType).map(([k,v])=>`<div style="display:flex;justify-content:space-between;margin-bottom:8px"><div style="font-size:13px;color:rgba(255,255,255,.6)">${esc(k)}</div><div style="font-family:var(--mono);font-size:13px;color:var(--white)">${v}</div></div>`).join('')}</div>
-      <div class="card"><div class="card-title">Jobs by Status</div>${Object.entries(byStatus).map(([k,v])=>`<div style="display:flex;justify-content:space-between;margin-bottom:8px"><div>${statusPill(k)}</div><div style="font-family:var(--mono);font-size:13px;color:var(--white)">${v}</div></div>`).join('')}</div>
+    <div class="card" style="margin-top:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div class="card-title" style="margin:0">Revenue over time</div>
+        <div style="font-size:13px;color:rgba(255,255,255,.4)">Completed jobs only</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:flex-end;height:160px">${chartBars}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div class="card-title" style="margin:0">Jobs by Type</div>
+        </div>
+        ${Object.entries(byType).map(([k,v])=>`<div style="display:flex;justify-content:space-between;margin-bottom:8px"><div style="font-size:13px;color:rgba(255,255,255,.6)">${esc(k)}</div><div style="font-family:var(--mono);font-size:13px;color:var(--white)">${v}</div></div>`).join('')}
+      </div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div class="card-title" style="margin:0">Jobs by Status</div>
+        </div>
+        ${Object.entries(byStatus).map(([k,v])=>`<div style="display:flex;justify-content:space-between;margin-bottom:8px"><div>${statusPill(k)}</div><div style="font-family:var(--mono);font-size:13px;color:var(--white)">${v}</div></div>`).join('')}
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-title">Revenue Summary</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px">
+        <div><div style="font-size:13px;color:rgba(255,255,255,.4)">Collected (completed)</div><div style="font-size:24px;font-weight:700;color:#51cf66;margin-top:4px">$${revenue.toLocaleString('en-US')}</div></div>
+        <div><div style="font-size:13px;color:rgba(255,255,255,.4)">Pipeline (active jobs)</div><div style="font-size:24px;font-weight:700;color:#ffd43b;margin-top:4px">$${Math.round(pending_rev).toLocaleString('en-US')}</div></div>
+      </div>
     </div>`;
 }
 
@@ -4150,6 +4261,158 @@ async function dbAll(table) {
   const r = await fetch(BASE + '/rest/v1/' + table + '?order=created_at.desc', { headers: authHeaders() });
   if (!r.ok) return [];
   return r.json();
+}
+
+
+// ═══════════════════════════════════════════════════════
+// ONBOARDING EMAIL SEQUENCES (auto-triggered on signup)
+// ═══════════════════════════════════════════════════════
+function scheduleOnboardingEmails(email, name, role) {
+  // Day 0 — Welcome (sent immediately)
+  const welcomeSubject = role === 'provider'
+    ? 'Welcome to RelayOps — here is how to get your first job'
+    : 'Welcome to RelayOps — submit your first job in minutes';
+  const welcomeBody = role === 'provider'
+    ? `Hi ${name},\n\nWelcome to RelayOps! You're now part of our verified vendor network.\n\nHere's how it works:\n1. We'll review your application and activate your account\n2. Once active, jobs in your area will be assigned to you automatically\n3. Complete the job, upload photos, and get paid instantly\n\nLog in any time to check your status:\n${window.location.origin + window.location.pathname}\n\nQuestions? Reply to this email or call (267) 875-9111.\n\n— The RelayOps Team`
+    : `Hi ${name},\n\nWelcome to RelayOps! We make it simple to manage vendors and get jobs done.\n\nTo submit your first job:\n1. Log in to your portal\n2. Click "Request a Job"\n3. Fill in the details — we'll match you with a verified vendor\n\nLog in here:\n${window.location.origin + window.location.pathname}\n\nQuestions? Reply to this email or call (267) 875-9111.\n\n— The RelayOps Team`;
+
+  emailjs.send('service_slduczl', 'template_sacm0kn', {
+    subject: welcomeSubject,
+    from_name: 'RelayOps',
+    from_email: email,
+    phone: '—',
+    message: welcomeBody
+  }).catch(()=>{});
+
+  // Day 3 — follow up (stored in Supabase, triggered by backend or manually)
+  dbInsert('email_queue', {
+    to_email: email,
+    to_name: name,
+    role,
+    send_after: new Date(Date.now() + 3*24*60*60*1000).toISOString(),
+    subject: role === 'provider' ? 'Your RelayOps vendor account — any questions?' : 'Have you submitted your first job yet?',
+    body: role === 'provider'
+      ? `Hi ${name},\n\nJust checking in — your vendor application is being reviewed.\n\nWhile you wait, make sure your profile is complete so we can match you to the right jobs.\n\nLog in here: ${window.location.origin + window.location.pathname}\n\n— The RelayOps Team`
+      : `Hi ${name},\n\nHave you had a chance to submit your first job on RelayOps?\n\nIt takes less than 2 minutes. Just log in, click "Request a Job", and we'll handle the rest.\n\nLog in here: ${window.location.origin + window.location.pathname}\n\n— The RelayOps Team`,
+    sent: false
+  }).catch(()=>{});
+
+  // Day 7 — referral nudge
+  dbInsert('email_queue', {
+    to_email: email,
+    to_name: name,
+    role,
+    send_after: new Date(Date.now() + 7*24*60*60*1000).toISOString(),
+    subject: role === 'provider' ? 'Know another vendor? Refer them to RelayOps' : 'Get 10% off — refer a property manager',
+    body: role === 'provider'
+      ? `Hi ${name},\n\nKnow another plumber, handyman, cleaner, or contractor who wants steady work?\n\nRefer them to RelayOps. The bigger our network, the more jobs come in for everyone.\n\nShare your referral link from your portal dashboard:\n${window.location.origin + window.location.pathname}\n\n— The RelayOps Team`
+      : `Hi ${name},\n\nKnow another property manager who could use RelayOps?\n\nRefer them and when they complete their first job, you get 10% off your next one.\n\nGrab your referral link from your portal dashboard:\n${window.location.origin + window.location.pathname}\n\n— The RelayOps Team`,
+    sent: false
+  }).catch(()=>{});
+}
+
+// ═══════════════════════════════════════════════════════
+// REFERRAL CONFIRMATION EMAILS (auto on signup)
+// ═══════════════════════════════════════════════════════
+async function sendReferralConfirmationEmail(referrerCode, referredEmail, role) {
+  // Notify admin of the referral
+  emailjs.send('service_slduczl', 'template_sacm0kn', {
+    subject: '🔗 New Referral Signup — ' + referredEmail,
+    from_name: 'RelayOps Referral System',
+    from_email: ADMIN_EMAIL,
+    phone: '—',
+    message: `New referral signup!\n\nReferred: ${referredEmail}\nRole: ${role}\nReferrer Code: ${referrerCode}\n\nLog in to track it in the Referrals section.`
+  }).catch(()=>{});
+}
+
+// ═══════════════════════════════════════════════════════
+// INVITE VENDOR FLOW
+// ═══════════════════════════════════════════════════════
+async function sendVendorInvite() {
+  const name  = document.getElementById('inv-name').value.trim();
+  const email = document.getElementById('inv-email').value.trim();
+  const trade = document.getElementById('inv-trade').value.trim();
+  const note  = document.getElementById('inv-note').value.trim();
+  if (!name || !email || !trade) { showNotif('Missing Fields', 'Please fill in name, email, and trade.', 'warning'); return; }
+  const btn = document.getElementById('inv-btn');
+  btn.disabled = true; btn.textContent = 'Sending...';
+
+  // Log invite in Supabase
+  await dbInsert('vendor_invites', {
+    invited_by_email: currentUser?.email || '',
+    invited_name: name,
+    invited_email: email,
+    trade,
+    note,
+    created_at: new Date().toISOString(),
+    signed_up: false
+  });
+
+  // Send invite email via EmailJS
+  const portalUrl = window.location.origin + window.location.pathname;
+  const inviterName = currentUser?.user_metadata?.full_name || 'A RelayOps customer';
+  emailjs.send('service_slduczl', 'template_sacm0kn', {
+    subject: inviterName + ' invited you to join RelayOps as a vendor',
+    from_name: 'RelayOps',
+    from_email: email,
+    phone: '—',
+    message: `Hi ${name},\n\n${inviterName} thinks you'd be a great fit for RelayOps — a platform that connects verified vendors with property managers who need ${trade} work done.\n\n${note ? 'Their message: "' + note + '"\n\n' : ''}Here's how it works:\n1. Sign up as a vendor at the link below\n2. We verify your credentials\n3. Jobs in your area start coming to you automatically — and you get paid instantly when the job is done\n\nSign up here:\n${portalUrl}\n\nQuestions? Call (267) 875-9111 or reply to this email.\n\n— The RelayOps Team`
+  }).then(() => {
+    showNotif('Invite Sent!', name + ' has been invited to join RelayOps.', 'success');
+    document.getElementById('inv-name').value = '';
+    document.getElementById('inv-email').value = '';
+    document.getElementById('inv-trade').value = '';
+    document.getElementById('inv-note').value = '';
+    loadInvitesSent();
+  }).catch(() => {
+    showNotif('Error', 'Could not send invite email. Please try again.', 'warning');
+  }).finally(() => {
+    btn.disabled = false; btn.textContent = 'Send Invite →';
+  });
+}
+
+async function loadInvitesSent() {
+  const invites = await dbWhere('vendor_invites', 'invited_by_email', currentUser?.email || '');
+  const el = document.getElementById('invite-sent-list');
+  if (!el) return;
+  if (!invites.length) { el.innerHTML = '<div class="empty-state">No invites sent yet</div>'; return; }
+  el.innerHTML = invites.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).map(i=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+      <div>
+        <div style="font-size:14px;color:var(--white);font-weight:500">${esc(i.invited_name)}</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:2px">${esc(i.trade)} · ${esc(i.invited_email)}</div>
+      </div>
+      <div>${i.signed_up
+        ? '<span style="background:rgba(34,197,94,.15);color:#4ade80;padding:3px 10px;border-radius:20px;font-size:12px">✓ Joined</span>'
+        : '<span style="background:rgba(255,255,255,.06);color:rgba(255,255,255,.4);padding:3px 10px;border-radius:20px;font-size:12px">Pending</span>'
+      }</div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// VENDOR RATINGS
+// ═══════════════════════════════════════════════════════
+function hoverStars(n) {
+  document.querySelectorAll('#star-row span').forEach(s => {
+    s.style.opacity = parseInt(s.dataset.star) <= n ? '1' : '0.2';
+    s.style.color = parseInt(s.dataset.star) <= n ? '#ffd43b' : '';
+  });
+}
+function resetStars() {
+  document.querySelectorAll('#star-row span').forEach(s => { s.style.opacity = '0.4'; s.style.color = ''; });
+}
+async function submitRating(jobId, stars) {
+  document.getElementById('rating-msg').textContent = 'Saving...';
+  document.querySelectorAll('#star-row span').forEach((s,i) => {
+    s.style.opacity = i < stars ? '1' : '0.2';
+    s.style.color = i < stars ? '#ffd43b' : '';
+    s.onclick = null;
+  });
+  await sbFetch('PATCH', '/rest/v1/jobs?id=eq.' + jobId, { vendor_rating: stars });
+  document.getElementById('rating-msg').textContent = 'Thanks for your rating!';
+  // Update local cache
+  const job = allCustomerJobs.find(j=>j.id===jobId);
+  if (job) job.vendor_rating = stars;
 }
 
 </script>
