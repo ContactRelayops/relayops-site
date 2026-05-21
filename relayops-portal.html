@@ -701,6 +701,10 @@ a{text-decoration:none;color:inherit}
         <div class="nav-item" onclick="showPage('p-my-profile')" data-page="p-my-profile">
           <span class="nav-icon">👤</span> My Profile
         </div>
+        <div class="sidebar-section" style="margin-top:8px">Referrals</div>
+        <div class="nav-item" onclick="showPage('p-customer-referral')" data-page="p-customer-referral">
+          <span class="nav-icon">🔗</span> Refer & Earn
+        </div>
       </nav>
 
       <!-- VENDOR NAV -->
@@ -713,6 +717,10 @@ a{text-decoration:none;color:inherit}
         <div class="sidebar-section" style="margin-top:8px">Account</div>
         <div class="nav-item" onclick="showPage('p-vendor-profile')" data-page="p-vendor-profile">
           <span class="nav-icon">👤</span> My Profile
+        </div>
+        <div class="sidebar-section" style="margin-top:8px">Referrals</div>
+        <div class="nav-item" onclick="showPage('p-vendor-referral')" data-page="p-vendor-referral">
+          <span class="nav-icon">🔗</span> Refer a Vendor
         </div>
       </nav>
 
@@ -1078,6 +1086,102 @@ a{text-decoration:none;color:inherit}
         </div>
       </div>
 
+
+      <!-- ══════════════════════════════════════════
+           CUSTOMER REFERRAL PAGE
+      ══════════════════════════════════════════ -->
+      <div class="page" id="p-customer-referral">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Refer &amp; Earn</div>
+            <div class="page-sub">Share RelayOps — get 10% off your next job</div>
+          </div>
+        </div>
+        <div style="max-width:620px">
+          <div class="card" style="border:1px solid rgba(200,16,46,.3);background:rgba(200,16,46,.05)">
+            <div style="font-size:13px;font-family:var(--mono);color:var(--red);letter-spacing:.06em;margin-bottom:8px">YOUR REWARD</div>
+            <div style="font-size:22px;font-weight:600;color:var(--white);margin-bottom:6px">10% off your next job</div>
+            <div style="font-size:14px;color:rgba(255,255,255,.5)">Every time someone signs up and completes their first job using your link, you get 10% off your next job — automatically.</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Your Referral Link</div>
+            <div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:14px">Share this link with property managers who could use RelayOps.</div>
+            <div style="display:flex;gap:10px;align-items:center">
+              <div id="cust-ref-link" style="flex:1;padding:12px 14px;background:#1a1a1a;border:1px solid rgba(255,255,255,.1);border-radius:var(--r-sm);font-family:var(--mono);font-size:13px;color:rgba(255,255,255,.7);word-break:break-all">Generating your link...</div>
+              <button class="btn btn-primary btn-sm" onclick="copyCustRefLink()" id="cust-copy-btn">Copy</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">How to Share</div>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;gap:12px;align-items:flex-start">
+                <div style="width:28px;height:28px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">1</div>
+                <div style="font-size:14px;color:rgba(255,255,255,.7)">Copy your referral link above</div>
+              </div>
+              <div style="display:flex;gap:12px;align-items:flex-start">
+                <div style="width:28px;height:28px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">2</div>
+                <div style="font-size:14px;color:rgba(255,255,255,.7)">Send it to a property manager you know who manages vendors or coordinates jobs</div>
+              </div>
+              <div style="display:flex;gap:12px;align-items:flex-start">
+                <div style="width:28px;height:28px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">3</div>
+                <div style="font-size:14px;color:rgba(255,255,255,.7)">When they sign up and complete their first job, we'll apply 10% off your next job</div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Your Referrals</div>
+            <div id="cust-referral-list"><div class="empty-state">Loading referrals...</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════
+           VENDOR REFERRAL PAGE
+      ══════════════════════════════════════════ -->
+      <div class="page" id="p-vendor-referral">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Refer a Vendor</div>
+            <div class="page-sub">Grow the network — more vendors means more jobs for everyone</div>
+          </div>
+        </div>
+        <div style="max-width:620px">
+          <div class="card" style="border:1px solid rgba(200,16,46,.3);background:rgba(200,16,46,.05)">
+            <div style="font-size:13px;font-family:var(--mono);color:var(--red);letter-spacing:.06em;margin-bottom:8px">WHY REFER?</div>
+            <div style="font-size:22px;font-weight:600;color:var(--white);margin-bottom:6px">More vendors = more jobs</div>
+            <div style="font-size:14px;color:rgba(255,255,255,.5)">The bigger our verified vendor network, the more property managers trust us with their jobs — and the more work we can send your way.</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Your Referral Link</div>
+            <div style="font-size:13px;color:rgba(255,255,255,.5);margin-bottom:14px">Share this link with contractors, handymen, cleaners, or any trade pro looking for steady work.</div>
+            <div style="display:flex;gap:10px;align-items:center">
+              <div id="vendor-ref-link" style="flex:1;padding:12px 14px;background:#1a1a1a;border:1px solid rgba(255,255,255,.1);border-radius:var(--r-sm);font-family:var(--mono);font-size:13px;color:rgba(255,255,255,.7);word-break:break-all">Generating your link...</div>
+              <button class="btn btn-primary btn-sm" onclick="copyVendorRefLink()" id="vendor-copy-btn">Copy</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">How It Works</div>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;gap:12px;align-items:flex-start">
+                <div style="width:28px;height:28px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">1</div>
+                <div style="font-size:14px;color:rgba(255,255,255,.7)">Copy your referral link above</div>
+              </div>
+              <div style="display:flex;gap:12px;align-items:flex-start">
+                <div style="width:28px;height:28px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">2</div>
+                <div style="font-size:14px;color:rgba(255,255,255,.7)">Send it to a tradesperson or contractor who's looking for more work</div>
+              </div>
+              <div style="display:flex;gap:12px;align-items:flex-start">
+                <div style="width:28px;height:28px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">3</div>
+                <div style="font-size:14px;color:rgba(255,255,255,.7)">They sign up as a vendor — we verify them and start sending jobs their way</div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Your Referrals</div>
+            <div id="vendor-referral-list"><div class="empty-state">Loading referrals...</div></div>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 </div>
@@ -1491,7 +1595,7 @@ async function enterCustomerMode(user) {
   document.getElementById('prof-type').textContent  = 'Property Manager / Customer';
   document.getElementById('prof-since').textContent = new Date(user.created_at || Date.now()).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const savedPageC = sessionStorage.getItem('relayops_page');
-  const custPages = ['p-my-jobs','p-request-job','p-my-profile'];
+  const custPages = ['p-my-jobs','p-request-job','p-my-profile','p-customer-referral'];
   showPage(savedPageC && custPages.includes(savedPageC) ? savedPageC : 'p-my-jobs');
   loadCustomerJobs(); startStatusPolling(); initChatBubble(); startKeepAlive();
 }
@@ -1534,7 +1638,7 @@ async function enterVendorMode(user) {
   document.getElementById('vprof-service').textContent  = currentProviderRecord?.service_types?.join(', ') || '—';
   document.getElementById('vprof-coverage').textContent = currentProviderRecord?.coverage_zips || '—';
   const savedPageV = sessionStorage.getItem('relayops_page');
-  const vendorPages = ['p-vendor-jobs','p-vendor-profile'];
+  const vendorPages = ['p-vendor-jobs','p-vendor-profile','p-vendor-referral'];
   showPage(savedPageV && vendorPages.includes(savedPageV) ? savedPageV : 'p-vendor-jobs');
   loadVendorJobs(); initChatBubble(); startKeepAlive();
 }
@@ -1565,6 +1669,8 @@ function showPage(pageId) {
   if (pageId === 'p-admin-customers')  loadAdminCustomers();
   if (pageId === 'p-admin-analytics')  loadAdminAnalytics();
   if (pageId === 'p-vendor-profile')   loadVendorPerf();
+  if (pageId === 'p-customer-referral') loadCustomerReferral();
+  if (pageId === 'p-vendor-referral')   loadVendorReferral();
 }
 
 // ═══════════════════════════════════════════════════════
@@ -3805,38 +3911,143 @@ function startKeepAlive() {
   ping(); // immediate first ping on login
   setInterval(ping, 10 * 60 * 1000); // then every 10 min
 }
+
+// ═══════════════════════════════════════════════════════
+// REFERRAL TRACKING
+// ═══════════════════════════════════════════════════════
+
+function generateRefCode(userId) {
+  // Deterministic short code from user ID
+  return btoa(userId).replace(/[^a-zA-Z0-9]/g,'').substring(0,10).toUpperCase();
+}
+
+function getPortalBase() {
+  return window.location.origin + window.location.pathname;
+}
+
+async function loadCustomerReferral() {
+  const user = await sbGetUser();
+  if (!user) return;
+  const code = generateRefCode(user.id);
+  const link = getPortalBase() + '?ref=' + code + '&role=customer';
+  document.getElementById('cust-ref-link').textContent = link;
+  document.getElementById('cust-ref-link').dataset.link = link;
+
+  // Store referral code in user profile if not already there
+  const existing = await dbWhere('customers', 'user_id', user.id);
+  if (existing.length && !existing[0].referral_code) {
+    await sbFetch('PATCH', '/rest/v1/customers?user_id=eq.' + user.id, { referral_code: code });
+  }
+
+  // Load referrals made by this user
+  const refs = await dbWhere('referrals', 'referrer_code', code);
+  const listEl = document.getElementById('cust-referral-list');
+  if (!refs.length) {
+    listEl.innerHTML = '<div class="empty-state">No referrals yet — share your link to get started!</div>';
+    return;
+  }
+  listEl.innerHTML = refs.map(r => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+      <div>
+        <div style="font-size:14px;color:var(--white)">${esc(r.referred_email || 'Signed up')}</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:2px">${fmtDate(r.created_at)}</div>
+      </div>
+      <div>${r.first_job_done
+        ? '<span style="background:rgba(34,197,94,.15);color:#4ade80;padding:4px 10px;border-radius:20px;font-size:12px">✓ Reward earned</span>'
+        : '<span style="background:rgba(255,255,255,.06);color:rgba(255,255,255,.4);padding:4px 10px;border-radius:20px;font-size:12px">Pending first job</span>'
+      }</div>
+    </div>
+  `).join('');
+}
+
+async function loadVendorReferral() {
+  const user = await sbGetUser();
+  if (!user) return;
+  const code = generateRefCode(user.id);
+  const link = getPortalBase() + '?ref=' + code + '&role=vendor';
+  document.getElementById('vendor-ref-link').textContent = link;
+  document.getElementById('vendor-ref-link').dataset.link = link;
+
+  // Load referrals made by this vendor
+  const refs = await dbWhere('referrals', 'referrer_code', code);
+  const listEl = document.getElementById('vendor-referral-list');
+  if (!refs.length) {
+    listEl.innerHTML = '<div class="empty-state">No referrals yet — share your link to get started!</div>';
+    return;
+  }
+  listEl.innerHTML = refs.map(r => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+      <div>
+        <div style="font-size:14px;color:var(--white)">${esc(r.referred_email || 'Signed up')}</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:2px">${fmtDate(r.created_at)}</div>
+      </div>
+      <div>${r.first_job_done
+        ? '<span style="background:rgba(34,197,94,.15);color:#4ade80;padding:4px 10px;border-radius:20px;font-size:12px">✓ Active vendor</span>'
+        : '<span style="background:rgba(255,255,255,.06);color:rgba(255,255,255,.4);padding:4px 10px;border-radius:20px;font-size:12px">Pending verification</span>'
+      }</div>
+    </div>
+  `).join('');
+}
+
+function copyCustRefLink() {
+  const link = document.getElementById('cust-ref-link').dataset.link || document.getElementById('cust-ref-link').textContent;
+  navigator.clipboard.writeText(link).then(() => {
+    const btn = document.getElementById('cust-copy-btn');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+  });
+}
+
+function copyVendorRefLink() {
+  const link = document.getElementById('vendor-ref-link').dataset.link || document.getElementById('vendor-ref-link').textContent;
+  navigator.clipboard.writeText(link).then(() => {
+    const btn = document.getElementById('vendor-copy-btn');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 2000);
+  });
+}
+
+// On page load — capture referral code from URL and log it
+(async function captureReferral() {
+  const params = new URLSearchParams(window.location.search);
+  const refCode = params.get('ref');
+  const refRole = params.get('role');
+  if (refCode) {
+    sessionStorage.setItem('pending_ref_code', refCode);
+    sessionStorage.setItem('pending_ref_role', refRole || 'customer');
+  }
+})();
+
+async function recordReferralSignup(userEmail) {
+  const refCode = sessionStorage.getItem('pending_ref_code');
+  if (!refCode) return;
+  // Check not already recorded
+  const existing = await dbWhere('referrals', 'referred_email', userEmail);
+  if (existing.length) return;
+  await dbInsert('referrals', {
+    referrer_code: refCode,
+    referred_email: userEmail,
+    referred_role: sessionStorage.getItem('pending_ref_role') || 'customer',
+    first_job_done: false,
+    created_at: new Date().toISOString()
+  });
+  sessionStorage.removeItem('pending_ref_code');
+  sessionStorage.removeItem('pending_ref_role');
+}
+
+async function sbGetUser() {
+  if (!_accessToken) return null;
+  const r = await fetch(BASE + '/auth/v1/user', { headers: authHeaders() });
+  if (!r.ok) return null;
+  return r.json();
+}
+
+async function sbFetch(method, path, body) {
+  return fetch(BASE + path, {
+    method,
+    headers: authHeaders({ 'Prefer': 'return=minimal' }),
+    body: body ? JSON.stringify(body) : undefined
+  });
+}
+
 </script>
-
-
-<!-- ── FLOATING CHAT BUBBLE + PANEL ── -->
-<button id="chat-bubble-btn" onclick="toggleChatPanel()" title="AI Assistant">
-  💬
-  <div class="chat-unread" id="chat-unread-dot"></div>
-</button>
-
-<div id="chat-panel">
-  <div class="chat-panel-header">
-    <div class="chat-panel-title">
-      <div class="chat-panel-dot"></div>
-      RelayOps AI
-    </div>
-    <div style="display:flex;align-items:center;gap:6px">
-      <button onclick="clearMyChatHistory()" title="Clear chat history" style="width:28px;height:28px;border-radius:50%;background:transparent;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.35);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s" onmouseover="this.style.background='rgba(200,16,46,.15)';this.style.color='#ff8898';this.style.borderColor='rgba(200,16,46,.3)'" onmouseout="this.style.background='transparent';this.style.color='rgba(255,255,255,.35)';this.style.borderColor='rgba(255,255,255,.1)'">🗑</button>
-      <button class="chat-panel-close" onclick="toggleChatPanel()">✕</button>
-    </div>
-  </div>
-  <div class="chat-panel-msgs" id="cp-msgs">
-    <div class="cp-empty" id="cp-empty">
-      <div class="cp-empty-icon">🤖</div>
-      <div>Ask anything about RelayOps,<br/>your jobs, or property maintenance.</div>
-      <div class="cp-suggestions" id="cp-suggestions"></div>
-    </div>
-  </div>
-  <div class="chat-panel-input-row">
-    <textarea class="chat-panel-input" id="cp-input" placeholder="Ask a question..." rows="1"
-      onkeydown="cpKeydown(event)" oninput="cpAutoResize(this)"></textarea>
-    <button class="chat-panel-send" id="cp-send" onclick="cpSend()">➤</button>
-  </div>
-</div>
-</body>
-</html>
