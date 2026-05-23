@@ -1781,7 +1781,13 @@ function doSignOut() {
 async function initApp(user) {
   // Request push notification permission
   if ('Notification' in window && Notification.permission === 'default') {
-    setTimeout(() => Notification.requestPermission(), 2000);
+    setTimeout(() => {
+      Notification.requestPermission().then(perm => {
+        if (perm === 'granted') showNotif('Notifications enabled', 'You will get notified of job updates.', 'success', 3000);
+      });
+    }, 2000);
+  } else if ('Notification' in window && Notification.permission === 'denied') {
+    console.log('Push notifications blocked by browser');
   }
   currentUser = user;
   if (!user) { doSignOut(); return; }
@@ -1964,7 +1970,7 @@ async function viewCustomerJob(id) {
     <div><div class="detail-label">Type</div><div class="detail-val">${esc(j.job_type||'—')}</div></div>
     <div><div class="detail-label">Urgency</div><div class="detail-val">${esc(j.urgency||'—')}</div></div>
     <div><div class="detail-label">Submitted</div><div class="detail-val">${fmtDate(j.created_at)}</div></div>
-    ${j.scheduled_date ? `<div><div class="detail-label">Scheduled</div><div class="detail-val">${j.scheduled_date}${j.scheduled_time ? ' at ' + j.scheduled_time : ''}</div></div>` : ''}
+    ${j.scheduled_date ? `<div><div class="detail-label">Scheduled</div><div class="detail-val">${new Date(j.scheduled_date).toLocaleDateString('en-US',{weekday:'short',month:'long',day:'numeric',year:'numeric'})}${j.scheduled_time ? ' at ' + (()=>{const [h,m]=j.scheduled_time.split(':');const hr=parseInt(h);return (hr>12?hr-12:hr||12)+':'+m+' '+(hr>=12?'PM':'AM');})() : ''}</div></div>` : ''}
     ${vendorName ? `<div style="grid-column:1/-1"><div class="detail-label">Assigned Vendor</div><div class="detail-val" style="color:#51cf66">✓ ${esc(vendorName)}</div></div>` : (j.status === 'submitted' ? `<div style="grid-column:1/-1"><div class="detail-label">Assigned Vendor</div><div class="detail-val" style="color:rgba(255,255,255,.3)">Pending assignment</div></div>` : '')}
   </div></div>
   <div class="modal-section"><div class="detail-label">Description</div><div class="detail-desc">${esc(j.description||'No description.')}</div></div>`;
@@ -2186,7 +2192,7 @@ async function editAdminJob(id) {
         <div><div class="detail-label">Urgency</div><div class="detail-val">${esc(j.urgency||'—')}</div></div>
         <div style="grid-column:1/-1"><div class="detail-label">Address</div><div class="detail-val">${esc(j.property_address||'—')}</div></div>
         <div><div class="detail-label">Submitted</div><div class="detail-val">${fmtDate(j.created_at)}</div></div>
-    ${j.scheduled_date ? `<div><div class="detail-label">Scheduled</div><div class="detail-val">${j.scheduled_date}${j.scheduled_time ? ' at ' + j.scheduled_time : ''}</div></div>` : ''}
+    ${j.scheduled_date ? `<div><div class="detail-label">Scheduled</div><div class="detail-val">${new Date(j.scheduled_date).toLocaleDateString('en-US',{weekday:'short',month:'long',day:'numeric',year:'numeric'})}${j.scheduled_time ? ' at ' + (()=>{const [h,m]=j.scheduled_time.split(':');const hr=parseInt(h);return (hr>12?hr-12:hr||12)+':'+m+' '+(hr>=12?'PM':'AM');})() : ''}</div></div>` : ''}
         <div><div class="detail-label">Customer Email</div><div class="detail-val" style="font-size:12px">${esc(j.customer_email||'—')}</div></div>
       </div>
       <div class="detail-label">Description</div>
@@ -2229,8 +2235,13 @@ async function editAdminJob(id) {
         ${j.payment_link ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();navigator.clipboard?.writeText('${j.payment_link}');showNotif('Copied','Payment link copied.','info')">📋 Copy Link</button>` : ''}
         <div style="margin-left:auto;font-size:11px;color:rgba(255,255,255,.2)">Job ID: ${j.id.slice(0,8)}...</div>
       </div>
+      <div style="margin-top:20px;border-top:1px solid rgba(255,255,255,.06);padding-top:16px">
+        <div style="font-size:11px;font-family:var(--mono);color:rgba(255,255,255,.25);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Activity Log</div>
+        <div id="job-activity-log" style="font-size:12px;color:rgba(255,255,255,.4)">Loading...</div>
+      </div>
     </div>`;
   document.getElementById('job-modal').classList.add('open');
+  setTimeout(() => loadJobActivityLog(j.id), 150);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -2893,6 +2904,7 @@ async function loadAdminCustomers() {
     if (j.created_at < byUser[uid].first) byUser[uid].first = j.created_at;
   });
 
+  window._allCustomerData = byUser;
   const rows = Object.entries(byUser).map(([uid, info]) => {
     const displayName  = info.name  || (info.email ? info.email.split('@')[0] : uid.substring(0,10));
     const displayEmail = info.email || '—';
@@ -4883,30 +4895,40 @@ function exportJobsCSV() {
 let allAdminCustomers = [];
 const _origLoadAdminCustomers = window.loadAdminCustomers;
 
-async function filterCustomers(query) {
-  if (!allAdminCustomers.length) return;
+function filterCustomers(query) {
+  const byUser = window._allCustomerData;
+  if (!byUser) return;
   const q = query.toLowerCase();
-  const filtered = q ? allAdminCustomers.filter(c =>
-    (c.full_name||'').toLowerCase().includes(q) ||
-    (c.email||'').toLowerCase().includes(q)
-  ) : allAdminCustomers;
-  renderCustomerList(filtered);
-}
-
-function renderCustomerList(customers) {
-  allAdminCustomers = customers.map(c => ({...c, _jobCount: jobCounts[c.user_id||c.id]||0}));
   const el = document.getElementById('admin-customers-list');
   if (!el) return;
-  if (!customers.length) { el.innerHTML = '<div class="empty-state">No customers found</div>'; return; }
-  el.innerHTML = customers.map(c => `
-    <div class="table-row" style="grid-template-columns:2fr 2fr 1fr 1fr 140px" onclick="viewAdminCustomer('${c.id}')">
-      <div class="td" style="font-weight:500">${esc(c.full_name||'—')}</div>
-      <div class="td" style="font-size:12px;color:rgba(255,255,255,.5)">${esc(c.email||'—')}</div>
-      <div class="td">${c._jobCount||0}</div>
-      <div class="td">${fmtDate(c.created_at)}</div>
-      <div class="td"><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();viewAdminCustomer('${c.id}')">View</button></div>
-    </div>`).join('');
+  const entries = Object.entries(byUser).filter(([uid, info]) => {
+    if (!q) return true;
+    const name = (info.name || info.email?.split('@')[0] || '').toLowerCase();
+    const email = (info.email || '').toLowerCase();
+    return name.includes(q) || email.includes(q);
+  });
+  if (!entries.length) { el.innerHTML = '<div class="empty-state">No customers match your search</div>'; return; }
+  const rows = entries.map(([uid, info]) => {
+    const displayName  = info.name  || (info.email ? info.email.split('@')[0] : uid.substring(0,10));
+    const displayEmail = info.email || '—';
+    const statusSummary = Object.entries(info.statuses||{})
+      .map(([s,c]) => `<span style="font-size:10px;padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.4);margin-right:4px">${s} (${c})</span>`)
+      .join('');
+    return `<div class="table-row" style="grid-template-columns:2fr 2fr 1fr 1fr 140px">
+      <div><div class="tr-main">${esc(displayName)}</div><div style="margin-top:4px">${statusSummary}</div></div>
+      <div class="tr-cell" style="font-size:12px">${esc(displayEmail)}</div>
+      <div class="tr-cell">${info.count||0}</div>
+      <div class="tr-cell">${fmtDate(info.first)}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button onclick="editCustomer('${uid}','${esc(displayName)}','${esc(displayEmail)}')" style="background:transparent;border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.6);font-size:11px;padding:5px 10px;border-radius:999px;cursor:pointer">✏️ Edit</button>
+        <button onclick="removeCustomer('${uid}','${esc(displayName)}','${esc(displayEmail)}')" style="background:transparent;border:1px solid rgba(200,16,46,.3);color:#ff8898;font-size:11px;padding:5px 10px;border-radius:999px;cursor:pointer">🗑 Remove</button>
+      </div>
+    </div>`;
+  });
+  el.innerHTML = `<div style="font-size:12px;color:rgba(255,255,255,.25);padding:8px 18px;font-family:var(--mono)">${rows.length} customer${rows.length!==1?'s':''} found</div>` + rows.join('');
 }
+
+function renderCustomerList(customers) { /* legacy stub */ }
 
 // ═══════════════════════════════════════════════════════
 // VENDOR AVAILABILITY
