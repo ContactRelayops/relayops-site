@@ -742,6 +742,9 @@ a{text-decoration:none;color:inherit}
         <div class="nav-item" onclick="showPage('p-invite-vendor')" data-page="p-invite-vendor">
           <span class="nav-icon">➕</span> Invite a Vendor
         </div>
+        <div class="nav-item" onclick="showPage('p-messages')" data-page="p-messages">
+          <span class="nav-icon">💬</span> Messages
+        </div>
       </nav>
 
       <!-- VENDOR NAV -->
@@ -758,6 +761,9 @@ a{text-decoration:none;color:inherit}
         <div class="sidebar-section" style="margin-top:8px">Referrals</div>
         <div class="nav-item" onclick="showPage('p-vendor-referral')" data-page="p-vendor-referral">
           <span class="nav-icon">🔗</span> Refer a Vendor
+        </div>
+        <div class="nav-item" onclick="showPage('p-messages')" data-page="p-messages">
+          <span class="nav-icon">💬</span> Messages
         </div>
       </nav>
 
@@ -884,6 +890,20 @@ a{text-decoration:none;color:inherit}
                   <option value="Flexible">🗓️ Flexible — Within 1 Week</option>
                 </select>
               </div>
+              <div class="field"><label>Preferred Date</label><input id="rj-date" type="date" min="" style="color-scheme:dark"/></div>
+              <div class="field"><label>Preferred Time</label><select id="rj-time">
+                <option value="">Any time</option>
+                <option value="08:00">8:00 AM</option>
+                <option value="09:00">9:00 AM</option>
+                <option value="10:00">10:00 AM</option>
+                <option value="11:00">11:00 AM</option>
+                <option value="12:00">12:00 PM</option>
+                <option value="13:00">1:00 PM</option>
+                <option value="14:00">2:00 PM</option>
+                <option value="15:00">3:00 PM</option>
+                <option value="16:00">4:00 PM</option>
+                <option value="17:00">5:00 PM</option>
+              </select></div>
               <div class="field form-full"><label>Job Description</label><textarea id="rj-desc" placeholder="Describe the issue, access details, and any scheduling constraints."></textarea></div>
             </div>
             <button class="btn btn-red" id="rj-btn" onclick="submitJobRequest()" style="width:100%;justify-content:center;padding:13px;">Submit Job Request →</button>
@@ -1063,6 +1083,9 @@ a{text-decoration:none;color:inherit}
           <div><div class="page-title">Customers</div><div class="page-sub">All registered customers and their job history</div></div>
           <button class="btn btn-ghost btn-sm" onclick="loadAdminCustomers()">↻ Refresh</button>
         </div>
+        <div style="margin-bottom:14px">
+          <input id="customer-search" type="text" placeholder="Search by name or email..." oninput="filterCustomers(this.value)" style="width:100%;max-width:400px;padding:10px 14px;background:#1a1a1a;border:1px solid rgba(255,255,255,.1);border-radius:var(--r-sm);color:#fff;font-size:14px;font-family:var(--sans);outline:none"/>
+        </div>
         <div class="table-wrap">
           <div class="table-head" style="grid-template-columns:2fr 2fr 1fr 1fr 140px">
             <div class="th">Customer</div><div class="th">Email</div><div class="th">Jobs</div><div class="th">Joined</div><div class="th">Actions</div>
@@ -1208,6 +1231,34 @@ a{text-decoration:none;color:inherit}
           <div class="card">
             <div class="card-title">Invites Sent</div>
             <div id="invite-sent-list"><div class="empty-state">No invites sent yet</div></div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ══════════════════════════════════════════
+           MESSAGES (Customer & Vendor)
+      ══════════════════════════════════════════ -->
+      <div class="page" id="p-messages">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Messages</div>
+            <div class="page-sub">Direct messages between you and your vendor/customer</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="loadMessages()">↻ Refresh</button>
+        </div>
+        <div style="display:grid;grid-template-columns:280px 1fr;gap:16px;height:calc(100vh - 180px);max-height:600px">
+          <div style="background:#111;border-radius:var(--r-md);overflow-y:auto;border:1px solid rgba(255,255,255,.06)">
+            <div style="padding:14px 16px;font-size:11px;font-family:var(--mono);color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid rgba(255,255,255,.06)">Conversations</div>
+            <div id="msg-threads"></div>
+          </div>
+          <div style="display:flex;flex-direction:column;background:#111;border-radius:var(--r-md);border:1px solid rgba(255,255,255,.06);overflow:hidden">
+            <div style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px;font-weight:500;color:#fff" id="msg-thread-title">Select a job to view messages</div>
+            <div id="msg-body" style="flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px"></div>
+            <div style="padding:12px 16px;border-top:1px solid rgba(255,255,255,.06);display:flex;gap:10px">
+              <input id="msg-input" type="text" placeholder="Type a message..." style="flex:1;padding:10px 14px;background:#1a1a1a;border:1px solid rgba(255,255,255,.1);border-radius:var(--r-sm);color:#fff;font-size:14px;font-family:var(--sans);outline:none" onkeydown="if(event.key==='Enter')sendMessage()"/>
+              <button class="btn btn-red btn-sm" onclick="sendMessage()">Send</button>
+            </div>
           </div>
         </div>
       </div>
@@ -1692,6 +1743,10 @@ function doSignOut() {
 // APP INIT
 // ═══════════════════════════════════════════════════════
 async function initApp(user) {
+  // Request push notification permission
+  if ('Notification' in window && Notification.permission === 'default') {
+    setTimeout(() => Notification.requestPermission(), 2000);
+  }
   currentUser = user;
   if (!user) { doSignOut(); return; }
   const role = user.user_metadata?.role || user.role || 'customer';
@@ -1728,7 +1783,7 @@ async function enterCustomerMode(user) {
   document.getElementById('prof-type').textContent  = 'Property Manager / Customer';
   document.getElementById('prof-since').textContent = new Date(user.created_at || Date.now()).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const savedPageC = sessionStorage.getItem('relayops_page');
-  const custPages = ['p-my-jobs','p-request-job','p-my-profile','p-customer-referral','p-invite-vendor'];
+  const custPages = ['p-my-jobs','p-request-job','p-my-profile','p-customer-referral','p-invite-vendor','p-messages'];
   showPage(savedPageC && custPages.includes(savedPageC) ? savedPageC : 'p-my-jobs');
   loadCustomerJobs(); startStatusPolling(); initChatBubble(); startKeepAlive();
 }
@@ -1771,7 +1826,7 @@ async function enterVendorMode(user) {
   document.getElementById('vprof-service').textContent  = currentProviderRecord?.service_types?.join(', ') || '—';
   document.getElementById('vprof-coverage').textContent = currentProviderRecord?.coverage_zips || '—';
   const savedPageV = sessionStorage.getItem('relayops_page');
-  const vendorPages = ['p-vendor-jobs','p-vendor-profile','p-vendor-referral'];
+  const vendorPages = ['p-vendor-jobs','p-vendor-profile','p-vendor-referral','p-messages'];
   showPage(savedPageV && vendorPages.includes(savedPageV) ? savedPageV : 'p-vendor-jobs');
   loadVendorJobs(); initChatBubble(); startKeepAlive();
 }
@@ -1806,6 +1861,7 @@ function showPage(pageId) {
   if (pageId === 'p-invite-vendor')      loadInvitesSent();
   if (pageId === 'p-admin-referrals')   loadAdminReferrals();
   if (pageId === 'p-vendor-referral')   loadVendorReferral();
+  if (pageId === 'p-messages')           loadMessages();
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1872,6 +1928,7 @@ async function viewCustomerJob(id) {
     <div><div class="detail-label">Type</div><div class="detail-val">${esc(j.job_type||'—')}</div></div>
     <div><div class="detail-label">Urgency</div><div class="detail-val">${esc(j.urgency||'—')}</div></div>
     <div><div class="detail-label">Submitted</div><div class="detail-val">${fmtDate(j.created_at)}</div></div>
+    ${j.scheduled_date ? `<div><div class="detail-label">Scheduled</div><div class="detail-val">${j.scheduled_date}${j.scheduled_time ? ' at ' + j.scheduled_time : ''}</div></div>` : ''}
     ${vendorName ? `<div style="grid-column:1/-1"><div class="detail-label">Assigned Vendor</div><div class="detail-val" style="color:#51cf66">✓ ${esc(vendorName)}</div></div>` : (j.status === 'submitted' ? `<div style="grid-column:1/-1"><div class="detail-label">Assigned Vendor</div><div class="detail-val" style="color:rgba(255,255,255,.3)">Pending assignment</div></div>` : '')}
   </div></div>
   <div class="modal-section"><div class="detail-label">Description</div><div class="detail-desc">${esc(j.description||'No description.')}</div></div>`;
@@ -1899,6 +1956,8 @@ async function submitJobRequest() {
   const address = document.getElementById('rj-address').value.trim();
   const type    = document.getElementById('rj-type').value;
   const urgency = document.getElementById('rj-urgency').value;
+  const scheduled_date = document.getElementById('rj-date').value || null;
+  const scheduled_time = document.getElementById('rj-time').value || null;
   const desc    = document.getElementById('rj-desc').value.trim();
   if (!address || !type || !urgency || !desc) { showNotif('Missing Fields', 'Please fill in all required fields.', 'warning'); return; }
   const btn = document.getElementById('rj-btn'); btn.disabled = true; btn.textContent = 'Submitting...';
@@ -1909,7 +1968,9 @@ async function submitJobRequest() {
     description: desc,
     status: 'submitted',
     customer_id: currentUser?.id || null,
-    customer_email: currentUser?.email || null
+    customer_email: currentUser?.email || null,
+    scheduled_date,
+    scheduled_time
   });
   if (!ok) {
     btn.disabled = false; btn.textContent = 'Submit Job Request →';
@@ -2089,6 +2150,7 @@ async function editAdminJob(id) {
         <div><div class="detail-label">Urgency</div><div class="detail-val">${esc(j.urgency||'—')}</div></div>
         <div style="grid-column:1/-1"><div class="detail-label">Address</div><div class="detail-val">${esc(j.property_address||'—')}</div></div>
         <div><div class="detail-label">Submitted</div><div class="detail-val">${fmtDate(j.created_at)}</div></div>
+    ${j.scheduled_date ? `<div><div class="detail-label">Scheduled</div><div class="detail-val">${j.scheduled_date}${j.scheduled_time ? ' at ' + j.scheduled_time : ''}</div></div>` : ''}
         <div><div class="detail-label">Customer Email</div><div class="detail-val" style="font-size:12px">${esc(j.customer_email||'—')}</div></div>
       </div>
       <div class="detail-label">Description</div>
@@ -2423,6 +2485,11 @@ ${PORTAL_URL}
 — RelayOps Team`;
     await sendEmail(vendor.email, `📋 Job updated — ${type} at ${addr.split(',')[0]}`, body);
   }
+}
+
+function pushNotify(title, body, icon) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  try { new Notification(title, { body, icon: icon || '/favicon.ico', badge: '/favicon.ico' }); } catch(e) {}
 }
 
 async function saveAdminJob(id) {
@@ -4626,4 +4693,355 @@ if (_isIOS) {
   }, 3000);
 }
 
+</script><script>
+// ═══════════════════════════════════════════════════════
+// IN-APP MESSAGING
+// ═══════════════════════════════════════════════════════
+let activeThreadJobId = null;
+let allMessageThreads = [];
+
+async function loadMessages() {
+  const threadsEl = document.getElementById('msg-threads');
+  if (!threadsEl) return;
+  threadsEl.innerHTML = '<div style="padding:14px 16px;font-size:13px;color:rgba(255,255,255,.3)">Loading...</div>';
+  
+  let jobs = [];
+  if (currentRole === 'customer') {
+    jobs = await dbWhere('jobs', 'customer_id', currentUser.id, 'select=id,property_address,status,provider_id');
+  } else if (currentRole === 'provider') {
+    jobs = await dbWhere('jobs', 'provider_id', currentProviderRecord.id, 'select=id,property_address,status,customer_id');
+  }
+  
+  allMessageThreads = jobs.filter(j => j.status !== 'submitted');
+  
+  if (!allMessageThreads.length) {
+    threadsEl.innerHTML = '<div style="padding:14px 16px;font-size:13px;color:rgba(255,255,255,.3)">No active jobs to message about yet.</div>';
+    return;
+  }
+  
+  threadsEl.innerHTML = allMessageThreads.map(j => `
+    <div onclick="openThread('${j.id}','${esc(j.property_address||'Job')}')" style="padding:14px 16px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.04);transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''">
+      <div style="font-size:13px;font-weight:500;color:#fff;margin-bottom:3px">${esc(j.property_address||'Job')}</div>
+      <div style="font-size:11px;color:rgba(255,255,255,.3)">${statusPill(j.status)}</div>
+    </div>`).join('');
+}
+
+async function openThread(jobId, title) {
+  activeThreadJobId = jobId;
+  document.getElementById('msg-thread-title').textContent = title;
+  document.getElementById('msg-body').innerHTML = '<div style="font-size:13px;color:rgba(255,255,255,.3)">Loading messages...</div>';
+  
+  const messages = await dbWhere('job_messages', 'job_id', jobId, 'select=*&order=created_at.asc');
+  renderMessages(messages);
+  document.getElementById('msg-input').focus();
+  // Mark as read
+  setTimeout(() => {
+    const body = document.getElementById('msg-body');
+    if (body) body.scrollTop = body.scrollHeight;
+  }, 100);
+}
+
+function renderMessages(messages) {
+  const el = document.getElementById('msg-body');
+  if (!el) return;
+  if (!messages.length) {
+    el.innerHTML = '<div style="text-align:center;font-size:13px;color:rgba(255,255,255,.2);margin-top:40px">No messages yet — start the conversation!</div>';
+    return;
+  }
+  el.innerHTML = messages.map(m => {
+    const isMe = m.sender_id === currentUser?.id;
+    return `<div style="display:flex;justify-content:${isMe?'flex-end':'flex-start'}">
+      <div style="max-width:70%;background:${isMe?'#c8102e':'#1e1e1e'};border-radius:${isMe?'16px 16px 4px 16px':'16px 16px 16px 4px'};padding:10px 14px">
+        <div style="font-size:13px;color:#fff;line-height:1.5">${esc(m.message)}</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.4);margin-top:4px;text-align:${isMe?'right':'left'}">${m.sender_name||'User'} · ${fmtDate(m.created_at)}</div>
+      </div>
+    </div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+async function sendMessage() {
+  if (!activeThreadJobId) { showNotif('Select a job', 'Pick a job thread on the left first.', 'warning'); return; }
+  const input = document.getElementById('msg-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  const senderName = currentUser?.user_metadata?.full_name || currentUser?.email || 'User';
+  await dbInsert('job_messages', {
+    job_id: activeThreadJobId,
+    sender_id: currentUser.id,
+    sender_name: senderName,
+    sender_role: currentRole,
+    message: text,
+    created_at: new Date().toISOString()
+  });
+  // Push notification to other party
+  pushNotify('New message — RelayOps', senderName + ': ' + text);
+  // Reload messages
+  const messages = await dbWhere('job_messages', 'job_id', activeThreadJobId, 'select=*&order=created_at.asc');
+  renderMessages(messages);
+}
+
+// ═══════════════════════════════════════════════════════
+// JOB ACTIVITY LOG
+// ═══════════════════════════════════════════════════════
+async function loadJobActivityLog(jobId) {
+  const el = document.getElementById('job-activity-log');
+  if (!el) return;
+  const logs = await dbWhere('job_activity', 'job_id', jobId, 'select=*&order=created_at.desc');
+  if (!logs.length) {
+    el.innerHTML = '<div style="color:rgba(255,255,255,.2);font-size:12px">No activity recorded yet</div>';
+    return;
+  }
+  el.innerHTML = logs.map(l => `
+    <div style="display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+      <div style="font-size:10px;color:rgba(255,255,255,.2);font-family:var(--mono);white-space:nowrap;margin-top:2px">${fmtDate(l.created_at)}</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.5)">${esc(l.action)}</div>
+    </div>`).join('');
+}
+
+async function logJobActivity(jobId, action) {
+  await dbInsert('job_activity', {
+    job_id: jobId,
+    action,
+    actor: currentUser?.email || 'admin',
+    created_at: new Date().toISOString()
+  }).catch(() => {});
+}
+
+// Hook into saveAdminJob to log activity
+const _origSaveAdminJob = window.saveAdminJob;
+
+// ═══════════════════════════════════════════════════════
+// BULK CSV EXPORT
+// ═══════════════════════════════════════════════════════
+function exportJobsCSV() {
+  if (!allAdminJobs.length) { showNotif('No jobs', 'Load the job queue first.', 'warning'); return; }
+  const headers = ['ID','Address','Type','Status','Urgency','Quoted Price','Customer Email','Scheduled Date','Created'];
+  const rows = allAdminJobs.map(j => [
+    j.id?.substring(0,8)||'',
+    j.property_address||'',
+    j.job_type||'',
+    j.status||'',
+    j.urgency||'',
+    j.quoted_price||'',
+    j.customer_email||'',
+    j.scheduled_date||'',
+    j.created_at ? new Date(j.created_at).toLocaleDateString() : ''
+  ].map(v => '"' + String(v).replace(/"/g,'""') + '"').join(','));
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'relayops-jobs-' + new Date().toISOString().split('T')[0] + '.csv';
+  a.click(); URL.revokeObjectURL(url);
+  showNotif('Exported!', allAdminJobs.length + ' jobs exported to CSV.', 'success');
+}
+
+// ═══════════════════════════════════════════════════════
+// CUSTOMER SEARCH
+// ═══════════════════════════════════════════════════════
+let allAdminCustomers = [];
+const _origLoadAdminCustomers = window.loadAdminCustomers;
+
+async function filterCustomers(query) {
+  if (!allAdminCustomers.length) return;
+  const q = query.toLowerCase();
+  const filtered = q ? allAdminCustomers.filter(c =>
+    (c.full_name||'').toLowerCase().includes(q) ||
+    (c.email||'').toLowerCase().includes(q)
+  ) : allAdminCustomers;
+  renderCustomerList(filtered);
+}
+
+function renderCustomerList(customers) {
+  const el = document.getElementById('admin-customers-list');
+  if (!el) return;
+  if (!customers.length) { el.innerHTML = '<div class="empty-state">No customers found</div>'; return; }
+  // Keep existing render logic — just filter the data
+  el.innerHTML = customers.map(c => `
+    <div class="table-row" style="grid-template-columns:2fr 2fr 1fr 1fr 140px" onclick="viewAdminCustomer('${c.id}')">
+      <div class="td" style="font-weight:500">${esc(c.full_name||'—')}</div>
+      <div class="td" style="font-size:12px;color:rgba(255,255,255,.5)">${esc(c.email||'—')}</div>
+      <div class="td">${c._jobCount||0}</div>
+      <div class="td">${fmtDate(c.created_at)}</div>
+      <div class="td"><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();viewAdminCustomer('${c.id}')">View</button></div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// VENDOR AVAILABILITY
+// ═══════════════════════════════════════════════════════
+let selectedAvailDays = [];
+
+function toggleAvailDay(el) {
+  const day = el.dataset.day;
+  if (selectedAvailDays.includes(day)) {
+    selectedAvailDays = selectedAvailDays.filter(d => d !== day);
+    el.style.background = '';
+    el.style.borderColor = 'rgba(255,255,255,.1)';
+    el.style.color = '';
+  } else {
+    selectedAvailDays.push(day);
+    el.style.background = 'rgba(200,16,46,.2)';
+    el.style.borderColor = 'rgba(200,16,46,.5)';
+    el.style.color = '#fff';
+  }
+}
+
+async function loadAvailability() {
+  if (!currentProviderRecord) return;
+  const rows = await dbWhere('provider_availability', 'provider_id', currentProviderRecord.id);
+  if (!rows.length) return;
+  const avail = rows[0];
+  selectedAvailDays = avail.days || [];
+  const fromEl = document.getElementById('avail-from');
+  const toEl = document.getElementById('avail-to');
+  if (fromEl && avail.from_time) fromEl.value = avail.from_time;
+  if (toEl && avail.to_time) toEl.value = avail.to_time;
+  // Highlight selected days
+  document.querySelectorAll('.avail-day').forEach(el => {
+    if (selectedAvailDays.includes(el.dataset.day)) {
+      el.style.background = 'rgba(200,16,46,.2)';
+      el.style.borderColor = 'rgba(200,16,46,.5)';
+      el.style.color = '#fff';
+    }
+  });
+}
+
+async function saveAvailability() {
+  if (!currentProviderRecord) return;
+  const from_time = document.getElementById('avail-from')?.value || '08:00';
+  const to_time = document.getElementById('avail-to')?.value || '17:00';
+  const existing = await dbWhere('provider_availability', 'provider_id', currentProviderRecord.id);
+  if (existing.length) {
+    await sbFetch('PATCH', `/rest/v1/provider_availability?provider_id=eq.${currentProviderRecord.id}`, {
+      days: selectedAvailDays, from_time, to_time
+    });
+  } else {
+    await dbInsert('provider_availability', {
+      provider_id: currentProviderRecord.id,
+      days: selectedAvailDays,
+      from_time,
+      to_time
+    });
+  }
+  showNotif('Saved!', 'Your availability has been updated.', 'success');
+}
+
+// ═══════════════════════════════════════════════════════
+// VENDOR DOCUMENTS
+// ═══════════════════════════════════════════════════════
+async function uploadVendorDoc(input, docType) {
+  if (!input.files.length) return;
+  const file = input.files[0];
+  if (file.size > 5 * 1024 * 1024) { showNotif('File too large', 'Max file size is 5MB.', 'warning'); return; }
+  
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    const base64 = e.target.result;
+    await dbInsert('vendor_documents', {
+      provider_id: currentProviderRecord.id,
+      doc_type: docType,
+      file_name: file.name,
+      file_data: base64,
+      uploaded_at: new Date().toISOString()
+    });
+    showNotif('Uploaded!', file.name + ' has been uploaded successfully.', 'success');
+    loadVendorDocs();
+  };
+  reader.readAsDataURL(file);
+}
+
+async function loadVendorDocs() {
+  if (!currentProviderRecord) return;
+  const docs = await dbWhere('vendor_documents', 'provider_id', currentProviderRecord.id);
+  const el = document.getElementById('vendor-docs-list');
+  if (!el) return;
+  if (!docs.length) { el.innerHTML = '<div style="font-size:13px;color:rgba(255,255,255,.2)">No documents uploaded yet</div>'; return; }
+  el.innerHTML = docs.map(d => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span>${d.doc_type === 'license' ? '📄' : '🛡️'}</span>
+        <div>
+          <div style="font-size:13px;color:#fff">${esc(d.file_name)}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.3);text-transform:capitalize">${esc(d.doc_type)} · ${fmtDate(d.uploaded_at)}</div>
+        </div>
+      </div>
+      <a href="${d.file_data}" download="${d.file_name}" style="font-size:12px;color:var(--red)">Download</a>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// VENDOR COMPLETION CHECKLIST
+// ═══════════════════════════════════════════════════════
+function showCompletionChecklist(jobId) {
+  const checks = [
+    'Work area cleaned up',
+    'All tools and materials removed',
+    'Customer notified of completion',
+    'Photos taken of completed work',
+    'Any issues noted and reported'
+  ];
+  const checkHtml = checks.map((c,i) => `
+    <label class="checklist-item" style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer">
+      <input type="checkbox" id="chk-${i}" style="width:16px;height:16px;accent-color:#c8102e" onchange="checkCompletion(${checks.length})"/>
+      <span style="font-size:14px;color:rgba(255,255,255,.7)">${c}</span>
+    </label>`).join('');
+  
+  document.getElementById('modal-job-content').innerHTML = `
+    <div class="modal-section">
+      <div style="font-size:15px;font-weight:600;color:#fff;margin-bottom:14px">Before marking complete, confirm:</div>
+      ${checkHtml}
+      <div id="checklist-msg" style="font-size:13px;color:rgba(255,255,255,.3);margin-top:12px">Complete all items to proceed</div>
+      <button id="confirm-complete-btn" class="btn btn-red" style="width:100%;justify-content:center;margin-top:14px;opacity:.4;pointer-events:none" onclick="confirmVendorComplete('${jobId}')">✓ Mark Job Complete</button>
+    </div>`;
+  document.getElementById('job-modal').classList.add('open');
+}
+
+function checkCompletion(total) {
+  const checked = document.querySelectorAll('[id^="chk-"]:checked').length;
+  const btn = document.getElementById('confirm-complete-btn');
+  const msg = document.getElementById('checklist-msg');
+  if (checked === total) {
+    btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
+    msg.textContent = 'All items confirmed — ready to complete!';
+    msg.style.color = '#4ade80';
+  } else {
+    btn.style.opacity = '.4'; btn.style.pointerEvents = 'none';
+    msg.textContent = `${checked}/${total} items confirmed`;
+    msg.style.color = 'rgba(255,255,255,.3)';
+  }
+}
+
+async function confirmVendorComplete(jobId) {
+  await sbFetch('PATCH', `/rest/v1/jobs?id=eq.${jobId}`, { status: 'completed' });
+  pushNotify('Job Completed — RelayOps', 'Your vendor has marked the job as complete.');
+  closeModal();
+  loadVendorJobs();
+  showNotif('Job Complete!', 'The job has been marked as completed.', 'success');
+}
+
+// Hook vendor profile load to also load availability and docs
+const _origEnterVendorMode = window.enterVendorMode;
+document.addEventListener('DOMContentLoaded', () => {
+  const origShowPage = window.showPage;
+  if (origShowPage) {
+    const patched = function(pageId) {
+      origShowPage(pageId);
+      if (pageId === 'p-vendor-profile') {
+        setTimeout(() => { loadAvailability(); loadVendorDocs(); }, 300);
+      }
+      if (pageId === 'p-admin-customers') {
+        setTimeout(async () => {
+          const customers = await dbSelect('customers');
+          const jobs = await dbSelect('jobs', 'select=customer_id');
+          const jobCounts = {};
+          jobs.forEach(j => { jobCounts[j.customer_id] = (jobCounts[j.customer_id]||0)+1; });
+          allAdminCustomers = customers.map(c => ({...c, _jobCount: jobCounts[c.user_id||c.id]||0}));
+        }, 500);
+      }
+    };
+  }
+});
 </script>
