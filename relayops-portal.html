@@ -994,6 +994,39 @@ a{text-decoration:none;color:inherit}
               <div class="profile-stat"><div class="profile-stat-n" id="vperf-reviews">—</div><div class="profile-stat-l">Reviews</div></div>
             </div>
           </div>
+          <div class="card" id="availability-card">
+            <div class="card-title">My Availability</div>
+            <div style="font-size:13px;color:rgba(255,255,255,.4);margin-bottom:14px">Set the days and hours you're available for jobs.</div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:14px">
+              <div class="avail-day" data-day="Mon" onclick="toggleAvailDay(this)" style="padding:8px 4px;border:1px solid rgba(255,255,255,.1);border-radius:8px;text-align:center;font-size:12px;cursor:pointer;transition:all .15s;color:rgba(255,255,255,.5)">Mon</div>
+              <div class="avail-day" data-day="Tue" onclick="toggleAvailDay(this)" style="padding:8px 4px;border:1px solid rgba(255,255,255,.1);border-radius:8px;text-align:center;font-size:12px;cursor:pointer;transition:all .15s;color:rgba(255,255,255,.5)">Tue</div>
+              <div class="avail-day" data-day="Wed" onclick="toggleAvailDay(this)" style="padding:8px 4px;border:1px solid rgba(255,255,255,.1);border-radius:8px;text-align:center;font-size:12px;cursor:pointer;transition:all .15s;color:rgba(255,255,255,.5)">Wed</div>
+              <div class="avail-day" data-day="Thu" onclick="toggleAvailDay(this)" style="padding:8px 4px;border:1px solid rgba(255,255,255,.1);border-radius:8px;text-align:center;font-size:12px;cursor:pointer;transition:all .15s;color:rgba(255,255,255,.5)">Thu</div>
+              <div class="avail-day" data-day="Fri" onclick="toggleAvailDay(this)" style="padding:8px 4px;border:1px solid rgba(255,255,255,.1);border-radius:8px;text-align:center;font-size:12px;cursor:pointer;transition:all .15s;color:rgba(255,255,255,.5)">Fri</div>
+              <div class="avail-day" data-day="Sat" onclick="toggleAvailDay(this)" style="padding:8px 4px;border:1px solid rgba(255,255,255,.1);border-radius:8px;text-align:center;font-size:12px;cursor:pointer;transition:all .15s;color:rgba(255,255,255,.5)">Sat</div>
+              <div class="avail-day" data-day="Sun" onclick="toggleAvailDay(this)" style="padding:8px 4px;border:1px solid rgba(255,255,255,.1);border-radius:8px;text-align:center;font-size:12px;cursor:pointer;transition:all .15s;color:rgba(255,255,255,.5)">Sun</div>
+            </div>
+            <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px">
+              <div style="flex:1"><div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:4px">From</div><input id="avail-from" type="time" value="08:00" style="color-scheme:dark;width:100%;padding:8px;background:#1a1a1a;border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#fff;font-size:13px"/></div>
+              <div style="flex:1"><div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:4px">To</div><input id="avail-to" type="time" value="17:00" style="color-scheme:dark;width:100%;padding:8px;background:#1a1a1a;border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#fff;font-size:13px"/></div>
+            </div>
+            <button class="btn btn-red btn-sm" onclick="saveAvailability()">Save Availability</button>
+          </div>
+          <div class="card" id="documents-card">
+            <div class="card-title">Documents</div>
+            <div style="font-size:13px;color:rgba(255,255,255,.4);margin-bottom:14px">Upload your license and insurance for verification.</div>
+            <div id="vendor-docs-list" style="margin-bottom:14px"><div style="font-size:13px;color:rgba(255,255,255,.2)">No documents uploaded yet</div></div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <label style="display:flex;align-items:center;gap:8px;padding:8px 14px;border:1px dashed rgba(255,255,255,.2);border-radius:8px;cursor:pointer;font-size:13px;color:rgba(255,255,255,.5)">
+                <span>📄</span> Upload License
+                <input type="file" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="uploadVendorDoc(this,'license')"/>
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;padding:8px 14px;border:1px dashed rgba(255,255,255,.2);border-radius:8px;cursor:pointer;font-size:13px;color:rgba(255,255,255,.5)">
+                <span>🛡️</span> Upload Insurance
+                <input type="file" accept=".pdf,.jpg,.jpeg,.png" style="display:none" onchange="uploadVendorDoc(this,'insurance')"/>
+              </label>
+            </div>
+          </div>
           <div class="card">
             <div class="card-title">Need Help?</div>
             <div style="font-size:14px;color:rgba(255,255,255,.5);margin-bottom:14px">Questions about a job or your account? Contact us.</div>
@@ -1017,7 +1050,10 @@ a{text-decoration:none;color:inherit}
             <div class="page-title">Job Queue</div>
             <div class="page-sub">Review, price, assign and track all jobs</div>
           </div>
-          <button class="btn btn-ghost btn-sm" onclick="loadAdminJobs()">↻ Refresh</button>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost btn-sm" onclick="exportJobsCSV()">⬇ Export CSV</button>
+            <button class="btn btn-ghost btn-sm" onclick="loadAdminJobs()">↻ Refresh</button>
+          </div>
         </div>
         <div class="stats-row">
           <div class="stat-card"><div class="stat-n" id="as-total">—</div><div class="stat-l">Total Jobs</div></div>
@@ -1856,7 +1892,7 @@ function showPage(pageId) {
   if (pageId === 'p-admin-payments')   loadAdminPayments();
   if (pageId === 'p-admin-customers')  loadAdminCustomers();
   if (pageId === 'p-admin-analytics')  loadAdminAnalytics();
-  if (pageId === 'p-vendor-profile')   loadVendorPerf();
+  if (pageId === 'p-vendor-profile') { loadVendorPerf(); setTimeout(() => { loadAvailability(); loadVendorDocs(); }, 200); }
   if (pageId === 'p-customer-referral') loadCustomerReferral();
   if (pageId === 'p-invite-vendor')      loadInvitesSent();
   if (pageId === 'p-admin-referrals')   loadAdminReferrals();
@@ -2076,7 +2112,7 @@ async function loadVendorJobs() {
 
 function vendorActionBtn(j) {
   if (j.status === 'assigned')    return `<button class="btn btn-red btn-sm" onclick="event.stopPropagation();updateVendorStatus('${j.id}','in_progress')">▶ Start Job</button>`;
-  if (j.status === 'in_progress') return `<button class="btn btn-red btn-sm" onclick="event.stopPropagation();showCompletionModal('${j.id}')">📸 Mark Done</button>`;
+  if (j.status === 'in_progress') return `<button class="btn btn-red btn-sm" onclick="event.stopPropagation();showCompletionChecklist('${j.id}')">📸 Mark Done</button>`;
   return `<span class="tr-cell">${j.status}</span>`;
 }
 
@@ -2823,6 +2859,9 @@ async function loadAdminPayments() {
 // ADMIN: CUSTOMERS
 // ═══════════════════════════════════════════════════════
 async function loadAdminCustomers() {
+  // Reset search
+  const searchEl = document.getElementById('customer-search');
+  if (searchEl) searchEl.value = '';
   if (currentRole !== 'admin') return;
 
   // Fetch jobs with all customer-related fields
@@ -4855,10 +4894,10 @@ async function filterCustomers(query) {
 }
 
 function renderCustomerList(customers) {
+  allAdminCustomers = customers.map(c => ({...c, _jobCount: jobCounts[c.user_id||c.id]||0}));
   const el = document.getElementById('admin-customers-list');
   if (!el) return;
   if (!customers.length) { el.innerHTML = '<div class="empty-state">No customers found</div>'; return; }
-  // Keep existing render logic — just filter the data
   el.innerHTML = customers.map(c => `
     <div class="table-row" style="grid-template-columns:2fr 2fr 1fr 1fr 140px" onclick="viewAdminCustomer('${c.id}')">
       <div class="td" style="font-weight:500">${esc(c.full_name||'—')}</div>
@@ -5015,11 +5054,9 @@ function checkCompletion(total) {
 }
 
 async function confirmVendorComplete(jobId) {
-  await sbFetch('PATCH', `/rest/v1/jobs?id=eq.${jobId}`, { status: 'completed' });
-  pushNotify('Job Completed — RelayOps', 'Your vendor has marked the job as complete.');
   closeModal();
-  loadVendorJobs();
-  showNotif('Job Complete!', 'The job has been marked as completed.', 'success');
+  // Open the photo/notes completion modal
+  showCompletionModal(jobId);
 }
 
 // Hook vendor profile load to also load availability and docs
