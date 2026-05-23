@@ -1034,14 +1034,12 @@ a{text-decoration:none;color:inherit}
           <button class="filter-btn" onclick="filterAdminVendors('rated',this)">⭐ Top Rated</button>
         </div>
         <div id="admin-vendors-list"><div class="empty-state">Loading...</div></div>
-        <div style="margin-top:28px">
-          <div style="font-size:13px;font-family:var(--mono);color:rgba(255,255,255,.3);letter-spacing:.08em;margin-bottom:12px;text-transform:uppercase">Vendor Invites</div>
-          <div class="table-wrap">
-            <div class="table-head" style="grid-template-columns:1.5fr 1.5fr 1fr 1fr 80px">
-              <div class="th">Name</div><div class="th">Email</div><div class="th">Trade</div><div class="th">Invited By</div><div class="th">Status</div>
-            </div>
-            <div id="admin-invites-list"><div class="empty-state">Loading invites...</div></div>
+        <div style="margin-top:32px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div style="font-size:13px;font-family:var(--mono);color:rgba(255,255,255,.3);letter-spacing:.08em;text-transform:uppercase">Vendor Invites</div>
+            <button class="btn btn-ghost btn-sm" onclick="loadAdminVendorInvites()">↻ Refresh</button>
           </div>
+          <div id="admin-invites-list"><div class="empty-state">No vendor invites yet</div></div>
         </div>
       </div>
 
@@ -4553,17 +4551,19 @@ async function loadAdminVendorInvites() {
     el.innerHTML = '<div class="empty-state">No vendor invites yet</div>';
     return;
   }
-  el.innerHTML = invites.map(i => `
-    <div class="table-row" style="grid-template-columns:1.5fr 1.5fr 1fr 1fr 80px">
-      <div class="td" style="font-weight:500">${esc(i.invited_name||'—')}</div>
-      <div class="td" style="font-size:12px;color:rgba(255,255,255,.5)">${esc(i.invited_email||'—')}</div>
-      <div class="td">${esc(i.trade||'—')}</div>
-      <div class="td" style="font-size:12px;color:rgba(255,255,255,.4)">${esc(i.invited_by_email||'—')}</div>
-      <div class="td">${i.signed_up
-        ? '<span style="background:rgba(34,197,94,.15);color:#4ade80;padding:3px 8px;border-radius:20px;font-size:11px">Joined</span>'
-        : '<span style="background:rgba(255,255,255,.06);color:rgba(255,255,255,.35);padding:3px 8px;border-radius:20px;font-size:11px">Pending</span>'
-      }</div>
-    </div>`).join('');
+  el.innerHTML = `<div class="vendor-grid">${invites.map(i => `
+    <div class="vendor-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div class="vendor-name">${esc(i.invited_name||'—')}</div>
+        ${i.signed_up
+          ? '<span style="background:rgba(34,197,94,.15);color:#4ade80;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:500">✓ Joined</span>'
+          : '<span style="background:rgba(255,255,255,.06);color:rgba(255,255,255,.35);padding:2px 10px;border-radius:20px;font-size:11px">Pending</span>'
+        }
+      </div>
+      <div class="vendor-meta">${esc(i.trade||'—')}</div>
+      <div class="vendor-meta" style="margin-top:3px">${esc(i.invited_email||'—')}</div>
+      <div class="vendor-meta" style="margin-top:8px;font-size:10px;color:rgba(255,255,255,.2)">Invited by ${esc(i.invited_by_email||'—')}</div>
+    </div>`).join('')}</div>`;
 }
 
 
