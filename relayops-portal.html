@@ -1083,6 +1083,9 @@ a{text-decoration:none;color:inherit}
           <div><div class="page-title">Vendors</div><div class="page-sub">Manage applications and active providers</div></div>
           <button class="btn btn-ghost btn-sm" onclick="loadAdminVendors()">↻ Refresh</button>
         </div>
+        <div style="margin-bottom:14px">
+          <input id="vendor-search" type="text" placeholder="Search by name, email, or trade..." oninput="filterVendorSearch(this.value)" style="width:100%;max-width:400px;padding:10px 14px;background:#1a1a1a;border:1px solid rgba(255,255,255,.1);border-radius:var(--r-sm);color:#fff;font-size:14px;font-family:var(--sans);outline:none"/>
+        </div>
         <div class="filter-bar">
           <button class="filter-btn active" onclick="filterAdminVendors('all',this)">All</button>
           <button class="filter-btn" onclick="filterAdminVendors('pending',this)">Pending</button>
@@ -2584,6 +2587,18 @@ async function saveAdminJob(id) {
   }
   if (saveBtn) { saveBtn.textContent = '✅ Saved!'; saveBtn.style.background = '#51cf66'; saveBtn.style.color = '#000'; }
   showNotif('✅ Job saved!', 'Changes saved successfully.', 'success', 3000);
+  // Auto-log activity
+  const logParts = [];
+  if (prevStatus !== finalStatus) logParts.push(`Status: ${prevStatus} → ${finalStatus}`);
+  if (price) logParts.push(`Price set to $${parseFloat(price).toFixed(2)}`);
+  if (vendor) {
+    const v = allAdminVendors.find(x => x.id === vendor);
+    if (v) logParts.push(`Vendor assigned: ${v.full_name||v.name||'Unknown'}`);
+  }
+  if (notes) logParts.push('Notes updated');
+  if (logParts.length) {
+    logJobActivity(id, logParts.join(' · ')).catch(()=>{});
+  }
   setTimeout(() => { closeModal(); loadAdminJobs(); }, 700);
 
   // Build the updated job object for notifications
@@ -2870,68 +2885,72 @@ async function loadAdminPayments() {
 // ADMIN: CUSTOMERS
 // ═══════════════════════════════════════════════════════
 async function loadAdminCustomers() {
-  // Reset search
   const searchEl = document.getElementById('customer-search');
   if (searchEl) searchEl.value = '';
   if (currentRole !== 'admin') return;
-
-  // Fetch jobs with all customer-related fields
-  const jobs = await dbSelect('jobs', 'select=customer_id,description,created_at,customer_email,property_address,job_type,status');
   const el = document.getElementById('admin-customers-list');
-  if (!jobs.length) { el.innerHTML = '<div class="empty-state">No customer data yet.</div>'; return; }
+  el.innerHTML = '<div class="empty-state">Loading...</div>';
 
-  // Group by user_id, collecting email from customer_email column OR description
-  const byUser = {};
+  // Pull ALL registered customers from the customers table
+  const [customers, jobs] = await Promise.all([
+    dbSelect('customers', 'select=*'),
+    dbSelect('jobs', 'select=customer_id,status,created_at,customer_email')
+  ]);
+
+  // Build job counts and statuses per customer
+  const jobMap = {};
   jobs.forEach(j => {
-    const uid = j.customer_id || 'anon_' + (j.customer_email || '').replace(/[^a-z0-9]/gi,'_');
-    if (!byUser[uid]) {
-      const parsed = parseContact(j.description || '');
-      byUser[uid] = {
-        count: 0,
-        first: j.created_at,
-        uid,
-        // Priority: customer_email column > parsed from description
-        email: j.customer_email || parsed.email || '',
-        name: parsed.name || '',
-        statuses: {}
-      };
-    }
-    // Update email if we find a better source
-    if (!byUser[uid].email && j.customer_email) byUser[uid].email = j.customer_email;
-    byUser[uid].count++;
-    byUser[uid].statuses[j.status] = (byUser[uid].statuses[j.status] || 0) + 1;
-    // Keep earliest date
-    if (j.created_at < byUser[uid].first) byUser[uid].first = j.created_at;
+    const id = j.customer_id || '';
+    if (!jobMap[id]) jobMap[id] = { count: 0, statuses: {}, first: j.created_at };
+    jobMap[id].count++;
+    jobMap[id].statuses[j.status] = (jobMap[id].statuses[j.status] || 0) + 1;
+    if (j.created_at < jobMap[id].first) jobMap[id].first = j.created_at;
   });
 
-  window._allCustomerData = byUser;
-  const rows = Object.entries(byUser).map(([uid, info]) => {
-    const displayName  = info.name  || (info.email ? info.email.split('@')[0] : uid.substring(0,10));
-    const displayEmail = info.email || '—';
-    const statusSummary = Object.entries(info.statuses)
-      .map(([s, c]) => `<span style="font-size:10px;padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.4);margin-right:4px">${s} (${c})</span>`)
-      .join('');
+  // Merge: use customers table as source of truth, supplement with job data
+  const allC = customers.map(c => ({
+    uid: c.user_id || c.id,
+    name: c.full_name || c.name || c.email?.split('@')[0] || '—',
+    email: c.email || '—',
+    phone: c.phone || '',
+    created_at: c.created_at,
+    jobData: jobMap[c.user_id || c.id] || { count: 0, statuses: {}, first: c.created_at }
+  }));
 
-    return `<div class="table-row" style="grid-template-columns:2fr 2fr 1fr 1fr 140px">
-      <div>
-        <div class="tr-main">${esc(displayName)}</div>
-        <div style="margin-top:4px">${statusSummary}</div>
-      </div>
-      <div class="tr-cell" style="font-size:12px">${esc(displayEmail)}</div>
-      <div class="tr-cell">${info.count}</div>
-      <div class="tr-cell">${fmtDate(info.first)}</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button onclick="editCustomer('${uid}','${esc(displayName)}','${esc(displayEmail)}')" style="background:transparent;border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.6);font-size:11px;padding:5px 10px;border-radius:999px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(255,255,255,.08)'" onmouseout="this.style.background='transparent'">✏️ Edit</button>
-        <button onclick="removeCustomer('${uid}','${esc(displayName)}','${esc(displayEmail)}')" style="background:transparent;border:1px solid rgba(200,16,46,.3);color:#ff8898;font-size:11px;padding:5px 10px;border-radius:999px;cursor:pointer;transition:all .15s" onmouseover="this.style.background='rgba(200,16,46,.12)'" onmouseout="this.style.background='transparent'">🗑 Remove</button>
-      </div>
-    </div>`;
-  });
+  window._allCustomerRows = allC;
+  renderAdminCustomerRows(allC);
+}
 
-  if (!rows.length) {
-    el.innerHTML = '<div class="empty-state">No customers yet. They appear here once jobs are submitted.</div>';
-  } else {
-    el.innerHTML = `<div style="font-size:12px;color:rgba(255,255,255,.25);padding:8px 18px;font-family:var(--mono)">${rows.length} customer${rows.length!==1?'s':''} found</div>` + rows.join('');
-  }
+function renderAdminCustomerRows(rows) {
+  const el = document.getElementById('admin-customers-list');
+  if (!el) return;
+  if (!rows.length) { el.innerHTML = '<div class="empty-state">No customers found</div>'; return; }
+  el.innerHTML = `<div style="font-size:12px;color:rgba(255,255,255,.25);padding:8px 18px;font-family:var(--mono)">${rows.length} customer${rows.length!==1?'s':''} found</div>` +
+    rows.map(c => {
+      const statusSummary = Object.entries(c.jobData.statuses)
+        .map(([s,n]) => `<span style="font-size:10px;padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.06);color:rgba(255,255,255,.4);margin-right:4px">${s} (${n})</span>`)
+        .join('');
+      return `<div class="table-row" style="grid-template-columns:2fr 2fr 1fr 1fr 140px">
+        <div><div class="tr-main">${esc(c.name)}</div><div style="margin-top:4px">${statusSummary}</div></div>
+        <div class="tr-cell" style="font-size:12px">${esc(c.email)}</div>
+        <div class="tr-cell">${c.jobData.count}</div>
+        <div class="tr-cell">${fmtDate(c.created_at)}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button onclick="editCustomer('${c.uid}','${esc(c.name)}','${esc(c.email)}')" style="background:transparent;border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.6);font-size:11px;padding:5px 10px;border-radius:999px;cursor:pointer">✏️ Edit</button>
+          <button onclick="removeCustomer('${c.uid}','${esc(c.name)}','${esc(c.email)}')" style="background:transparent;border:1px solid rgba(200,16,46,.3);color:#ff8898;font-size:11px;padding:5px 10px;border-radius:999px;cursor:pointer">🗑 Remove</button>
+        </div>
+      </div>`;
+    }).join('');
+}
+
+function filterCustomers(query) {
+  const rows = window._allCustomerRows;
+  if (!rows) return;
+  const q = query.toLowerCase();
+  const filtered = q
+    ? rows.filter(c => c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q) || (c.phone||'').includes(q))
+    : rows;
+  renderAdminCustomerRows(filtered);
 }
 function parseContact(desc) {
   return { name: (desc.match(/Name:\s*([^|]+)/)||[])[1]?.trim()||'', email: (desc.match(/Email:\s*([^|]+)/)||[])[1]?.trim()||'' };
@@ -5103,4 +5122,20 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 });
+
+// ═══════════════════════════════════════════════════════
+// VENDOR SEARCH
+// ═══════════════════════════════════════════════════════
+function filterVendorSearch(query) {
+  if (!allAdminVendors.length) return;
+  const q = query.toLowerCase();
+  const filtered = q ? allAdminVendors.filter(v =>
+    (v.full_name||v.name||'').toLowerCase().includes(q) ||
+    (v.email||'').toLowerCase().includes(q) ||
+    (v.service_types||[]).join(' ').toLowerCase().includes(q) ||
+    (v.coverage_area||'').toLowerCase().includes(q)
+  ) : allAdminVendors;
+  renderAdminVendors(filtered);
+}
+
 </script>
