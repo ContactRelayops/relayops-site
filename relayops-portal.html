@@ -1831,6 +1831,7 @@ async function enterCustomerMode(user) {
   const custPages = ['p-my-jobs','p-request-job','p-my-profile','p-customer-referral','p-invite-vendor','p-messages'];
   showPage(savedPageC && custPages.includes(savedPageC) ? savedPageC : 'p-my-jobs');
   loadCustomerJobs(); startStatusPolling(); initChatBubble(); startKeepAlive();
+  setTimeout(checkUnratedJobs, 2000);
 }
 
 async function enterVendorMode(user) {
@@ -2471,8 +2472,28 @@ Questions? Call us at ${PHONE}
 
   if (eventType === 'completed') {
     const completionNote = job.completion_notes ? 'Completion notes: ' + job.completion_notes + '\n\n' : '';
-    const body = 'Hi there,\n\nYour job has been completed!\n\nJob: ' + type + ' at ' + addr + '\nStatus: Completed\n\n' + completionNote + 'Log in to view completion details and photos:\n' + PORTAL_URL + '\n\nThank you for using RelayOps!\n\n— RelayOps Team';
-    if (email) await sendEmail(email, `🏁 Job completed — ${type} at ${addr.split(',')[0]}`, body);
+    const vendor = allAdminVendors?.find(v => v.id === job.provider_id);
+    const vendorName = vendor?.full_name || 'your vendor';
+    const body = `Hi there,
+
+Your job has been completed!
+
+Job: ${type} at ${addr}
+Vendor: ${vendorName}
+${completionNote}
+View completion photos and details here:
+${PORTAL_URL}
+
+⭐ How did ${vendorName} do?
+We'd love to hear your feedback. Log in and click View on your completed job to leave a rating — it takes 5 seconds and helps us match you with the best vendors every time.
+
+Rate your vendor:
+${PORTAL_URL}
+
+Thank you for using RelayOps!
+
+— RelayOps Team`;
+    if (email) await sendEmail(email, `🏁 Job complete — how did ${vendorName} do?`, body);
     await sendEmail(ADMIN_EMAIL, `[ADMIN] Job completed: ${type} at ${addr.split(',')[0]}`, `Job ID: ${job.id}
 Customer: ${email || 'unknown'}`);
   }
@@ -5136,6 +5157,53 @@ function filterVendorSearch(query) {
     (v.coverage_area||'').toLowerCase().includes(q)
   ) : allAdminVendors;
   renderAdminVendors(filtered);
+}
+
+
+// ═══════════════════════════════════════════════════════
+// RATING REMINDER BANNER
+// ═══════════════════════════════════════════════════════
+async function checkUnratedJobs() {
+  if (currentRole !== 'customer') return;
+  const jobs = await dbWhere('jobs', 'customer_id', currentUser.id, 'select=id,status,vendor_rating,job_type,property_address,provider_id');
+  const unrated = jobs.filter(j => j.status === 'completed' && !j.vendor_rating && j.provider_id);
+  if (!unrated.length) return;
+
+  // Don't show if banner already visible
+  if (document.getElementById('rating-reminder-banner')) return;
+
+  const job = unrated[0];
+  const count = unrated.length;
+  const banner = document.createElement('div');
+  banner.id = 'rating-reminder-banner';
+  banner.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#1a1a1a;border:1px solid rgba(255,212,59,.35);border-radius:14px;padding:12px 18px;display:flex;align-items:center;gap:14px;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,.5);max-width:480px;width:90%;animation:slideDown .3s ease';
+  banner.innerHTML = `
+    <span style="font-size:22px">⭐</span>
+    <div style="flex:1">
+      <div style="font-size:13px;font-weight:600;color:#fff">Rate your vendor</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.45);margin-top:2px">You have ${count} completed job${count>1?'s':''} waiting for a review</div>
+    </div>
+    <button onclick="openUnratedJob('${job.id}')" style="background:#ffd43b;color:#000;border:none;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">Rate now</button>
+    <button onclick="document.getElementById('rating-reminder-banner').remove()" style="background:none;border:none;color:rgba(255,255,255,.3);font-size:18px;cursor:pointer;padding:0;flex-shrink:0;line-height:1">✕</button>
+  `;
+  // Add slide down animation
+  if (!document.getElementById('rating-banner-style')) {
+    const style = document.createElement('style');
+    style.id = 'rating-banner-style';
+    style.textContent = '@keyframes slideDown{from{opacity:0;transform:translateX(-50%) translateY(-12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}';
+    document.head.appendChild(style);
+  }
+  document.body.appendChild(banner);
+  // Auto-dismiss after 8 seconds
+  setTimeout(() => { const b = document.getElementById('rating-reminder-banner'); if (b) b.remove(); }, 8000);
+}
+
+async function openUnratedJob(jobId) {
+  document.getElementById('rating-reminder-banner')?.remove();
+  // Switch to My Jobs and open the job
+  showPage('p-my-jobs');
+  await loadCustomerJobs();
+  setTimeout(() => viewCustomerJob(jobId).catch(console.error), 500);
 }
 
 </script>
