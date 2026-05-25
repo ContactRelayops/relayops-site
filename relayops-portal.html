@@ -693,7 +693,7 @@ a{text-decoration:none;color:inherit}
       </div>
       <button class="auth-btn" id="su-btn" onclick="doSignUp()">Create Account →</button>
     </div>
-    <div class="auth-back"><a href="https://contactrelayops.github.io/relayops-site">← Back to RelayOps</a></div>
+    <div class="auth-back"><a href="https://getrelayhq.com">← Back to RelayOps</a></div>
   </div>
 </div>
 
@@ -801,7 +801,7 @@ a{text-decoration:none;color:inherit}
       </nav>
 
       <div class="sidebar-bottom">
-        <a href="https://contactrelayops.github.io/relayops-site" class="sidebar-site-link">
+        <a href="https://getrelayhq.com" class="sidebar-site-link">
           <span class="nav-icon">🌐</span> Marketing Site
         </a>
         <div class="sidebar-sign-out" onclick="doSignOut()">
@@ -1159,7 +1159,7 @@ a{text-decoration:none;color:inherit}
             <div class="detail-row"><div class="detail-label">Contact Email</div><div class="detail-val">contactrelayops@gmail.com</div></div>
             <div class="detail-row"><div class="detail-label">Phone</div><div class="detail-val">(267) 875-9111</div></div>
             <div class="detail-row"><div class="detail-label">Service Area</div><div class="detail-val">Pittsburgh, PA &amp; Philadelphia, PA</div></div>
-            <div class="detail-row"><div class="detail-label">Marketing Site</div><div class="detail-val"><a href="https://contactrelayops.github.io/relayops-site" style="color:var(--red)">contactrelayops.github.io/relayops-site</a></div></div>
+            <div class="detail-row"><div class="detail-label">Marketing Site</div><div class="detail-val"><a href="https://getrelayhq.com" style="color:var(--red)">getrelayhq.com</a></div></div>
           </div>
           <div class="card">
             <div class="card-title">System</div>
@@ -1168,7 +1168,7 @@ a{text-decoration:none;color:inherit}
             <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
               <a href="https://supabase.com/dashboard" target="_blank" class="btn btn-ghost btn-sm">🗄️ Supabase</a>
               <a href="https://dashboard.stripe.com" target="_blank" class="btn btn-ghost btn-sm">💳 Stripe</a>
-              <a href="https://contactrelayops.github.io/relayops-site" target="_blank" class="btn btn-ghost btn-sm">🌐 Website</a>
+              <a href="https://getrelayhq.com" target="_blank" class="btn btn-ghost btn-sm">🌐 Website</a>
             </div>
           </div>
           <div class="card">
@@ -1651,7 +1651,7 @@ async function doPasswordReset() {
       headers: { 'apikey': ANON_KEY, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         email,
-        redirect_to: 'https://contactrelayops.github.io/relayops-site/relayops-portal.html'
+        redirect_to: 'https://getrelayhq.com/relayops-portal.html'
       })
     });
 
@@ -2402,7 +2402,7 @@ function sendEmail(to, subject, body) {
   }).catch(e => console.warn('Email failed:', e));
 }
 
-const PORTAL_URL = 'https://contactrelayops.github.io/relayops-site/relayops-portal.html';
+const PORTAL_URL = 'https://getrelayhq.com/relayops-portal.html';
 const PHONE = '(267) 875-9111';
 
 // Get customer email from job record
@@ -2871,7 +2871,7 @@ async function approveAndVerify(id) {
   emailjs.send('service_slduczl','template_sacm0kn',{
     subject:'✅ Your RelayOps vendor account is approved!',
     from_name:'RelayOps', from_email:ADMIN_EMAIL, phone:'—',
-    message:`Hi ${v?.full_name||'there'},\n\nYour vendor account has been verified and approved!\n\nYou can now log in to receive jobs:\nhttps://contactrelayops.github.io/relayops-site/relayops-portal.html\n\nWelcome to the RelayOps network!\n\n— RelayOps Team`
+    message:`Hi ${v?.full_name||'there'},\n\nYour vendor account has been verified and approved!\n\nYou can now log in to receive jobs:\nhttps://getrelayhq.com/relayops-portal.html\n\nWelcome to the RelayOps network!\n\n— RelayOps Team`
   }).catch(()=>{});
   showNotif('✅ Vendor Approved & Verified', 'Account activated and welcome email sent.', 'success', 5000);
   closeModal(); loadAdminVendors();
@@ -2881,7 +2881,7 @@ async function activateVendor(id) {
   const ok = await dbUpdate('providers', id, { status: 'active' });
   if (!ok) { showNotif('Error', 'Could not activate.', 'warning'); return; }
   const v = allAdminVendors.find(x => x.id === id);
-  emailjs.send('service_slduczl','template_sacm0kn',{ subject:'✅ Your RelayOps vendor account is approved!', from_name:'RelayOps', from_email:ADMIN_EMAIL, phone:'—', message:`Hi ${v?.full_name||'there'},\n\nYour vendor account is approved. Log in at https://contactrelayops.github.io/relayops-site/relayops-portal.html\n\nWelcome!\nRelayOps` }).catch(()=>{});
+  emailjs.send('service_slduczl','template_sacm0kn',{ subject:'✅ Your RelayOps vendor account is approved!', from_name:'RelayOps', from_email:ADMIN_EMAIL, phone:'—', message:`Hi ${v?.full_name||'there'},\n\nYour vendor account is approved. Log in at https://getrelayhq.com/relayops-portal.html\n\nWelcome!\nRelayOps` }).catch(()=>{});
   showNotif('Approved', 'Vendor activated and notified.', 'success'); closeModal(); loadAdminVendors();
 }
 
