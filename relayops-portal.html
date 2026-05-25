@@ -2015,7 +2015,9 @@ async function viewCustomerJob(id) {
   if (j.status === 'completed') {
     if (j.completion_notes) html += `<div class="modal-section"><div class="detail-label">Completion Notes</div><div class="detail-desc">${esc(j.completion_notes)}</div></div>`;
     if (j.completion_photos && j.completion_photos.length) {
-      html += `<div class="modal-section"><div class="detail-label">Completion Photos</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px">${j.completion_photos.map(p=>`<a href="${p}" target="_blank"><img src="${p}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;cursor:pointer"/></a>`).join('')}</div></div>`;
+      html += `<div class="modal-section"><div class="detail-label">Completion Photos</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px">${j.completion_photos.map(p=>`<a href="${p}" target="_blank"><img src="${p}" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid rgba(255,255,255,.1)"/></a>`).join('')}</div></div>`;
+    } else {
+      html += `<div class="modal-section"><div class="detail-label">Completion Photos</div><div style="font-size:13px;color:rgba(255,255,255,.3);margin-top:4px">No photos uploaded yet</div></div>`;
     }
     if (!j.vendor_rating) {
       html += `<div class="modal-section"><div class="detail-label">Rate Your Vendor</div><div style="display:flex;gap:8px;margin-top:8px" id="star-row">${[1,2,3,4,5].map(n=>`<span onclick="submitRating('${j.id}',${n})" style="font-size:28px;cursor:pointer;opacity:.4;transition:opacity .15s" onmouseover="hoverStars(${n})" onmouseout="resetStars()" data-star="${n}">★</span>`).join('')}</div><div id="rating-msg" style="font-size:13px;color:rgba(255,255,255,.4);margin-top:6px"></div></div>`;
@@ -2311,11 +2313,15 @@ async function regeneratePaymentLink(jobId) {
   const job = allAdminJobs.find(j => j.id === jobId);
   if (!job) return;
 
-  const amount = job.quoted_price || 0;
+  // Read from the live input field first, fall back to saved value
+  const inputVal = document.getElementById('edit-price')?.value;
+  const amount = parseFloat(inputVal) || parseFloat(job.quoted_price) || 0;
   if (!amount) {
     showNotif('Set a price first', 'Enter a quoted price before generating a payment link.', 'warning');
     return;
   }
+  // Use the live input amount for the request
+  job.quoted_price = amount;
 
   showNotif('Generating...', 'Calling Render backend...', 'info', 8000);
 
@@ -4153,31 +4159,21 @@ async function submitJobCompletion(jobId) {
 
   btn.disabled = true; btn.textContent = '⏳ Submitting...';
 
-  // Store photos as base64 in completion_notes (until we have file storage)
-  const photoSummary = completionPhotos.length > 0
-    ? `\n\n[${completionPhotos.length} photo(s) attached: ${completionPhotos.map(p=>p.name).join(', ')}]`
-    : '';
+  const completionText = notes || 'Job completed.';
 
-  const completionText = (notes || 'Job completed.') + photoSummary;
+  // Convert photos to base64 data URLs and save to Supabase
+  const photoDataUrls = await Promise.all(completionPhotos.map(p => new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.readAsDataURL(p);
+  })));
 
-  // Update job status and save completion notes + photos
+  // Update job status, notes, and photos
   const updates = {
     status: 'completed',
-    completion_notes: completionText
+    completion_notes: completionText,
+    completion_photos: photoDataUrls
   };
-
-  // Store photo data in localStorage keyed by job ID (for admin to view)
-  if (completionPhotos.length > 0) {
-    try {
-      localStorage.setItem('job_photos_' + jobId, JSON.stringify({
-        jobId, photos: completionPhotos, completedAt: new Date().toISOString(),
-        vendorName: currentUser?.user_metadata?.full_name || currentUser?.email
-      }));
-      // Also update index
-      const idx = JSON.parse(localStorage.getItem('job_photos_index') || '[]');
-      if (!idx.includes(jobId)) { idx.push(jobId); localStorage.setItem('job_photos_index', JSON.stringify(idx)); }
-    } catch(e) {}
-  }
 
   const ok = await dbUpdate('jobs', jobId, updates);
 
