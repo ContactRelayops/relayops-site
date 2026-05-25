@@ -946,7 +946,6 @@ a{text-decoration:none;color:inherit}
             <div style="display:flex;flex-direction:column;gap:8px">
               
               <a href="tel:+12672257379" style="display:flex;align-items:center;gap:10px;font-size:14px;color:rgba(255,255,255,.7)"><span>📞</span>(267) 225-7379</a>
-              <a href="tel:+12672257379" style="display:flex;align-items:center;gap:10px;font-size:14px;color:rgba(255,255,255,.7)"><span>📞</span>(267) 225-7379</a>
               <a href="mailto:contactrelayops@gmail.com" style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--red)"><span>📧</span>contactrelayops@gmail.com</a>
             </div>
           </div>
@@ -1060,7 +1059,6 @@ a{text-decoration:none;color:inherit}
             <div style="font-size:14px;color:rgba(255,255,255,.5);margin-bottom:14px">Questions about a job or your account? Contact us.</div>
             <div style="display:flex;flex-direction:column;gap:8px">
               
-              <a href="tel:+12672257379" style="display:flex;align-items:center;gap:10px;font-size:14px;color:rgba(255,255,255,.7)"><span>📞</span>(267) 225-7379</a>
               <a href="tel:+12672257379" style="display:flex;align-items:center;gap:10px;font-size:14px;color:rgba(255,255,255,.7)"><span>📞</span>(267) 225-7379</a>
               <a href="mailto:contactrelayops@gmail.com" style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--red)"><span>📧</span>contactrelayops@gmail.com</a>
             </div>
@@ -5275,8 +5273,9 @@ async function saveCustName() {
     await sbFetch('PATCH', '/rest/v1/customers?user_id=eq.' + currentUser.id, { full_name: newName });
     document.getElementById('prof-name').textContent = newName;
     // Update sidebar display
-    const sidebarName = document.querySelector('.user-name');
-    if (sidebarName) sidebarName.textContent = newName;
+    document.querySelectorAll('.user-name').forEach(el => el.textContent = newName);
+    const sidebarInitial = document.querySelector('.user-avatar');
+    if (sidebarInitial) sidebarInitial.textContent = newName.charAt(0).toUpperCase();
     toggleCustNameEdit();
     showNotif('Name updated!', 'Your profile name has been saved.', 'success');
   } else {
@@ -5316,8 +5315,9 @@ async function saveVendorName() {
     }
     document.getElementById('vprof-name').textContent = newName;
     // Update sidebar display
-    const sidebarName = document.querySelector('.user-name');
-    if (sidebarName) sidebarName.textContent = newName;
+    document.querySelectorAll('.user-name').forEach(el => el.textContent = newName);
+    const sidebarInitial = document.querySelector('.user-avatar');
+    if (sidebarInitial) sidebarInitial.textContent = newName.charAt(0).toUpperCase();
     toggleVendorNameEdit();
     showNotif('Name updated!', 'Your profile name has been saved.', 'success');
   } else {
