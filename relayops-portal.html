@@ -922,7 +922,20 @@ a{text-decoration:none;color:inherit}
         <div style="max-width:560px">
           <div class="card">
             <div class="card-title">Account Details</div>
-            <div class="detail-row"><div class="detail-label">Name</div><div class="detail-val" id="prof-name">—</div></div>
+            <div class="detail-row">
+              <div class="detail-label">Name</div>
+              <div style="display:flex;align-items:center;gap:8px;flex:1">
+                <div class="detail-val" id="prof-name" style="flex:1">—</div>
+                <button onclick="toggleCustNameEdit()" id="cust-name-edit-btn" style="background:none;border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.5);font-size:11px;padding:3px 10px;border-radius:6px;cursor:pointer">Edit</button>
+              </div>
+            </div>
+            <div id="cust-name-edit-row" style="display:none;margin-bottom:10px">
+              <input id="cust-name-input" type="text" placeholder="Your full name" style="width:100%;padding:8px 12px;background:#1a1a1a;border:1px solid rgba(200,16,46,.4);border-radius:8px;color:#fff;font-size:14px;font-family:var(--sans);outline:none;margin-bottom:8px"/>
+              <div style="display:flex;gap:8px">
+                <button onclick="saveCustName()" class="btn btn-red btn-sm">Save</button>
+                <button onclick="toggleCustNameEdit()" class="btn btn-ghost btn-sm">Cancel</button>
+              </div>
+            </div>
             <div class="detail-row"><div class="detail-label">Email</div><div class="detail-val" id="prof-email">—</div></div>
             <div class="detail-row"><div class="detail-label">Account Type</div><div class="detail-val" id="prof-type">—</div></div>
             <div class="detail-row"><div class="detail-label">Member Since</div><div class="detail-val" id="prof-since">—</div></div>
@@ -981,7 +994,20 @@ a{text-decoration:none;color:inherit}
         <div style="max-width:560px">
           <div class="card">
             <div class="card-title">Account Details</div>
-            <div class="detail-row"><div class="detail-label">Name</div><div class="detail-val" id="vprof-name">—</div></div>
+            <div class="detail-row">
+              <div class="detail-label">Name</div>
+              <div style="display:flex;align-items:center;gap:8px;flex:1">
+                <div class="detail-val" id="vprof-name" style="flex:1">—</div>
+                <button onclick="toggleVendorNameEdit()" id="vendor-name-edit-btn" style="background:none;border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.5);font-size:11px;padding:3px 10px;border-radius:6px;cursor:pointer">Edit</button>
+              </div>
+            </div>
+            <div id="vendor-name-edit-row" style="display:none;margin-bottom:10px">
+              <input id="vendor-name-input" type="text" placeholder="Your full name" style="width:100%;padding:8px 12px;background:#1a1a1a;border:1px solid rgba(200,16,46,.4);border-radius:8px;color:#fff;font-size:14px;font-family:var(--sans);outline:none;margin-bottom:8px"/>
+              <div style="display:flex;gap:8px">
+                <button onclick="saveVendorName()" class="btn btn-red btn-sm">Save</button>
+                <button onclick="toggleVendorNameEdit()" class="btn btn-ghost btn-sm">Cancel</button>
+              </div>
+            </div>
             <div class="detail-row"><div class="detail-label">Email</div><div class="detail-val" id="vprof-email">—</div></div>
             <div class="detail-row"><div class="detail-label">Account Status</div><div class="detail-val" id="vprof-status">—</div></div>
             <div class="detail-row"><div class="detail-label">Service Type</div><div class="detail-val" id="vprof-service">—</div></div>
@@ -5212,6 +5238,91 @@ async function openUnratedJob(jobId) {
   showPage('p-my-jobs');
   await loadCustomerJobs();
   setTimeout(() => viewCustomerJob(jobId).catch(console.error), 500);
+}
+
+
+// ═══════════════════════════════════════════════════════
+// PROFILE NAME EDITING
+// ═══════════════════════════════════════════════════════
+
+// Customer name edit
+function toggleCustNameEdit() {
+  const row = document.getElementById('cust-name-edit-row');
+  const input = document.getElementById('cust-name-input');
+  const btn = document.getElementById('cust-name-edit-btn');
+  const isOpen = row.style.display !== 'none';
+  row.style.display = isOpen ? 'none' : 'block';
+  btn.textContent = isOpen ? 'Edit' : 'Cancel';
+  if (!isOpen) {
+    input.value = document.getElementById('prof-name').textContent || '';
+    input.focus();
+  }
+}
+
+async function saveCustName() {
+  const newName = document.getElementById('cust-name-input').value.trim();
+  if (!newName) { showNotif('Name required', 'Please enter your name.', 'warning'); return; }
+  
+  // Update Supabase auth metadata
+  const res = await fetch(BASE + '/auth/v1/user', {
+    method: 'PUT',
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ data: { full_name: newName } })
+  });
+  
+  if (res.ok) {
+    // Update customers table
+    await sbFetch('PATCH', '/rest/v1/customers?user_id=eq.' + currentUser.id, { full_name: newName });
+    document.getElementById('prof-name').textContent = newName;
+    // Update sidebar display
+    const sidebarName = document.querySelector('.user-name');
+    if (sidebarName) sidebarName.textContent = newName;
+    toggleCustNameEdit();
+    showNotif('Name updated!', 'Your profile name has been saved.', 'success');
+  } else {
+    showNotif('Error', 'Could not update name. Please try again.', 'warning');
+  }
+}
+
+// Vendor name edit
+function toggleVendorNameEdit() {
+  const row = document.getElementById('vendor-name-edit-row');
+  const input = document.getElementById('vendor-name-input');
+  const btn = document.getElementById('vendor-name-edit-btn');
+  const isOpen = row.style.display !== 'none';
+  row.style.display = isOpen ? 'none' : 'block';
+  btn.textContent = isOpen ? 'Edit' : 'Cancel';
+  if (!isOpen) {
+    input.value = document.getElementById('vprof-name').textContent || '';
+    input.focus();
+  }
+}
+
+async function saveVendorName() {
+  const newName = document.getElementById('vendor-name-input').value.trim();
+  if (!newName) { showNotif('Name required', 'Please enter your name.', 'warning'); return; }
+
+  // Update Supabase auth metadata
+  const res = await fetch(BASE + '/auth/v1/user', {
+    method: 'PUT',
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ data: { full_name: newName } })
+  });
+
+  if (res.ok) {
+    // Update providers table
+    if (currentProviderRecord?.id) {
+      await sbFetch('PATCH', '/rest/v1/providers?id=eq.' + currentProviderRecord.id, { full_name: newName });
+    }
+    document.getElementById('vprof-name').textContent = newName;
+    // Update sidebar display
+    const sidebarName = document.querySelector('.user-name');
+    if (sidebarName) sidebarName.textContent = newName;
+    toggleVendorNameEdit();
+    showNotif('Name updated!', 'Your profile name has been saved.', 'success');
+  } else {
+    showNotif('Error', 'Could not update name. Please try again.', 'warning');
+  }
 }
 
 </script>
