@@ -933,6 +933,7 @@ a{text-decoration:none;color:inherit}
             <div style="display:flex;flex-direction:column;gap:8px">
               
               <a href="tel:+12672257379" style="display:flex;align-items:center;gap:10px;font-size:14px;color:rgba(255,255,255,.7)"><span>📞</span>(267) 225-7379</a>
+              <a href="tel:+12672257379" style="display:flex;align-items:center;gap:10px;font-size:14px;color:rgba(255,255,255,.7)"><span>📞</span>(267) 225-7379</a>
               <a href="mailto:contactrelayops@gmail.com" style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--red)"><span>📧</span>contactrelayops@gmail.com</a>
             </div>
           </div>
@@ -1033,6 +1034,7 @@ a{text-decoration:none;color:inherit}
             <div style="font-size:14px;color:rgba(255,255,255,.5);margin-bottom:14px">Questions about a job or your account? Contact us.</div>
             <div style="display:flex;flex-direction:column;gap:8px">
               
+              <a href="tel:+12672257379" style="display:flex;align-items:center;gap:10px;font-size:14px;color:rgba(255,255,255,.7)"><span>📞</span>(267) 225-7379</a>
               <a href="tel:+12672257379" style="display:flex;align-items:center;gap:10px;font-size:14px;color:rgba(255,255,255,.7)"><span>📞</span>(267) 225-7379</a>
               <a href="mailto:contactrelayops@gmail.com" style="display:flex;align-items:center;gap:10px;font-size:14px;color:var(--red)"><span>📧</span>contactrelayops@gmail.com</a>
             </div>
@@ -1158,6 +1160,7 @@ a{text-decoration:none;color:inherit}
         <div style="max-width:560px">
           <div class="card">
             <div class="card-title">Contact Info</div>
+            <div class="detail-row"><div class="detail-label">Phone</div><div class="detail-val">(267) 225-7379</div></div>
             <div class="detail-row"><div class="detail-label">Contact Email</div><div class="detail-val">contactrelayops@gmail.com</div></div>
             
             <div class="detail-row"><div class="detail-label">Service Area</div><div class="detail-val">Pittsburgh, PA &amp; Philadelphia, PA</div></div>
@@ -3657,6 +3660,7 @@ We review and send you a quote within **2 hours** for standard jobs, faster for 
   if (t.match(/cancel|stop|change.*mind|no longer need/)) {
     return `To cancel a job, contact us directly:
 
+- 📞 **(267) 225-7379**
 - 📧 **contactrelayops@gmail.com**
 
 
@@ -3703,6 +3707,7 @@ Expanding to more cities soon. Email **contactrelayops@gmail.com** to get your c
   if (t.match(/contact|phone|call|email|reach|talk.*someone|speak.*person|human/)) {
     return `Reach RelayOps directly:
 
+- 📞 **(267) 225-7379**
 - 📧 **contactrelayops@gmail.com**
 
 - 🕐 Response time: within 2 hours during business hours
@@ -3760,7 +3765,7 @@ To confirm, please pay via the link below. Once payment is received, the vendor 
 
 [STRIPE PAYMENT LINK]
 
-Questions? Reply here or call (267) 875-9111.
+Questions? Reply here or call (267) 225-7379.
 
 — RelayOps Team
 
@@ -3797,7 +3802,7 @@ We are not a directory. Every job is actively managed.`;
   if (t.match(/refund|dispute|unhappy|bad.*job|problem|issue|complain|not.*right|wrong/)) {
     return `If there is an issue with a completed job:
 
-1. **Contact us immediately** — Email contactrelayops@gmail.com or call (267) 875-9111
+1. **Contact us immediately** — Email contactrelayops@gmail.com or call (267) 225-7379
 2. **Describe the issue** — Photos and details help us resolve it faster
 3. **We will make it right** — Options include a return visit, partial refund, or full refund depending on the situation
 
@@ -3868,7 +3873,7 @@ Mention specific timing needs in the job description (e.g. "Must be done before 
     return `Access instructions for vendors:
 
 - Include lockbox codes, key locations, or access instructions in the **job description** when you submit
-- If access changes after submission, call us at **(267) 875-9111** immediately
+- If access changes after submission, call us at **(267) 225-7379** immediately
 - For lock changes, the vendor will need access to the unit — coordinate with any current tenants
 
 All access info is kept confidential and only shared with the assigned vendor.`;
@@ -3931,6 +3936,7 @@ Just type your question and I will answer it.`;
 What specifically do you need help with?`;
   if (r === 'provider') return `Good question. For the most accurate answer, reach out to us directly:
 
+- 📞 **(267) 225-7379**
 - 📧 **contactrelayops@gmail.com**
 
 
@@ -3939,7 +3945,7 @@ Or check your **My Profile** and **My Assigned Jobs** tabs for account and job d
 
 - Check your **My Jobs** tab for live job status
 - Email **contactrelayops@gmail.com** for billing or account questions
-- Call **(267) 875-9111** for anything urgent
+- Call **(267) 225-7379** for anything urgent
 
 What else can I help you with?`;
 }
@@ -4529,8 +4535,8 @@ function scheduleOnboardingEmails(email, name, role) {
     ? 'Welcome to RelayOps — here is how to get your first job'
     : 'Welcome to RelayOps — submit your first job in minutes';
   const welcomeBody = role === 'provider'
-    ? `Hi ${name},\n\nWelcome to RelayOps! You're now part of our verified vendor network.\n\nHere's how it works:\n1. We'll review your application and activate your account\n2. Once active, jobs in your area will be assigned to you automatically\n3. Complete the job, upload photos, and get paid instantly\n\nLog in any time to check your status:\n${window.location.origin + window.location.pathname}\n\nQuestions? Reply to this email or call (267) 875-9111.\n\n— The RelayOps Team`
-    : `Hi ${name},\n\nWelcome to RelayOps! We make it simple to manage vendors and get jobs done.\n\nTo submit your first job:\n1. Log in to your portal\n2. Click "Request a Job"\n3. Fill in the details — we'll match you with a verified vendor\n\nLog in here:\n${window.location.origin + window.location.pathname}\n\nQuestions? Reply to this email or call (267) 875-9111.\n\n— The RelayOps Team`;
+    ? `Hi ${name},\n\nWelcome to RelayOps! You're now part of our verified vendor network.\n\nHere's how it works:\n1. We'll review your application and activate your account\n2. Once active, jobs in your area will be assigned to you automatically\n3. Complete the job, upload photos, and get paid instantly\n\nLog in any time to check your status:\n${window.location.origin + window.location.pathname}\n\nQuestions? Reply to this email or call (267) 225-7379.\n\n— The RelayOps Team`
+    : `Hi ${name},\n\nWelcome to RelayOps! We make it simple to manage vendors and get jobs done.\n\nTo submit your first job:\n1. Log in to your portal\n2. Click "Request a Job"\n3. Fill in the details — we'll match you with a verified vendor\n\nLog in here:\n${window.location.origin + window.location.pathname}\n\nQuestions? Reply to this email or call (267) 225-7379.\n\n— The RelayOps Team`;
 
   emailjs.send('service_slduczl', 'template_sacm0kn', {
     subject: welcomeSubject,
@@ -4612,7 +4618,7 @@ async function sendVendorInvite() {
     from_name: 'RelayOps',
     from_email: email,
     phone: '—',
-    message: `Hi ${name},\n\n${inviterName} thinks you'd be a great fit for RelayOps — a platform that connects verified vendors with property managers who need ${trade} work done.\n\n${note ? 'Their message: "' + note + '"\n\n' : ''}Here's how it works:\n1. Sign up as a vendor at the link below\n2. We verify your credentials\n3. Jobs in your area start coming to you automatically — and you get paid instantly when the job is done\n\nSign up here:\n${portalUrl}\n\nQuestions? Call (267) 875-9111 or reply to this email.\n\n— The RelayOps Team`
+    message: `Hi ${name},\n\n${inviterName} thinks you'd be a great fit for RelayOps — a platform that connects verified vendors with property managers who need ${trade} work done.\n\n${note ? 'Their message: "' + note + '"\n\n' : ''}Here's how it works:\n1. Sign up as a vendor at the link below\n2. We verify your credentials\n3. Jobs in your area start coming to you automatically — and you get paid instantly when the job is done\n\nSign up here:\n${portalUrl}\n\nQuestions? Call (267) 225-7379 or reply to this email.\n\n— The RelayOps Team`
   }).then(() => {
     showNotif('Invite Sent!', name + ' has been invited to join RelayOps.', 'success');
     document.getElementById('inv-name').value = '';
