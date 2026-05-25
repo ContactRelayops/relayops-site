@@ -4161,18 +4161,34 @@ async function submitJobCompletion(jobId) {
 
   const completionText = notes || 'Job completed.';
 
-  // Convert photos to base64 data URLs and save to Supabase
-  const photoDataUrls = await Promise.all(completionPhotos.map(p => new Promise(resolve => {
-    const reader = new FileReader();
-    reader.onload = e => resolve(e.target.result);
-    reader.readAsDataURL(p);
-  })));
+  // Upload photos to Supabase Storage
+  let photoUrls = [];
+  for (const photo of completionPhotos) {
+    try {
+      const ext = photo.name.split('.').pop() || 'jpg';
+      const fileName = `job-${jobId}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const uploadRes = await fetch(`${BASE}/storage/v1/object/job-photos/${fileName}`, {
+        method: 'POST',
+        headers: {
+          'apikey': ANON_KEY,
+          'Authorization': `Bearer ${_accessToken || ANON_KEY}`,
+          'Content-Type': photo.type || 'image/jpeg',
+          'x-upsert': 'true'
+        },
+        body: photo
+      });
+      if (uploadRes.ok) {
+        const publicUrl = `${BASE}/storage/v1/object/public/job-photos/${fileName}`;
+        photoUrls.push(publicUrl);
+      }
+    } catch(e) { console.warn('Photo upload failed:', e.message); }
+  }
 
-  // Update job status, notes, and photos
+  // Update job status, notes, and photo URLs
   const updates = {
     status: 'completed',
     completion_notes: completionText,
-    completion_photos: photoDataUrls
+    completion_photos: photoUrls
   };
 
   const ok = await dbUpdate('jobs', jobId, updates);
