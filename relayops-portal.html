@@ -1980,12 +1980,15 @@ function renderCustomerJobs(jobs) {
   const el = document.getElementById('cust-jobs-list');
   if (!jobs.length) { el.innerHTML = '<div class="empty-state">No jobs yet. <a onclick="showPage("p-request-job")" href="#">Submit your first job →</a></div>'; return; }
   el.innerHTML = jobs.map(j => `
-    <div class="table-row" style="grid-template-columns:2fr 1fr 1fr 1fr 90px" onclick="viewCustomerJob('${j.id}').catch(console.error)">
+    <div class="table-row" style="grid-template-columns:2fr 1fr 1fr 1fr 140px" onclick="viewCustomerJob('${j.id}').catch(console.error)">
       <div><div class="tr-main">${esc(j.property_address||'No address')}</div><div class="tr-sub">${fmtDate(j.created_at)}</div></div>
       <div class="tr-cell">${esc(j.job_type||'—')}</div>
       <div class="tr-cell">${esc(j.urgency||'—')}</div>
       <div>${statusPill(j.status)}</div>
-      <div><button class="btn btn-ink btn-sm" onclick="event.stopPropagation();viewCustomerJob('${j.id}').catch(console.error)">View</button></div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="btn btn-ink btn-sm" onclick="event.stopPropagation();viewCustomerJob('${j.id}').catch(console.error)">View</button>
+        ${j.status === 'submitted' ? `<button class="btn btn-sm" onclick="event.stopPropagation();deleteCustomerJob('${j.id}')" style="background:transparent;border:1px solid rgba(200,16,46,.3);color:#ff8898;padding:4px 8px;font-size:11px">✕</button>` : ''}
+      </div>
     </div>`).join('');
 }
 
@@ -5322,6 +5325,27 @@ async function saveVendorName() {
     showNotif('Name updated!', 'Your profile name has been saved.', 'success');
   } else {
     showNotif('Error', 'Could not update name. Please try again.', 'warning');
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════
+// CUSTOMER: DELETE JOB
+// ═══════════════════════════════════════════════════════
+async function deleteCustomerJob(jobId) {
+  const job = allCustomerJobs.find(j => j.id === jobId);
+  if (!job) return;
+  if (job.status !== 'submitted') {
+    showNotif('Cannot delete', 'Only submitted jobs that have not been assigned can be cancelled.', 'warning');
+    return;
+  }
+  if (!confirm('Cancel this job request? This cannot be undone.')) return;
+  const res = await sbFetch('DELETE', '/rest/v1/jobs?id=eq.' + jobId);
+  if (res.ok) {
+    showNotif('Job cancelled', 'Your job request has been removed.', 'success');
+    loadCustomerJobs();
+  } else {
+    showNotif('Error', 'Could not cancel job. Please try again.', 'warning');
   }
 }
 
