@@ -3,21 +3,8 @@
 <head>
 <meta charset="UTF-8"/>
 <title>RelayOps</title>
-<script>
-  // Preserve hash (for Supabase auth tokens) and redirect to portal or marketing site
-  var hash = window.location.hash;
-  var search = window.location.search;
-  
-  // If there's an access_token in the hash, it's a Supabase auth redirect — go to portal
-  if (hash && hash.includes('access_token')) {
-    window.location.replace('/relayops-site/relayops-portal.html' + hash);
-  } else {
-    // Otherwise go to marketing site
-    window.location.replace('/relayops-site/relayops.html');
-  }
-</script>
+<meta http-equiv="refresh" content="0; url=relayops.html"/>
+<script>window.location.replace('relayops.html');</script>
 </head>
-<body>
-<a href="/relayops-site/relayops.html">Click here if not redirected</a>
-</body>
+<body></body>
 </html>
