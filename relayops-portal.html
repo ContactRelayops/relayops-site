@@ -2146,11 +2146,14 @@ async function loadVendorJobs() {
   const el = document.getElementById('vendor-jobs-list');
   if (!jobs.length) { el.innerHTML = '<div class="empty-state">No jobs assigned yet.</div>'; return; }
   el.innerHTML = jobs.map(j => `
-    <div class="table-row" style="grid-template-columns:2fr 1fr 1fr 100px">
+    <div class="table-row" style="grid-template-columns:2fr 1fr 1fr 160px" onclick="viewVendorJobDetail('${j.id}')">
       <div><div class="tr-main">${esc(j.property_address||'No address')}</div><div class="tr-sub">${fmtDate(j.created_at)}</div></div>
       <div class="tr-cell">${esc(j.job_type||'—')}</div>
       <div>${statusPill(j.status)}</div>
-      <div>${vendorActionBtn(j)}</div>
+      <div style="display:flex;gap:6px;align-items:center">
+        ${vendorActionBtn(j)}
+        ${j.status === 'assigned' ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();editVendorJob('${j.id}')">Edit</button>` : ''}
+      </div>
     </div>`).join('');
 }
 
@@ -5358,6 +5361,84 @@ async function deleteCustomerJob(jobId) {
     loadCustomerJobs();
   } else {
     showNotif('Error', 'Could not cancel job. Please try again.', 'warning');
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════
+// VENDOR: VIEW + EDIT JOB
+// ═══════════════════════════════════════════════════════
+async function viewVendorJobDetail(id) {
+  const j = allVendorJobs.find(x => x.id === id);
+  if (!j) return;
+  document.getElementById('modal-job-title').textContent = j.property_address || 'Job Details';
+  document.getElementById('modal-job-content').innerHTML = `
+    <div class="modal-section">
+      <div class="job-detail-grid">
+        <div><div class="detail-label">Status</div><div class="detail-val">${statusPill(j.status)}</div></div>
+        <div><div class="detail-label">Type</div><div class="detail-val">${esc(j.job_type||'—')}</div></div>
+        <div><div class="detail-label">Urgency</div><div class="detail-val">${esc(j.urgency||'—')}</div></div>
+        <div><div class="detail-label">Submitted</div><div class="detail-val">${fmtDate(j.created_at)}</div></div>
+        ${j.scheduled_date ? `<div style="grid-column:1/-1"><div class="detail-label">Scheduled</div><div class="detail-val">${new Date(j.scheduled_date).toLocaleDateString('en-US',{weekday:'short',month:'long',day:'numeric'})}${j.scheduled_time ? ' at ' + (()=>{const [h,m]=j.scheduled_time.split(':');const hr=parseInt(h);return (hr>12?hr-12:hr||12)+':'+m+' '+(hr>=12?'PM':'AM');})() : ''}</div></div>` : ''}
+      </div>
+    </div>
+    <div class="modal-section"><div class="detail-label">Description</div><div class="detail-desc">${esc(j.description||'No description.')}</div></div>
+    ${j.customer_notes ? `<div class="modal-section"><div class="detail-label">Notes from RelayOps</div><div class="detail-desc">${esc(j.customer_notes)}</div></div>` : ''}
+    <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+      ${j.status === 'assigned' ? `<button class="btn btn-red" onclick="updateVendorStatus('${j.id}','in_progress');closeModal()">▶ Start Job</button>` : ''}
+      ${j.status === 'in_progress' ? `<button class="btn btn-red" onclick="closeModal();setTimeout(()=>showCompletionChecklist('${j.id}'),200)">📸 Mark Done</button>` : ''}
+      ${j.status === 'assigned' ? `<button class="btn btn-ghost" onclick="closeModal();editVendorJob('${j.id}')">Edit Details</button>` : ''}
+    </div>`;
+  document.getElementById('job-modal').classList.add('open');
+}
+
+function editVendorJob(id) {
+  const j = allVendorJobs.find(x => x.id === id);
+  if (!j) return;
+  document.getElementById('modal-job-title').textContent = 'Edit Job Details';
+  document.getElementById('modal-job-content').innerHTML = `
+    <div class="modal-section">
+      <div style="font-size:13px;color:rgba(255,255,255,.4);margin-bottom:16px">You can add notes or update availability for this job. Contact RelayOps to change address or service type.</div>
+      <div class="auth-field">
+        <div class="auth-label">Preferred Date</div>
+        <input id="vj-date" type="date" value="${j.scheduled_date||''}" style="color-scheme:dark" class="auth-input"/>
+      </div>
+      <div class="auth-field">
+        <div class="auth-label">Preferred Time</div>
+        <select id="vj-time" class="auth-input">
+          <option value="">Any time</option>
+          ${['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'].map(t => {
+            const [h] = t.split(':');
+            const hr = parseInt(h);
+            const label = (hr > 12 ? hr-12 : hr) + ':00 ' + (hr >= 12 ? 'PM' : 'AM');
+            return `<option value="${t}" ${j.scheduled_time===t?'selected':''}>${label}</option>`;
+          }).join('')}
+        </select>
+      </div>
+      <div class="auth-field">
+        <div class="auth-label">Notes for RelayOps (optional)</div>
+        <textarea id="vj-notes" class="auth-input" rows="3" placeholder="Any access details, parking info, or questions...">${esc(j.vendor_notes||'')}</textarea>
+      </div>
+      <button class="btn btn-red" style="width:100%;justify-content:center;margin-top:8px" onclick="saveVendorJobEdit('${j.id}')">Save Changes</button>
+    </div>`;
+  document.getElementById('job-modal').classList.add('open');
+}
+
+async function saveVendorJobEdit(jobId) {
+  const date  = document.getElementById('vj-date')?.value || null;
+  const time  = document.getElementById('vj-time')?.value || null;
+  const notes = document.getElementById('vj-notes')?.value.trim() || null;
+  const updates = {};
+  if (date)  updates.scheduled_date = date;
+  if (time)  updates.scheduled_time = time;
+  if (notes) updates.vendor_notes   = notes;
+  const ok = await dbUpdate('jobs', jobId, updates);
+  if (ok) {
+    showNotif('Saved!', 'Job details updated.', 'success');
+    closeModal();
+    loadVendorJobs();
+  } else {
+    showNotif('Error', 'Could not save. Please try again.', 'warning');
   }
 }
 
