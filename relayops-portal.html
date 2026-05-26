@@ -4165,33 +4165,34 @@ async function submitJobCompletion(jobId) {
   const completionText = notes || 'Job completed.';
 
   // Upload photos to Supabase Storage
+  // completionPhotos contains {name, data} objects where data is base64 string
   let photoUrls = [];
   for (const photo of completionPhotos) {
     try {
       const ext = (photo.name.split('.').pop() || 'jpg').toLowerCase();
       const fileName = `job-${jobId}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      
-      // Read file as ArrayBuffer to preserve binary data
-      const arrayBuf = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = e => resolve(e.target.result);
-        reader.onerror = reject;
-        reader.readAsArrayBuffer(photo);
-      });
+
+      // Convert base64 to binary blob
+      const base64Data = photo.data.split(',')[1] || photo.data;
+      const mimeType = photo.data.split(';')[0].split(':')[1] || 'image/jpeg';
+      const byteChars = atob(base64Data);
+      const byteArr = new Uint8Array(byteChars.length);
+      for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
+      const blob = new Blob([byteArr], { type: mimeType });
 
       const uploadRes = await fetch(`${BASE}/storage/v1/object/job-photos/${fileName}`, {
         method: 'POST',
         headers: {
           'apikey': ANON_KEY,
           'Authorization': `Bearer ${ANON_KEY}`,
-          'Content-Type': photo.type || 'image/jpeg',
+          'Content-Type': mimeType,
           'x-upsert': 'true',
           'Cache-Control': '3600'
         },
-        body: arrayBuf
+        body: blob
       });
       const uploadData = await uploadRes.json().catch(()=>({}));
-      console.log('Upload response:', uploadRes.status, uploadData, 'size:', arrayBuf.byteLength);
+      console.log('Upload response:', uploadRes.status, uploadData, 'size:', blob.size);
       if (uploadRes.ok || uploadRes.status === 200) {
         const publicUrl = `${BASE}/storage/v1/object/public/job-photos/${fileName}`;
         photoUrls.push(publicUrl);
