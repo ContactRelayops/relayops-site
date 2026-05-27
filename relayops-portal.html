@@ -2870,7 +2870,7 @@ function editAdminVendor(id) {
           </select>
         </div>
         <div class="field" style="grid-column:1/-1"><label>Service Types (comma separated)</label>
-          <select id="vedit-services" multiple onload="preselectServices(this,'${esc(JSON.stringify(v.service_types||[]))}')" style="height:140px;background:#1a1a1a;border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#fff;font-size:13px;width:100%;padding:4px">
+          <select id="vedit-services" multiple style="height:140px;background:#1a1a1a;border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#fff;font-size:13px;width:100%;padding:4px">
               <option value='Handyman'>Handyman / Repairs</option>
               <option value='Cleaning'>Cleaning</option>
               <option value='Turnover'>Turnover Cleaning</option>
@@ -2903,6 +2903,10 @@ function editAdminVendor(id) {
     <div class="modal-section">
       <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,.8);margin-bottom:14px">🔍 Verification Checklist</div>
       <div style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:12px">Check off each step as you verify. Progress saves automatically to this device.</div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,.8);margin-bottom:10px">📅 Vendor Availability</div>
+        <div id="admin-vendor-availability" style="font-size:13px;color:rgba(255,255,255,.4)">Loading availability...</div>
+      </div>
       <div id="vendor-checklist">
         ${[
           {id:'call', label:'Called vendor — confirmed real phone number and person'},
@@ -2932,6 +2936,17 @@ function editAdminVendor(id) {
       </div>
     </div>`;
   document.getElementById('job-modal').classList.add('open');
+  // Pre-select vendor's current services
+  setTimeout(() => {
+    const sel = document.getElementById('vedit-services');
+    if (sel && v.service_types?.length) {
+      Array.from(sel.options).forEach(opt => {
+        opt.selected = v.service_types.includes(opt.value);
+      });
+    }
+    // Load vendor availability
+    loadVendorAvailabilityAdmin(v.id);
+  }, 100);
 }
 
 async function saveAdminVendor(id) {
@@ -5665,4 +5680,31 @@ async function declineJob(jobId) {
 
 // Load availability toggle state on vendor login
 const _origEnterVendorModeUX = window.enterVendorMode;
+
+// ═══════════════════════════════════════════════════════
+// ADMIN: LOAD VENDOR AVAILABILITY
+// ═══════════════════════════════════════════════════════
+async function loadVendorAvailabilityAdmin(providerId) {
+  const el = document.getElementById('admin-vendor-availability');
+  if (!el) return;
+  const rows = await dbWhere('provider_availability', 'provider_id', providerId);
+  if (!rows.length) {
+    el.innerHTML = '<span style="color:rgba(255,255,255,.25)">No availability set by vendor</span>';
+    return;
+  }
+  const a = rows[0];
+  const days = (a.days || []).join(', ') || 'None set';
+  const from = a.from_time || '—';
+  const to   = a.to_time   || '—';
+  // Format times nicely
+  const fmt = t => { if (!t||t==='—') return '—'; const [h,m]=t.split(':');const hr=parseInt(h);return (hr>12?hr-12:hr||12)+':'+m+' '+(hr>=12?'PM':'AM'); };
+  el.innerHTML = `
+    <div style="display:flex;gap:20px;flex-wrap:wrap">
+      <div><div style="font-size:11px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Available Days</div>
+        <div style="font-size:13px;color:#fff">${esc(days)}</div></div>
+      <div><div style="font-size:11px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Hours</div>
+        <div style="font-size:13px;color:#fff">${fmt(from)} – ${fmt(to)}</div></div>
+    </div>`;
+}
+
 </script>
