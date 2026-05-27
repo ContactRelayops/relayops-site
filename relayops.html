@@ -248,12 +248,16 @@ section{position:relative;z-index:1}
 
 /* ── SERVICES ── */
 .services{padding:100px 0;background:var(--paper-2)}
+.svc-group{margin-top:48px}
+.svc-group + .svc-group{margin-top:40px}
+.svc-group-label{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--red);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.svc-group-label::after{content:'';flex:1;height:1px;background:var(--line)}
 .services-grid{
-  display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:48px;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:12px;
 }
 .svc{
   background:var(--white);border:1px solid var(--line);border-radius:var(--r-md);
-  padding:22px;cursor:default;transition:all .2s;position:relative;overflow:hidden;
+  padding:20px;cursor:default;transition:all .2s;position:relative;overflow:hidden;
 }
 .svc::before{
   content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
@@ -262,9 +266,9 @@ section{position:relative;z-index:1}
 }
 .svc:hover{border-color:var(--red-mid);transform:translateY(-2px);box-shadow:0 12px 30px rgba(0,0,0,.08)}
 .svc:hover::before{transform:scaleX(1)}
-.svc-icon{font-size:24px;margin-bottom:12px}
-.svc-title{font-family:var(--display);font-size:15px;font-weight:700;color:var(--ink)}
-.svc-desc{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.5}
+.svc-icon{font-size:22px;margin-bottom:10px}
+.svc-title{font-family:var(--display);font-size:14px;font-weight:700;color:var(--ink)}
+.svc-desc{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}
 
 /* ── TWO SIDES ── */
 .sides{padding:100px 0;background:var(--cream)}
@@ -504,6 +508,7 @@ footer{background:#080808;padding:40px 0 28px;border-top:1px solid rgba(255,255,
   .hero-inner,.problem-grid,.sides-grid,.intake-grid,.vsignup-grid,.pricing-grid{grid-template-columns:1fr}
   .steps{grid-template-columns:repeat(2,1fr)}
   .services-grid{grid-template-columns:repeat(2,1fr)}
+  .svc-group-label{font-size:10px}
   .trust-grid{grid-template-columns:1fr}
   .roadmap-track{grid-template-columns:1fr}
   .dash-inner{grid-template-columns:1fr}
@@ -711,21 +716,60 @@ footer{background:#080808;padding:40px 0 28px;border-top:1px solid rgba(255,255,
   <div class="wrap">
     <div class="section-eyebrow">Job categories</div>
     <h2 class="section-title">Every maintenance category<br/>property operators need</h2>
-    <div class="services-grid">
-      <div class="svc"><div class="svc-icon">🔨</div><div class="svc-title">Handyman Work</div><div class="svc-desc">Repairs, punch-list items, and general maintenance tasks.</div></div>
-      <div class="svc"><div class="svc-icon">🧹</div><div class="svc-title">Turnover Cleaning</div><div class="svc-desc">Move-out cleans, deep cleans, and same-day turnovers.</div></div>
-      <div class="svc"><div class="svc-icon">🏗️</div><div class="svc-title">Remodeling</div><div class="svc-desc">Kitchen, bathroom, and full property renovations.</div></div>
-      <div class="svc"><div class="svc-icon">🌿</div><div class="svc-title">Landscaping</div><div class="svc-desc">Lawn care, trimming, and seasonal yard maintenance.</div></div>
-      <div class="svc"><div class="svc-icon">⚡</div><div class="svc-title">Electrician</div><div class="svc-desc">Wiring, panel upgrades, outlets, and lighting installs.</div></div>
-      <div class="svc"><div class="svc-icon">❄️</div><div class="svc-title">HVAC</div><div class="svc-desc">Heating, cooling, and ventilation repair and maintenance.</div></div>
-      <div class="svc"><div class="svc-icon">🏠</div><div class="svc-title">Roofing</div><div class="svc-desc">Repairs, inspections, and full roof replacements.</div></div>
-      <div class="svc"><div class="svc-icon">❄️</div><div class="svc-title">Snow Removal</div><div class="svc-desc">Seasonal snow and ice removal for properties.</div></div>
-      <div class="svc"><div class="svc-icon">🔐</div><div class="svc-title">Lock Changes</div><div class="svc-desc">Rekeying, smart lock installation, and emergency locksmith.</div></div>
-      <div class="svc"><div class="svc-icon">🗑️</div><div class="svc-title">Junk Removal</div><div class="svc-desc">Move-out hauls, appliance removal, and full unit cleanouts.</div></div>
-      <div class="svc"><div class="svc-icon">🎨</div><div class="svc-title">Paint Touch-Ups</div><div class="svc-desc">Room repaints, scuff repair, and full unit refreshes.</div></div>
-      <div class="svc"><div class="svc-icon">🪠</div><div class="svc-title">Plumbing</div><div class="svc-desc">Leaks, clogs, fixture replacements, and urgent calls.</div></div>
-      <div class="svc"><div class="svc-icon">🔄</div><div class="svc-title">Same-Day Turnovers</div><div class="svc-desc">Full-service same-day coordination for fast unit flips.</div></div>
-      <div class="svc"><div class="svc-icon">🚨</div><div class="svc-title">Emergency Backup</div><div class="svc-desc">Urgent vendor dispatch when speed matters most.</div></div>
+
+    <!-- GENERAL MAINTENANCE -->
+    <div class="svc-group">
+      <div class="svc-group-label">General Maintenance</div>
+      <div class="services-grid">
+        <div class="svc"><div class="svc-icon">🔨</div><div class="svc-title">Handyman Work</div><div class="svc-desc">Repairs, punch-list items, and general maintenance tasks.</div></div>
+        <div class="svc"><div class="svc-icon">🔧</div><div class="svc-title">Appliance Repair</div><div class="svc-desc">Washers, dryers, refrigerators, dishwashers, and more.</div></div>
+        <div class="svc"><div class="svc-icon">🐛</div><div class="svc-title">Pest Control</div><div class="svc-desc">Inspection, treatment, and prevention for all pests.</div></div>
+        <div class="svc"><div class="svc-icon">🔐</div><div class="svc-title">Lock Changes</div><div class="svc-desc">Rekeying, smart lock installation, and emergency locksmith.</div></div>
+        <div class="svc"><div class="svc-icon">🎨</div><div class="svc-title">Painting</div><div class="svc-desc">Interior and exterior repaints, touch-ups, and full unit refreshes.</div></div>
+      </div>
+    </div>
+
+    <!-- CLEANING & TURNOVER -->
+    <div class="svc-group">
+      <div class="svc-group-label">Cleaning &amp; Turnover</div>
+      <div class="services-grid">
+        <div class="svc"><div class="svc-icon">🧹</div><div class="svc-title">Cleaning</div><div class="svc-desc">Move-out cleans, deep cleans, and recurring maintenance cleaning.</div></div>
+        <div class="svc"><div class="svc-icon">🔄</div><div class="svc-title">Turnover Cleaning</div><div class="svc-desc">Full-service same-day coordination for fast unit flips.</div></div>
+        <div class="svc"><div class="svc-icon">🧺</div><div class="svc-title">Carpet Cleaning</div><div class="svc-desc">Deep steam cleaning and stain removal for all carpet types.</div></div>
+        <div class="svc"><div class="svc-icon">🪟</div><div class="svc-title">Window Cleaning</div><div class="svc-desc">Interior and exterior window cleaning for any property size.</div></div>
+        <div class="svc"><div class="svc-icon">🗑️</div><div class="svc-title">Junk Removal</div><div class="svc-desc">Move-out hauls, appliance removal, and full unit cleanouts.</div></div>
+      </div>
+    </div>
+
+    <!-- SKILLED TRADES -->
+    <div class="svc-group">
+      <div class="svc-group-label">Skilled Trades</div>
+      <div class="services-grid">
+        <div class="svc"><div class="svc-icon">🪠</div><div class="svc-title">Plumbing</div><div class="svc-desc">Leaks, clogs, fixture replacements, and urgent calls.</div></div>
+        <div class="svc"><div class="svc-icon">⚡</div><div class="svc-title">Electrician</div><div class="svc-desc">Wiring, panel upgrades, outlets, and lighting installs.</div></div>
+        <div class="svc"><div class="svc-icon">🌡️</div><div class="svc-title">HVAC</div><div class="svc-desc">Heating, cooling, and ventilation repair and maintenance.</div></div>
+        <div class="svc"><div class="svc-icon">🏠</div><div class="svc-title">Roofing</div><div class="svc-desc">Repairs, inspections, and full roof replacements.</div></div>
+        <div class="svc"><div class="svc-icon">🍂</div><div class="svc-title">Gutters</div><div class="svc-desc">Cleaning, repair, and installation for gutters and downspouts.</div></div>
+        <div class="svc"><div class="svc-icon">🏗️</div><div class="svc-title">Construction</div><div class="svc-desc">Structural work, additions, and full property builds.</div></div>
+        <div class="svc"><div class="svc-icon">🏗️</div><div class="svc-title">Remodeling</div><div class="svc-desc">Kitchen, bathroom, and full property renovations.</div></div>
+      </div>
+    </div>
+
+    <!-- EXTERIOR & GROUNDS -->
+    <div class="svc-group">
+      <div class="svc-group-label">Outdoor &amp; Seasonal</div>
+      <div class="services-grid">
+        <div class="svc"><div class="svc-icon">🌿</div><div class="svc-title">Landscaping</div><div class="svc-desc">Lawn care, trimming, and seasonal yard maintenance.</div></div>
+        <div class="svc"><div class="svc-icon">❄️</div><div class="svc-title">Snow Removal</div><div class="svc-desc">Seasonal snow and ice removal for properties.</div></div>
+      </div>
+    </div>
+
+    <!-- PRIORITY SERVICES -->
+    <div class="svc-group">
+      <div class="svc-group-label">Priority Services</div>
+      <div class="services-grid">
+        <div class="svc"><div class="svc-icon">🚨</div><div class="svc-title">Emergency Backup</div><div class="svc-desc">Urgent vendor dispatch when speed matters most.</div></div>
+      </div>
     </div>
   </div>
 </section>
