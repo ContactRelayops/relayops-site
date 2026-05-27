@@ -5313,7 +5313,12 @@ async function loadAvailability() {
   const rows = await dbWhere('provider_availability', 'provider_id', currentProviderRecord.id);
   if (!rows.length) return;
   const avail = rows[0];
-  selectedAvailDays = avail.days || [];
+  // Handle days as array or string
+  let days = avail.days || [];
+  if (typeof days === 'string') {
+    try { days = JSON.parse(days); } catch(e) { days = days.split(',').map(d=>d.trim()); }
+  }
+  selectedAvailDays = days;
   const fromEl = document.getElementById('avail-from');
   const toEl = document.getElementById('avail-to');
   if (fromEl && avail.from_time) fromEl.value = avail.from_time;
@@ -5324,6 +5329,10 @@ async function loadAvailability() {
       el.style.background = 'rgba(200,16,46,.2)';
       el.style.borderColor = 'rgba(200,16,46,.5)';
       el.style.color = '#fff';
+    } else {
+      el.style.background = '';
+      el.style.borderColor = 'rgba(255,255,255,.1)';
+      el.style.color = 'rgba(255,255,255,.5)';
     }
   });
 }
@@ -5332,20 +5341,29 @@ async function saveAvailability() {
   if (!currentProviderRecord) return;
   const from_time = document.getElementById('avail-from')?.value || '08:00';
   const to_time = document.getElementById('avail-to')?.value || '17:00';
-  const existing = await dbWhere('provider_availability', 'provider_id', currentProviderRecord.id);
-  if (existing.length) {
-    await sbFetch('PATCH', `/rest/v1/provider_availability?provider_id=eq.${currentProviderRecord.id}`, {
-      days: selectedAvailDays, from_time, to_time
-    });
-  } else {
-    await dbInsert('provider_availability', {
+  
+  // Use UPSERT so it works whether row exists or not
+  const res = await fetch(`${BASE}/rest/v1/provider_availability`, {
+    method: 'POST',
+    headers: authHeaders({ 
+      'Prefer': 'resolution=merge-duplicates,return=minimal',
+      'Content-Type': 'application/json'
+    }),
+    body: JSON.stringify({
       provider_id: currentProviderRecord.id,
       days: selectedAvailDays,
       from_time,
       to_time
-    });
+    })
+  });
+  
+  if (res.ok || res.status === 409) {
+    showNotif('Saved!', 'Your availability has been updated.', 'success');
+  } else {
+    const err = await res.text().catch(()=>'');
+    console.error('Availability save error:', res.status, err);
+    showNotif('Error', 'Could not save availability. Try again.', 'warning');
   }
-  showNotif('Saved!', 'Your availability has been updated.', 'success');
 }
 
 // ═══════════════════════════════════════════════════════
@@ -5807,7 +5825,11 @@ async function loadVendorAvailabilityAdmin(providerId) {
     return;
   }
   const a = rows[0];
-  const days = (a.days || []).join(', ') || 'None set';
+  let daysArr = a.days || [];
+  if (typeof daysArr === 'string') {
+    try { daysArr = JSON.parse(daysArr); } catch(e) { daysArr = daysArr.split(',').map(d=>d.trim()); }
+  }
+  const days = daysArr.join(', ') || 'None set';
   const from = a.from_time || '—';
   const to   = a.to_time   || '—';
   // Format times nicely
