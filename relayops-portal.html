@@ -1034,8 +1034,58 @@ a{text-decoration:none;color:inherit}
             </div>
             <div class="detail-row"><div class="detail-label">Email</div><div class="detail-val" id="vprof-email">—</div></div>
             <div class="detail-row"><div class="detail-label">Account Status</div><div class="detail-val" id="vprof-status">—</div></div>
-            <div class="detail-row"><div class="detail-label">Service Type</div><div class="detail-val" id="vprof-service">—</div></div>
-            <div class="detail-row"><div class="detail-label">Coverage Area</div><div class="detail-val" id="vprof-coverage">—</div></div>
+            <div class="detail-row"><div class="detail-label">Phone</div>
+              <div style="display:flex;align-items:center;gap:8px;flex:1">
+                <div class="detail-val" id="vprof-phone" style="flex:1">—</div>
+                <button onclick="toggleVendorPhoneEdit()" id="vendor-phone-edit-btn" style="background:none;border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.5);font-size:11px;padding:3px 10px;border-radius:6px;cursor:pointer">Edit</button>
+              </div>
+            </div>
+            <div id="vendor-phone-edit-row" style="display:none;margin-bottom:10px">
+              <input id="vendor-phone-input" type="tel" placeholder="(267) 555-0100" style="width:100%;padding:8px 12px;background:#1a1a1a;border:1px solid rgba(200,16,46,.4);border-radius:8px;color:#fff;font-size:14px;font-family:var(--sans);outline:none;margin-bottom:8px"/>
+              <div style="display:flex;gap:8px"><button onclick="saveVendorPhone()" class="btn btn-red btn-sm">Save</button><button onclick="toggleVendorPhoneEdit()" class="btn btn-ghost btn-sm">Cancel</button></div>
+            </div>
+            <div class="detail-row"><div class="detail-label">Coverage Area</div>
+              <div style="display:flex;align-items:center;gap:8px;flex:1">
+                <div class="detail-val" id="vprof-coverage" style="flex:1">—</div>
+                <button onclick="toggleVendorCoverageEdit()" id="vendor-coverage-edit-btn" style="background:none;border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.5);font-size:11px;padding:3px 10px;border-radius:6px;cursor:pointer">Edit</button>
+              </div>
+            </div>
+            <div id="vendor-coverage-edit-row" style="display:none;margin-bottom:10px">
+              <input id="vendor-coverage-input" type="text" placeholder="e.g. Pittsburgh, PA — 25 miles" style="width:100%;padding:8px 12px;background:#1a1a1a;border:1px solid rgba(200,16,46,.4);border-radius:8px;color:#fff;font-size:14px;font-family:var(--sans);outline:none;margin-bottom:8px"/>
+              <div style="display:flex;gap:8px"><button onclick="saveVendorCoverage()" class="btn btn-red btn-sm">Save</button><button onclick="toggleVendorCoverageEdit()" class="btn btn-ghost btn-sm">Cancel</button></div>
+            </div>
+            <div class="detail-row" style="flex-direction:column;align-items:flex-start;gap:10px">
+              <div style="display:flex;justify-content:space-between;width:100%;align-items:center">
+                <div class="detail-label">Service Types</div>
+                <button onclick="toggleVendorServicesEdit()" id="vendor-svc-edit-btn" style="background:none;border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.5);font-size:11px;padding:3px 10px;border-radius:6px;cursor:pointer">Edit</button>
+              </div>
+              <div id="vprof-service" style="font-size:13px;color:rgba(255,255,255,.7)">—</div>
+              <div id="vendor-svc-edit-row" style="display:none;width:100%">
+                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:2px;background:#1a1a1a;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px;margin-bottom:8px">
+              <label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer"><input type="checkbox" class="vprof-svc-cb" value="Handyman" style="width:13px;height:13px;accent-color:#c8102e;cursor:pointer"/><span style="font-size:13px;color:rgba(255,255,255,.7)">Handyman / Repairs</span></label>
+              <label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer"><input type="checkbox" class="vprof-svc-cb" value="Cleaning" style="width:13px;height:13px;accent-color:#c8102e;cursor:pointer"/><span style="font-size:13px;color:rgba(255,255,255,.7)">Cleaning</span></label>
+              <label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer"><input type="checkbox" class="vprof-svc-cb" value="Turnover" style="width:13px;height:13px;accent-color:#c8102e;cursor:pointer"/><span style="font-size:13px;color:rgba(255,255,255,.7)">Turnover Cleaning</span></label>
+              <label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer"><input type="checkbox" class="vprof-svc-cb" value="Lock Change" style="width:13px;height:13px;accent-color:#c8102e;cursor:pointer"/><span style="font-size:13px;color:rgba(255,255,255,.7)">Lock Change / Rekey</span></label>
+              <label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer"><input type="checkbox" class="vprof-svc-cb" value="Junk Removal" style="width:13px;height:13px;accent-color:#c8102e;cursor:pointer"/><span style="font-size:13px;color:rgba(255,255,255,.7)">Junk Removal</span></label>
+              <label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer"><input type="checkbox" class="vprof-svc-cb" value="Painting" style="width:13px;height:13px;accent-color:#c8102e;cursor:pointer"/><span style="font-size:13px;color:rgba(255,255,255,.7)">Painting</span></label>
+              <label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer"><input type="checkbox" class="vprof-svc-cb" value="Plumbing" style="width:13px;height:13px;accent-color:#c8102e;cursor:pointer"/><span style="font-size:13px;color:rgba(255,255,255,.7)">Plumbing</span></label>
+              <label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer"><input type="checkbox" class="vprof-svc-cb" value="Remodeling" style="width:13px;height:13px;accent-color:#c8102e;cursor:pointer"/><span style="font-size:13px;color:rgba(255,255,255,.7)">Remodeling</span></label>
+              <label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer"><input type="checkbox" class="vprof-svc-cb" value="Landscaping" style="width:13px;height:13px;accent-color:#c8102e;cursor:pointer"/><span style="font-size:13px;color:rgba(255,255,255,.7)">Landscaping</span></label>
+              <label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer"><input type="checkbox" class="vprof-svc-cb" value="Electrician" style="width:13px;height:13px;accent-color:#c8102e;cursor:pointer"/><span style="font-size:13px;color:rgba(255,255,255,.7)">Electrician</span></label>
+              <label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer"><input type="checkbox" class="vprof-svc-cb" value="HVAC" style="width:13px;height:13px;accent-color:#c8102e;cursor:pointer"/><span style="font-size:13px;color:rgba(255,255,255,.7)">HVAC</span></label>
+              <label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer"><input type="checkbox" class="vprof-svc-cb" value="Gutters" style="width:13px;height:13px;accent-color:#c8102e;cursor:pointer"/><span style="font-size:13px;color:rgba(255,255,255,.7)">Gutters</span></label>
+              <label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer"><input type="checkbox" class="vprof-svc-cb" value="Roofing" style="width:13px;height:13px;accent-color:#c8102e;cursor:pointer"/><span style="font-size:13px;color:rgba(255,255,255,.7)">Roofing</span></label>
+              <label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer"><input type="checkbox" class="vprof-svc-cb" value="Snow Removal" style="width:13px;height:13px;accent-color:#c8102e;cursor:pointer"/><span style="font-size:13px;color:rgba(255,255,255,.7)">Snow Removal</span></label>
+              <label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer"><input type="checkbox" class="vprof-svc-cb" value="Construction" style="width:13px;height:13px;accent-color:#c8102e;cursor:pointer"/><span style="font-size:13px;color:rgba(255,255,255,.7)">Construction</span></label>
+              <label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer"><input type="checkbox" class="vprof-svc-cb" value="Pest Control" style="width:13px;height:13px;accent-color:#c8102e;cursor:pointer"/><span style="font-size:13px;color:rgba(255,255,255,.7)">Pest Control</span></label>
+              <label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer"><input type="checkbox" class="vprof-svc-cb" value="Appliance Repair" style="width:13px;height:13px;accent-color:#c8102e;cursor:pointer"/><span style="font-size:13px;color:rgba(255,255,255,.7)">Appliance Repair</span></label>
+              <label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer"><input type="checkbox" class="vprof-svc-cb" value="Carpet Cleaning" style="width:13px;height:13px;accent-color:#c8102e;cursor:pointer"/><span style="font-size:13px;color:rgba(255,255,255,.7)">Carpet Cleaning</span></label>
+              <label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer"><input type="checkbox" class="vprof-svc-cb" value="Window Cleaning" style="width:13px;height:13px;accent-color:#c8102e;cursor:pointer"/><span style="font-size:13px;color:rgba(255,255,255,.7)">Window Cleaning</span></label>
+              <label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer"><input type="checkbox" class="vprof-svc-cb" value="Emergency" style="width:13px;height:13px;accent-color:#c8102e;cursor:pointer"/><span style="font-size:13px;color:rgba(255,255,255,.7)">Emergency</span></label>
+                </div>
+                <div style="display:flex;gap:8px"><button onclick="saveVendorServices()" class="btn btn-red btn-sm">Save</button><button onclick="toggleVendorServicesEdit()" class="btn btn-ghost btn-sm">Cancel</button></div>
+              </div>
+            </div>
           </div>
           <div class="card">
             <div class="card-title">Performance</div>
@@ -1929,6 +1979,7 @@ async function enterVendorMode(user) {
   document.getElementById('vprof-name').textContent     = name;
   document.getElementById('vprof-email').textContent    = user.email || '—';
   document.getElementById('vprof-status').innerHTML     = statusPill(status);
+  document.getElementById('vprof-phone').textContent    = currentProviderRecord?.phone || '—';
   document.getElementById('vprof-service').textContent  = currentProviderRecord?.service_types?.join(', ') || '—';
   document.getElementById('vprof-coverage').textContent = currentProviderRecord?.coverage_zips || '—';
   const savedPageV = sessionStorage.getItem('relayops_page');
@@ -2870,6 +2921,7 @@ function editAdminVendor(id) {
           </select>
         </div>
         <div class="field" style="grid-column:1/-1"><label>Service Types</label>
+          <div id="vedit-services-selected" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
           <div id="vedit-services-wrap" style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:#1a1a1a;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px">
             <label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''">
               <input type="checkbox" class="svc-checkbox" value="Handyman" style="width:14px;height:14px;accent-color:#c8102e;cursor:pointer"/>
@@ -3003,6 +3055,13 @@ function editAdminVendor(id) {
       const label = cb.closest('label');
       if (label) label.style.background = types.includes(cb.value) ? 'rgba(200,16,46,.15)' : '';
     });
+    // Show selected as pills
+    const pillsEl = document.getElementById('vedit-services-selected');
+    if (pillsEl) {
+      pillsEl.innerHTML = types.length
+        ? types.map(t => `<span style="background:rgba(200,16,46,.2);border:1px solid rgba(200,16,46,.3);color:#ff8898;padding:3px 10px;border-radius:20px;font-size:12px">${t}</span>`).join('')
+        : '<span style="font-size:12px;color:rgba(255,255,255,.3)">None selected</span>';
+    }
     loadVendorAvailabilityAdmin(v.id);
   }, 250);
 }
@@ -5760,6 +5819,73 @@ async function loadVendorAvailabilityAdmin(providerId) {
       <div><div style="font-size:11px;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Hours</div>
         <div style="font-size:13px;color:#fff">${fmt(from)} – ${fmt(to)}</div></div>
     </div>`;
+}
+
+
+// ═══════════════════════════════════════════════════════
+// VENDOR PROFILE — EDITABLE FIELDS
+// ═══════════════════════════════════════════════════════
+
+function toggleVendorPhoneEdit() {
+  const row = document.getElementById('vendor-phone-edit-row');
+  const btn = document.getElementById('vendor-phone-edit-btn');
+  const isOpen = row.style.display !== 'none';
+  row.style.display = isOpen ? 'none' : 'block';
+  btn.textContent = isOpen ? 'Edit' : 'Cancel';
+  if (!isOpen) { document.getElementById('vendor-phone-input').value = document.getElementById('vprof-phone').textContent.replace('—',''); }
+}
+
+async function saveVendorPhone() {
+  const val = document.getElementById('vendor-phone-input').value.trim();
+  if (!val) return;
+  await sbFetch('PATCH', '/rest/v1/providers?id=eq.' + currentProviderRecord.id, { phone: val });
+  document.getElementById('vprof-phone').textContent = val;
+  currentProviderRecord.phone = val;
+  toggleVendorPhoneEdit();
+  showNotif('Saved!', 'Phone number updated.', 'success');
+}
+
+function toggleVendorCoverageEdit() {
+  const row = document.getElementById('vendor-coverage-edit-row');
+  const btn = document.getElementById('vendor-coverage-edit-btn');
+  const isOpen = row.style.display !== 'none';
+  row.style.display = isOpen ? 'none' : 'block';
+  btn.textContent = isOpen ? 'Edit' : 'Cancel';
+  if (!isOpen) { document.getElementById('vendor-coverage-input').value = document.getElementById('vprof-coverage').textContent.replace('—',''); }
+}
+
+async function saveVendorCoverage() {
+  const val = document.getElementById('vendor-coverage-input').value.trim();
+  if (!val) return;
+  await sbFetch('PATCH', '/rest/v1/providers?id=eq.' + currentProviderRecord.id, { coverage_zips: val });
+  document.getElementById('vprof-coverage').textContent = val;
+  currentProviderRecord.coverage_zips = val;
+  toggleVendorCoverageEdit();
+  showNotif('Saved!', 'Coverage area updated.', 'success');
+}
+
+function toggleVendorServicesEdit() {
+  const row = document.getElementById('vendor-svc-edit-row');
+  const btn = document.getElementById('vendor-svc-edit-btn');
+  const isOpen = row.style.display !== 'none';
+  row.style.display = isOpen ? 'none' : 'block';
+  btn.textContent = isOpen ? 'Edit' : 'Cancel';
+  if (!isOpen) {
+    // Pre-check current services
+    const types = currentProviderRecord?.service_types || [];
+    document.querySelectorAll('.vprof-svc-cb').forEach(cb => {
+      cb.checked = types.includes(cb.value);
+    });
+  }
+}
+
+async function saveVendorServices() {
+  const selected = Array.from(document.querySelectorAll('.vprof-svc-cb:checked')).map(c => c.value);
+  await sbFetch('PATCH', '/rest/v1/providers?id=eq.' + currentProviderRecord.id, { service_types: selected });
+  currentProviderRecord.service_types = selected;
+  document.getElementById('vprof-service').textContent = selected.length ? selected.join(', ') : '—';
+  toggleVendorServicesEdit();
+  showNotif('Saved!', 'Service types updated.', 'success');
 }
 
 </script>
