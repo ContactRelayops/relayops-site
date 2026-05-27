@@ -1101,14 +1101,6 @@ footer{background:#080808;padding:40px 0 28px;border-top:1px solid rgba(255,255,
             <input id="v-license" type="text" placeholder="PA license # (plumbers, locksmiths, electricians)"/>
           </div>
           <div class="field">
-            <label>Can you provide 2 property manager references?</label>
-            <select id="v-references">
-              <option value="Yes">Yes — I can provide references</option>
-              <option value="New to property work">New to property work — no references yet</option>
-              <option value="No">No</option>
-            </select>
-          </div>
-          <div class="field">
             <label>Emergency / Same-Day Availability</label>
             <select id="v-emergency">
               <option value="Yes">Yes — available for same-day calls</option>
@@ -1118,6 +1110,8 @@ footer{background:#080808;padding:40px 0 28px;border-top:1px solid rgba(255,255,
           </div>
           <div class="field"><label>Typical Response Time</label><input id="v-response" type="text" placeholder="e.g. Within 1 hour"/></div>
           <div class="field"><label>Team Size</label><input id="v-team" type="text" placeholder="e.g. Solo, 2-person crew, 5+ people"/></div>
+          <div class="field form-full"><label>Google Business, Yelp, or Social Page Link <span style="color:var(--red)">*</span></label><input id="v-bizlink" type="url" placeholder="https://maps.google.com/... or https://yelp.com/biz/..." required/><div style="font-size:11px;color:var(--muted);margin-top:4px">Helps us verify your business. Most real vendors have at least one online listing.</div></div>
+          <div class="field form-full"><label>Do you currently have active clients in Pittsburgh or Philadelphia? <span style="color:var(--red)">*</span></label><select id="v-active-clients" required><option value="">Select one</option><option value="Yes - Pittsburgh">Yes — Pittsburgh</option><option value="Yes - Philadelphia">Yes — Philadelphia</option><option value="Yes - Both">Yes — Both cities</option><option value="No - expanding">No — looking to expand into these markets</option></select></div>
 
           <!-- Background check consent -->
           <div class="field form-full" style="background:var(--paper-2);border:1px solid var(--line);border-radius:12px;padding:16px;">
