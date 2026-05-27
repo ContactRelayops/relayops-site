@@ -1277,12 +1277,12 @@ a{text-decoration:none;color:inherit}
           <button class="filter-btn" onclick="filterAdminReferrals('rewarded',this)">Reward Earned</button>
         </div>
         <div class="table-wrap">
-          <div class="table-head" style="grid-template-columns:1.5fr 1.5fr 1fr 1fr 100px">
+          <div class="table-head" style="grid-template-columns:1.5fr 1.5fr 1fr 1fr 120px">
             <div class="th">Referred</div>
-            <div class="th">Referrer Code</div>
-            <div class="th">Role</div>
+            <div class="th">Referred By</div>
             <div class="th">Date</div>
             <div class="th">Status</div>
+            <div class="th">Action</div>
           </div>
           <div id="admin-referrals-list"><div class="empty-state">Loading...</div></div>
         </div>
@@ -1808,10 +1808,11 @@ async function doSignUp() {
       // Trigger onboarding email sequence
     scheduleOnboardingEmails(email, name, selectedRole);
     // Record referral if came via referral link
-    const refCode = sessionStorage.getItem('pending_ref_code');
-    if (refCode) {
+    let _refCode;
+    try { _refCode = localStorage.getItem('pending_ref_code'); } catch(e) {}
+    if (_refCode) {
       await recordReferralSignup(email);
-      sendReferralConfirmationEmail(refCode, email, selectedRole);
+      sendReferralConfirmationEmail(_refCode, email, selectedRole);
     }
     await initApp(user);
     } else {
@@ -4567,26 +4568,48 @@ function copyVendorRefLink() {
   const refCode = params.get('ref');
   const refRole = params.get('role');
   if (refCode) {
-    sessionStorage.setItem('pending_ref_code', refCode);
-    sessionStorage.setItem('pending_ref_role', refRole || 'customer');
+    // Use localStorage so referral survives browser close
+    try {
+      localStorage.setItem('pending_ref_code', refCode);
+      localStorage.setItem('pending_ref_role', refRole || 'customer');
+      localStorage.setItem('pending_ref_time', Date.now().toString());
+      console.log('Referral captured:', refCode, refRole);
+    } catch(e) {}
   }
 })();
 
 async function recordReferralSignup(userEmail) {
-  const refCode = sessionStorage.getItem('pending_ref_code');
+  let refCode, refRole;
+  try {
+    refCode = localStorage.getItem('pending_ref_code');
+    refRole = localStorage.getItem('pending_ref_role') || 'customer';
+    const refTime = parseInt(localStorage.getItem('pending_ref_time') || '0');
+    // Expire after 30 days
+    if (Date.now() - refTime > 30 * 24 * 60 * 60 * 1000) {
+      localStorage.removeItem('pending_ref_code');
+      localStorage.removeItem('pending_ref_role');
+      localStorage.removeItem('pending_ref_time');
+      refCode = null;
+    }
+  } catch(e) {}
   if (!refCode) return;
-  // Check not already recorded
+  // Check not already recorded for this email
   const existing = await dbWhere('referrals', 'referred_email', userEmail);
   if (existing.length) return;
   await dbInsert('referrals', {
     referrer_code: refCode,
     referred_email: userEmail,
-    referred_role: sessionStorage.getItem('pending_ref_role') || 'customer',
+    referred_role: refRole,
     first_job_done: false,
     created_at: new Date().toISOString()
   });
-  sessionStorage.removeItem('pending_ref_code');
-  sessionStorage.removeItem('pending_ref_role');
+  // Clear after recording
+  try {
+    localStorage.removeItem('pending_ref_code');
+    localStorage.removeItem('pending_ref_role');
+    localStorage.removeItem('pending_ref_time');
+  } catch(e) {}
+  console.log('Referral recorded:', userEmail, 'from code:', refCode);
 }
 
 async function sbGetUser() {
