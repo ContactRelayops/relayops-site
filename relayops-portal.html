@@ -2870,29 +2870,88 @@ function editAdminVendor(id) {
           </select>
         </div>
         <div class="field" style="grid-column:1/-1"><label>Service Types</label>
-          <select id="vedit-services" multiple style="height:140px;background:#1a1a1a;border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#fff;font-size:13px;width:100%;padding:4px">
-              <option value='Handyman'>Handyman / Repairs</option>
-              <option value='Cleaning'>Cleaning</option>
-              <option value='Turnover'>Turnover Cleaning</option>
-              <option value='Lock Change'>Lock Change / Rekey</option>
-              <option value='Junk Removal'>Junk Removal</option>
-              <option value='Painting'>Painting</option>
-              <option value='Plumbing'>Plumbing</option>
-              <option value='Remodeling'>Remodeling</option>
-              <option value='Landscaping'>Landscaping</option>
-              <option value='Electrician'>Electrician</option>
-              <option value='HVAC'>HVAC</option>
-              <option value='Gutters'>Gutters</option>
-              <option value='Roofing'>Roofing</option>
-              <option value='Snow Removal'>Snow Removal</option>
-              <option value='Construction'>Construction</option>
-              <option value='Pest Control'>Pest Control</option>
-              <option value='Appliance Repair'>Appliance Repair</option>
-              <option value='Carpet Cleaning'>Carpet Cleaning</option>
-              <option value='Window Cleaning'>Window Cleaning</option>
-              <option value='Emergency'>Emergency</option>
-          </select>
-          <div style="font-size:11px;color:rgba(255,255,255,.3);margin-top:4px">Hold Ctrl/Cmd to select multiple</div>
+          <div id="vedit-services-wrap" style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:#1a1a1a;border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px">
+            <label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''">
+              <input type="checkbox" class="svc-checkbox" value="Handyman" style="width:14px;height:14px;accent-color:#c8102e;cursor:pointer"/>
+              <span style="font-size:13px;color:rgba(255,255,255,.8)">Handyman / Repairs</span>
+            </label>
+<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''">
+              <input type="checkbox" class="svc-checkbox" value="Cleaning" style="width:14px;height:14px;accent-color:#c8102e;cursor:pointer"/>
+              <span style="font-size:13px;color:rgba(255,255,255,.8)">Cleaning</span>
+            </label>
+<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''">
+              <input type="checkbox" class="svc-checkbox" value="Turnover" style="width:14px;height:14px;accent-color:#c8102e;cursor:pointer"/>
+              <span style="font-size:13px;color:rgba(255,255,255,.8)">Turnover Cleaning</span>
+            </label>
+<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''">
+              <input type="checkbox" class="svc-checkbox" value="Lock Change" style="width:14px;height:14px;accent-color:#c8102e;cursor:pointer"/>
+              <span style="font-size:13px;color:rgba(255,255,255,.8)">Lock Change / Rekey</span>
+            </label>
+<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''">
+              <input type="checkbox" class="svc-checkbox" value="Junk Removal" style="width:14px;height:14px;accent-color:#c8102e;cursor:pointer"/>
+              <span style="font-size:13px;color:rgba(255,255,255,.8)">Junk Removal</span>
+            </label>
+<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''">
+              <input type="checkbox" class="svc-checkbox" value="Painting" style="width:14px;height:14px;accent-color:#c8102e;cursor:pointer"/>
+              <span style="font-size:13px;color:rgba(255,255,255,.8)">Painting</span>
+            </label>
+<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''">
+              <input type="checkbox" class="svc-checkbox" value="Plumbing" style="width:14px;height:14px;accent-color:#c8102e;cursor:pointer"/>
+              <span style="font-size:13px;color:rgba(255,255,255,.8)">Plumbing</span>
+            </label>
+<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''">
+              <input type="checkbox" class="svc-checkbox" value="Remodeling" style="width:14px;height:14px;accent-color:#c8102e;cursor:pointer"/>
+              <span style="font-size:13px;color:rgba(255,255,255,.8)">Remodeling</span>
+            </label>
+<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''">
+              <input type="checkbox" class="svc-checkbox" value="Landscaping" style="width:14px;height:14px;accent-color:#c8102e;cursor:pointer"/>
+              <span style="font-size:13px;color:rgba(255,255,255,.8)">Landscaping</span>
+            </label>
+<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''">
+              <input type="checkbox" class="svc-checkbox" value="Electrician" style="width:14px;height:14px;accent-color:#c8102e;cursor:pointer"/>
+              <span style="font-size:13px;color:rgba(255,255,255,.8)">Electrician</span>
+            </label>
+<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''">
+              <input type="checkbox" class="svc-checkbox" value="HVAC" style="width:14px;height:14px;accent-color:#c8102e;cursor:pointer"/>
+              <span style="font-size:13px;color:rgba(255,255,255,.8)">HVAC</span>
+            </label>
+<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''">
+              <input type="checkbox" class="svc-checkbox" value="Gutters" style="width:14px;height:14px;accent-color:#c8102e;cursor:pointer"/>
+              <span style="font-size:13px;color:rgba(255,255,255,.8)">Gutters</span>
+            </label>
+<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''">
+              <input type="checkbox" class="svc-checkbox" value="Roofing" style="width:14px;height:14px;accent-color:#c8102e;cursor:pointer"/>
+              <span style="font-size:13px;color:rgba(255,255,255,.8)">Roofing</span>
+            </label>
+<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''">
+              <input type="checkbox" class="svc-checkbox" value="Snow Removal" style="width:14px;height:14px;accent-color:#c8102e;cursor:pointer"/>
+              <span style="font-size:13px;color:rgba(255,255,255,.8)">Snow Removal</span>
+            </label>
+<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''">
+              <input type="checkbox" class="svc-checkbox" value="Construction" style="width:14px;height:14px;accent-color:#c8102e;cursor:pointer"/>
+              <span style="font-size:13px;color:rgba(255,255,255,.8)">Construction</span>
+            </label>
+<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''">
+              <input type="checkbox" class="svc-checkbox" value="Pest Control" style="width:14px;height:14px;accent-color:#c8102e;cursor:pointer"/>
+              <span style="font-size:13px;color:rgba(255,255,255,.8)">Pest Control</span>
+            </label>
+<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''">
+              <input type="checkbox" class="svc-checkbox" value="Appliance Repair" style="width:14px;height:14px;accent-color:#c8102e;cursor:pointer"/>
+              <span style="font-size:13px;color:rgba(255,255,255,.8)">Appliance Repair</span>
+            </label>
+<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''">
+              <input type="checkbox" class="svc-checkbox" value="Carpet Cleaning" style="width:14px;height:14px;accent-color:#c8102e;cursor:pointer"/>
+              <span style="font-size:13px;color:rgba(255,255,255,.8)">Carpet Cleaning</span>
+            </label>
+<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''">
+              <input type="checkbox" class="svc-checkbox" value="Window Cleaning" style="width:14px;height:14px;accent-color:#c8102e;cursor:pointer"/>
+              <span style="font-size:13px;color:rgba(255,255,255,.8)">Window Cleaning</span>
+            </label>
+<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(255,255,255,.04)'" onmouseout="this.style.background=''">
+              <input type="checkbox" class="svc-checkbox" value="Emergency" style="width:14px;height:14px;accent-color:#c8102e;cursor:pointer"/>
+              <span style="font-size:13px;color:rgba(255,255,255,.8)">Emergency</span>
+            </label>
+          </div>
         </div>
         <div class="field" style="grid-column:1/-1"><label>Coverage Area</label>
           <input id="vedit-coverage" type="text" value="${esc(v.coverage_zips||'')}"/>
@@ -2901,6 +2960,10 @@ function editAdminVendor(id) {
     </div>
 
     <div class="modal-section">
+      <div id="admin-vendor-avail-section" style="margin-bottom:20px;padding:14px 16px;background:#1a1a1a;border-radius:8px;border:1px solid rgba(255,255,255,.08)">
+        <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">📅 Vendor Availability</div>
+        <div id="admin-vendor-availability" style="font-size:13px;color:rgba(255,255,255,.4)">Loading...</div>
+      </div>
       <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,.8);margin-bottom:14px">🔍 Verification Checklist</div>
       <div style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:12px">Check off each step as you verify. Progress saves automatically to this device.</div>
       <div id="vendor-checklist">
@@ -2933,25 +2996,13 @@ function editAdminVendor(id) {
     </div>`;
   document.getElementById('job-modal').classList.add('open');
   setTimeout(() => {
-    // Pre-select vendor's current services
-    const sel = document.getElementById('vedit-services');
-    if (sel) {
-      const types = v.service_types || [];
-      Array.from(sel.options).forEach(opt => {
-        opt.selected = types.includes(opt.value);
-        opt.style.background = types.includes(opt.value) ? 'rgba(200,16,46,.3)' : '';
-        opt.style.color = types.includes(opt.value) ? '#fff' : 'rgba(255,255,255,.6)';
-      });
-    }
-    // Inject availability div before checklist
-    const checklist = document.getElementById('vendor-checklist');
-    if (checklist && !document.getElementById('admin-vendor-availability')) {
-      const avDiv = document.createElement('div');
-      avDiv.id = 'admin-vendor-availability-wrap';
-      avDiv.style.cssText = 'margin-bottom:20px;padding:14px 16px;background:#111;border-radius:8px;border:1px solid rgba(255,255,255,.06)';
-      avDiv.innerHTML = '<div style="font-size:12px;font-weight:600;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">📅 Vendor Availability</div><div id="admin-vendor-availability" style="font-size:13px;color:rgba(255,255,255,.4)">Loading...</div>';
-      checklist.parentNode.insertBefore(avDiv, checklist);
-    }
+    // Pre-check vendor's current services
+    const types = v.service_types || [];
+    document.querySelectorAll('.svc-checkbox').forEach(cb => {
+      cb.checked = types.includes(cb.value);
+      const label = cb.closest('label');
+      if (label) label.style.background = types.includes(cb.value) ? 'rgba(200,16,46,.15)' : '';
+    });
     loadVendorAvailabilityAdmin(v.id);
   }, 250);
 }
@@ -2968,11 +3019,8 @@ async function saveAdminVendor(id) {
   if (name)     updates.full_name      = name;
   if (email)    updates.email          = email;
   if (phone)    updates.phone          = phone;
-  const serviceSelect = document.getElementById('vedit-services');
-  if (serviceSelect) {
-    const selected = Array.from(serviceSelect.selectedOptions).map(o => o.value);
-    if (selected.length) updates.service_types = selected;
-  }
+  const checked = Array.from(document.querySelectorAll('.svc-checkbox:checked')).map(c => c.value);
+  if (checked.length) updates.service_types = checked;
   if (coverage) updates.coverage_zips  = coverage;
 
   const ok = await dbUpdate('providers', id, updates);
