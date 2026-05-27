@@ -168,8 +168,7 @@ a{text-decoration:none;color:inherit}
 .nav-item.active{background:rgba(200,16,46,.15);color:var(--white)}
 .nav-item.active .nav-icon{opacity:1}
 .nav-icon{font-size:15px;opacity:.6;flex-shrink:0}
-.nav-badge{
-  margin-left:auto;font-size:10px;padding:2px 7px;border-radius:999px;
+.nav-badge-gone{  margin-left:auto;font-size:10px;padding:2px 7px;border-radius:999px;
   background:var(--red);color:var(--white);font-family:var(--mono);font-weight:600;
   display:none;
 }
@@ -726,7 +725,7 @@ a{text-decoration:none;color:inherit}
         <div class="sidebar-section">Jobs</div>
         <div class="nav-item active" onclick="showPage('p-my-jobs')" data-page="p-my-jobs">
           <span class="nav-icon">📋</span> My Jobs
-          <span class="nav-badge" id="badge-new-jobs"></span>
+          <span class="nav-badge" id="badge-my-jobs"></span>
         </div>
         <div class="nav-item" onclick="showPage('p-request-job')" data-page="p-request-job">
           <span class="nav-icon">➕</span> Request a Job
