@@ -2869,7 +2869,7 @@ function editAdminVendor(id) {
             <option value="removed"  ${v.status==='removed' ?'selected':''}>Removed</option>
           </select>
         </div>
-        <div class="field" style="grid-column:1/-1"><label>Service Types (comma separated)</label>
+        <div class="field" style="grid-column:1/-1"><label>Service Types</label>
           <select id="vedit-services" multiple style="height:140px;background:#1a1a1a;border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#fff;font-size:13px;width:100%;padding:4px">
               <option value='Handyman'>Handyman / Repairs</option>
               <option value='Cleaning'>Cleaning</option>
@@ -2903,9 +2903,9 @@ function editAdminVendor(id) {
     <div class="modal-section">
       <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,.8);margin-bottom:14px">🔍 Verification Checklist</div>
       <div style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:12px">Check off each step as you verify. Progress saves automatically to this device.</div>
-      <div style="margin-bottom:16px">
-        <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,.8);margin-bottom:10px">📅 Vendor Availability</div>
-        <div id="admin-vendor-availability" style="font-size:13px;color:rgba(255,255,255,.4)">Loading availability...</div>
+      <div style="margin-bottom:20px;padding:14px 16px;background:#111;border-radius:var(--r-sm);border:1px solid rgba(255,255,255,.06)">
+        <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">📅 Vendor Availability</div>
+        <div id="admin-vendor-availability" style="font-size:13px;color:rgba(255,255,255,.4)">Loading...</div>
       </div>
       <div id="vendor-checklist">
         ${[
@@ -2936,17 +2936,18 @@ function editAdminVendor(id) {
       </div>
     </div>`;
   document.getElementById('job-modal').classList.add('open');
-  // Pre-select vendor's current services
+  // Pre-select vendor's current services + load availability
   setTimeout(() => {
     const sel = document.getElementById('vedit-services');
-    if (sel && v.service_types?.length) {
+    if (sel) {
+      const types = v.service_types || [];
       Array.from(sel.options).forEach(opt => {
-        opt.selected = v.service_types.includes(opt.value);
+        opt.selected = types.includes(opt.value);
+        opt.style.background = types.includes(opt.value) ? 'rgba(200,16,46,.25)' : '';
       });
     }
-    // Load vendor availability
     loadVendorAvailabilityAdmin(v.id);
-  }, 100);
+  }, 200);
 }
 
 async function saveAdminVendor(id) {
