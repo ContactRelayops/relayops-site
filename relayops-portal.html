@@ -2903,10 +2903,6 @@ function editAdminVendor(id) {
     <div class="modal-section">
       <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,.8);margin-bottom:14px">🔍 Verification Checklist</div>
       <div style="font-size:11px;color:rgba(255,255,255,.3);margin-bottom:12px">Check off each step as you verify. Progress saves automatically to this device.</div>
-      <div style="margin-bottom:20px;padding:14px 16px;background:#111;border-radius:var(--r-sm);border:1px solid rgba(255,255,255,.06)">
-        <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">📅 Vendor Availability</div>
-        <div id="admin-vendor-availability" style="font-size:13px;color:rgba(255,255,255,.4)">Loading...</div>
-      </div>
       <div id="vendor-checklist">
         ${[
           {id:'call', label:'Called vendor — confirmed real phone number and person'},
@@ -2936,18 +2932,28 @@ function editAdminVendor(id) {
       </div>
     </div>`;
   document.getElementById('job-modal').classList.add('open');
-  // Pre-select vendor's current services + load availability
   setTimeout(() => {
+    // Pre-select vendor's current services
     const sel = document.getElementById('vedit-services');
     if (sel) {
       const types = v.service_types || [];
       Array.from(sel.options).forEach(opt => {
         opt.selected = types.includes(opt.value);
-        opt.style.background = types.includes(opt.value) ? 'rgba(200,16,46,.25)' : '';
+        opt.style.background = types.includes(opt.value) ? 'rgba(200,16,46,.3)' : '';
+        opt.style.color = types.includes(opt.value) ? '#fff' : 'rgba(255,255,255,.6)';
       });
     }
+    // Inject availability div before checklist
+    const checklist = document.getElementById('vendor-checklist');
+    if (checklist && !document.getElementById('admin-vendor-availability')) {
+      const avDiv = document.createElement('div');
+      avDiv.id = 'admin-vendor-availability-wrap';
+      avDiv.style.cssText = 'margin-bottom:20px;padding:14px 16px;background:#111;border-radius:8px;border:1px solid rgba(255,255,255,.06)';
+      avDiv.innerHTML = '<div style="font-size:12px;font-weight:600;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">📅 Vendor Availability</div><div id="admin-vendor-availability" style="font-size:13px;color:rgba(255,255,255,.4)">Loading...</div>';
+      checklist.parentNode.insertBefore(avDiv, checklist);
+    }
     loadVendorAvailabilityAdmin(v.id);
-  }, 200);
+  }, 250);
 }
 
 async function saveAdminVendor(id) {
