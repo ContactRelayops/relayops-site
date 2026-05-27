@@ -993,6 +993,30 @@ a{text-decoration:none;color:inherit}
           </label>
         </div>
         <div id="next-job-banner" style="display:none;padding:12px 16px;background:rgba(200,16,46,.08);border:1px solid rgba(200,16,46,.2);border-radius:var(--r-md);margin-bottom:16px;font-size:13px;color:rgba(255,255,255,.8)"></div>
+        <!-- Weekly availability scheduler -->
+        <div id="avail-section" style="background:#111;border:1px solid rgba(255,255,255,.06);border-radius:var(--r-md);padding:14px 16px;margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,.7)">Weekly Availability</div>
+            <button onclick="toggleAvailSection()" id="avail-section-toggle" style="background:none;border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.4);font-size:11px;padding:3px 10px;border-radius:6px;cursor:pointer">Edit</button>
+          </div>
+          <div id="avail-summary" style="font-size:13px;color:rgba(255,255,255,.4)">Not set — click Edit to set your weekly schedule</div>
+          <div id="avail-editor" style="display:none;margin-top:12px">
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:12px">
+              <div class="avail-day" data-day="Mon" onclick="toggleAvailDay(this)" style="padding:8px 4px;border:1px solid rgba(255,255,255,.1);border-radius:8px;text-align:center;font-size:12px;cursor:pointer;transition:all .15s;color:rgba(255,255,255,.5)">Mon</div>
+              <div class="avail-day" data-day="Tue" onclick="toggleAvailDay(this)" style="padding:8px 4px;border:1px solid rgba(255,255,255,.1);border-radius:8px;text-align:center;font-size:12px;cursor:pointer;transition:all .15s;color:rgba(255,255,255,.5)">Tue</div>
+              <div class="avail-day" data-day="Wed" onclick="toggleAvailDay(this)" style="padding:8px 4px;border:1px solid rgba(255,255,255,.1);border-radius:8px;text-align:center;font-size:12px;cursor:pointer;transition:all .15s;color:rgba(255,255,255,.5)">Wed</div>
+              <div class="avail-day" data-day="Thu" onclick="toggleAvailDay(this)" style="padding:8px 4px;border:1px solid rgba(255,255,255,.1);border-radius:8px;text-align:center;font-size:12px;cursor:pointer;transition:all .15s;color:rgba(255,255,255,.5)">Thu</div>
+              <div class="avail-day" data-day="Fri" onclick="toggleAvailDay(this)" style="padding:8px 4px;border:1px solid rgba(255,255,255,.1);border-radius:8px;text-align:center;font-size:12px;cursor:pointer;transition:all .15s;color:rgba(255,255,255,.5)">Fri</div>
+              <div class="avail-day" data-day="Sat" onclick="toggleAvailDay(this)" style="padding:8px 4px;border:1px solid rgba(255,255,255,.1);border-radius:8px;text-align:center;font-size:12px;cursor:pointer;transition:all .15s;color:rgba(255,255,255,.5)">Sat</div>
+              <div class="avail-day" data-day="Sun" onclick="toggleAvailDay(this)" style="padding:8px 4px;border:1px solid rgba(255,255,255,.1);border-radius:8px;text-align:center;font-size:12px;cursor:pointer;transition:all .15s;color:rgba(255,255,255,.5)">Sun</div>
+            </div>
+            <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
+              <div style="flex:1"><div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:4px">From</div><input id="avail-from" type="time" value="08:00" style="color-scheme:dark;width:100%;padding:8px;background:#1a1a1a;border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#fff;font-size:13px"/></div>
+              <div style="flex:1"><div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:4px">To</div><input id="avail-to" type="time" value="17:00" style="color-scheme:dark;width:100%;padding:8px;background:#1a1a1a;border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#fff;font-size:13px"/></div>
+            </div>
+            <button class="btn btn-red btn-sm" onclick="saveAvailability()">Save Availability</button>
+          </div>
+        </div>
         <div class="stats-row" id="vendor-stats-row" style="grid-template-columns:repeat(4,1fr)">
           <div class="stat-card"><div class="stat-n" id="vs-assigned">—</div><div class="stat-l">Assigned</div></div>
           <div class="stat-card"><div class="stat-n" id="vs-inprog">—</div><div class="stat-l">In Progress</div></div>
@@ -1096,24 +1120,7 @@ a{text-decoration:none;color:inherit}
               <div class="profile-stat"><div class="profile-stat-n" id="vperf-reviews">—</div><div class="profile-stat-l">Reviews</div></div>
             </div>
           </div>
-          <div class="card" id="availability-card">
-            <div class="card-title">My Availability</div>
-            <div style="font-size:13px;color:rgba(255,255,255,.4);margin-bottom:14px">Set the days and hours you're available for jobs.</div>
-            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:14px">
-              <div class="avail-day" data-day="Mon" onclick="toggleAvailDay(this)" style="padding:8px 4px;border:1px solid rgba(255,255,255,.1);border-radius:8px;text-align:center;font-size:12px;cursor:pointer;transition:all .15s;color:rgba(255,255,255,.5)">Mon</div>
-              <div class="avail-day" data-day="Tue" onclick="toggleAvailDay(this)" style="padding:8px 4px;border:1px solid rgba(255,255,255,.1);border-radius:8px;text-align:center;font-size:12px;cursor:pointer;transition:all .15s;color:rgba(255,255,255,.5)">Tue</div>
-              <div class="avail-day" data-day="Wed" onclick="toggleAvailDay(this)" style="padding:8px 4px;border:1px solid rgba(255,255,255,.1);border-radius:8px;text-align:center;font-size:12px;cursor:pointer;transition:all .15s;color:rgba(255,255,255,.5)">Wed</div>
-              <div class="avail-day" data-day="Thu" onclick="toggleAvailDay(this)" style="padding:8px 4px;border:1px solid rgba(255,255,255,.1);border-radius:8px;text-align:center;font-size:12px;cursor:pointer;transition:all .15s;color:rgba(255,255,255,.5)">Thu</div>
-              <div class="avail-day" data-day="Fri" onclick="toggleAvailDay(this)" style="padding:8px 4px;border:1px solid rgba(255,255,255,.1);border-radius:8px;text-align:center;font-size:12px;cursor:pointer;transition:all .15s;color:rgba(255,255,255,.5)">Fri</div>
-              <div class="avail-day" data-day="Sat" onclick="toggleAvailDay(this)" style="padding:8px 4px;border:1px solid rgba(255,255,255,.1);border-radius:8px;text-align:center;font-size:12px;cursor:pointer;transition:all .15s;color:rgba(255,255,255,.5)">Sat</div>
-              <div class="avail-day" data-day="Sun" onclick="toggleAvailDay(this)" style="padding:8px 4px;border:1px solid rgba(255,255,255,.1);border-radius:8px;text-align:center;font-size:12px;cursor:pointer;transition:all .15s;color:rgba(255,255,255,.5)">Sun</div>
-            </div>
-            <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px">
-              <div style="flex:1"><div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:4px">From</div><input id="avail-from" type="time" value="08:00" style="color-scheme:dark;width:100%;padding:8px;background:#1a1a1a;border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#fff;font-size:13px"/></div>
-              <div style="flex:1"><div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:4px">To</div><input id="avail-to" type="time" value="17:00" style="color-scheme:dark;width:100%;padding:8px;background:#1a1a1a;border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#fff;font-size:13px"/></div>
-            </div>
-            <button class="btn btn-red btn-sm" onclick="saveAvailability()">Save Availability</button>
-          </div>
+
           <div class="card" id="documents-card">
             <div class="card-title">Documents</div>
             <div style="font-size:13px;color:rgba(255,255,255,.4);margin-bottom:14px">Upload your license and insurance for verification.</div>
@@ -2873,7 +2880,12 @@ function renderAdminVendors(vendors) {
         <div class="vendor-name">${esc(v.full_name)}</div>
         ${v.verified ? '<span class="verified-badge">✓ Verified</span>' : statusPill(v.status)}
       </div>
-      <div class="vendor-meta">${esc(v.service_types?.join(', ')||'—')}</div>
+      <div class="vendor-meta" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span>${esc(v.service_types?.join(', ')||'—')}</span>
+        ${v.available_today === false
+          ? '<span style="background:rgba(255,100,100,.12);color:#ff8898;font-size:10px;padding:2px 7px;border-radius:20px;border:1px solid rgba(255,100,100,.2)">● Unavailable today</span>'
+          : '<span style="background:rgba(34,197,94,.12);color:#4ade80;font-size:10px;padding:2px 7px;border-radius:20px;border:1px solid rgba(34,197,94,.2)">● Available today</span>'}
+      </div>
       <div class="vendor-meta" style="margin-top:3px">${esc(v.coverage_zips||'—')}</div>
       <div class="vendor-meta" style="margin-top:3px">${esc(v.email)}</div>
       ${!v.verified && v.status === 'pending' ? `<div style="margin-top:8px;font-size:10px;color:rgba(255,212,59,.6);font-family:var(--mono)">${checkCount}/7 checks complete</div>` : ''}
@@ -5311,18 +5323,26 @@ function toggleAvailDay(el) {
 async function loadAvailability() {
   if (!currentProviderRecord) return;
   const rows = await dbWhere('provider_availability', 'provider_id', currentProviderRecord.id);
-  if (!rows.length) return;
+  const summaryEl = document.getElementById('avail-summary');
+  if (!rows.length) {
+    if (summaryEl) summaryEl.textContent = 'Not set — click Edit to set your weekly schedule';
+    return;
+  }
   const avail = rows[0];
-  // Handle days as array or string
   let days = avail.days || [];
   if (typeof days === 'string') {
-    try { days = JSON.parse(days); } catch(e) { days = days.split(',').map(d=>d.trim()); }
+    try { days = JSON.parse(days); } catch(e) { days = days.split(',').map(d=>d.trim()).filter(Boolean); }
   }
   selectedAvailDays = days;
   const fromEl = document.getElementById('avail-from');
   const toEl = document.getElementById('avail-to');
   if (fromEl && avail.from_time) fromEl.value = avail.from_time;
   if (toEl && avail.to_time) toEl.value = avail.to_time;
+  // Update summary text
+  if (summaryEl && days.length) {
+    const fmt = t => { if (!t) return ''; const [h,m]=t.split(':');const hr=parseInt(h);return (hr>12?hr-12:hr||12)+':'+m+' '+(hr>=12?'PM':'AM'); };
+    summaryEl.innerHTML = `<span style="color:#fff">${days.join(', ')}</span> <span style="color:rgba(255,255,255,.4)">· ${fmt(avail.from_time)} – ${fmt(avail.to_time)}</span>`;
+  }
   // Highlight selected days
   document.querySelectorAll('.avail-day').forEach(el => {
     if (selectedAvailDays.includes(el.dataset.day)) {
@@ -5335,6 +5355,14 @@ async function loadAvailability() {
       el.style.color = 'rgba(255,255,255,.5)';
     }
   });
+}
+
+function toggleAvailSection() {
+  const editor = document.getElementById('avail-editor');
+  const btn = document.getElementById('avail-section-toggle');
+  const isOpen = editor.style.display !== 'none';
+  editor.style.display = isOpen ? 'none' : 'block';
+  btn.textContent = isOpen ? 'Edit' : 'Done';
 }
 
 async function saveAvailability() {
@@ -5359,6 +5387,7 @@ async function saveAvailability() {
   
   if (res.ok || res.status === 409) {
     showNotif('Saved!', 'Your availability has been updated.', 'success');
+    setTimeout(() => { loadAvailability(); toggleAvailSection(); }, 300);
   } else {
     const err = await res.text().catch(()=>'');
     console.error('Availability save error:', res.status, err);
