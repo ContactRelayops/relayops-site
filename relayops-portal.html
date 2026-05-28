@@ -1888,14 +1888,20 @@ function doSignOut() {
   stopStatusPolling(); sbSignOut();
   currentUser = null; currentRole = null; currentProviderRecord = null; jobStatusCache = {};
   chatHistories.customer = []; chatHistories.admin = []; chatHistories.provider = [];
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('auth-screen').style.display = 'flex';
+  const app = document.getElementById('app');
+  const auth = document.getElementById('auth-screen');
+  const chatBtn = document.getElementById('chat-bubble-btn');
+  const chatPanel = document.getElementById('chat-panel');
+  if (app) app.style.display = 'none';
+  if (auth) auth.style.display = 'flex';
   sessionStorage.removeItem('relayops_admin');
   sessionStorage.removeItem('relayops_page');
-  document.getElementById('chat-bubble-btn').classList.remove('visible');
-  document.getElementById('chat-panel').classList.remove('open');
-  // Reset nav
-  ['nav-customer','nav-vendor','nav-admin'].forEach(id => document.getElementById(id).style.display = 'none');
+  if (chatBtn) chatBtn.classList.remove('visible');
+  if (chatPanel) chatPanel.classList.remove('open');
+  ['nav-customer','nav-vendor','nav-admin'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
 }
 
 // ═══════════════════════════════════════════════════════
@@ -2041,7 +2047,7 @@ function statusPill(s) {
   const label = { submitted:'Submitted', priced:'Quoted', assigned:'Assigned', in_progress:'In Progress', completed:'Completed', cancelled:'Cancelled', pending:'Pending', active:'Active' }[s] || s;
   return `<span class="pill ${cls}">${label}</span>`;
 }
-function closeModal() { document.getElementById('job-modal').classList.remove('open'); }
+function closeModal() { document.getElementById('job-modal').classList.remove('open'); window._currentAdminVendorId = null; }
 
 // ═══════════════════════════════════════════════════════
 // CUSTOMER: JOBS
@@ -3028,10 +3034,7 @@ function editAdminVendor(id) {
 
     <div class="modal-section">
       <div id="admin-vendor-avail-section" style="margin-bottom:20px;padding:14px 16px;background:#1a1a1a;border-radius:8px;border:1px solid rgba(255,255,255,.08)">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-          <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em">📅 Vendor Availability</div>
-          <button onclick="loadVendorAvailabilityAdmin(window._currentAdminVendorId)" style="background:none;border:none;color:rgba(255,255,255,.3);font-size:11px;cursor:pointer">↻ Refresh</button>
-        </div>
+        <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">📅 Vendor Availability</div>
         <div id="admin-vendor-availability" style="font-size:13px;color:rgba(255,255,255,.4)">Loading...</div>
       </div>
       <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,.8);margin-bottom:14px">🔍 Verification Checklist</div>
@@ -3081,7 +3084,7 @@ function editAdminVendor(id) {
         : '<span style="font-size:12px;color:rgba(255,255,255,.3)">None selected</span>';
     }
     window._currentAdminVendorId = v.id;
-    loadVendorAvailabilityAdmin(v.id);
+    setTimeout(() => loadVendorAvailabilityAdmin(v.id), 400);
   }, 250);
 }
 
@@ -5377,22 +5380,24 @@ async function saveAvailability() {
   const from_time = document.getElementById('avail-from')?.value || '08:00';
   const to_time = document.getElementById('avail-to')?.value || '17:00';
   
-  // Use UPSERT so it works whether row exists or not
-  const res = await fetch(`${BASE}/rest/v1/provider_availability`, {
-    method: 'POST',
-    headers: authHeaders({ 
-      'Prefer': 'resolution=merge-duplicates,return=minimal',
-      'Content-Type': 'application/json'
-    }),
-    body: JSON.stringify({
-      provider_id: currentProviderRecord.id,
-      days: selectedAvailDays,
-      from_time,
-      to_time
-    })
-  });
+  // Check if row exists first, then update or insert
+  const existing = await dbWhere('provider_availability', 'provider_id', currentProviderRecord.id);
+  let res;
+  if (existing.length) {
+    res = await fetch(`${BASE}/rest/v1/provider_availability?provider_id=eq.${currentProviderRecord.id}`, {
+      method: 'PATCH',
+      headers: authHeaders({ 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ days: selectedAvailDays, from_time, to_time })
+    });
+  } else {
+    res = await fetch(`${BASE}/rest/v1/provider_availability`, {
+      method: 'POST',
+      headers: authHeaders({ 'Content-Type': 'application/json', 'Prefer': 'return=minimal' }),
+      body: JSON.stringify({ provider_id: currentProviderRecord.id, days: selectedAvailDays, from_time, to_time })
+    });
+  }
   
-  if (res.ok || res.status === 200 || res.status === 201 || res.status === 409) {
+  if (res.ok || res.status === 200 || res.status === 201) {
     showNotif('Saved!', 'Your availability has been updated.', 'success');
     // Close editor and refresh summary
     const editor = document.getElementById('avail-editor');
