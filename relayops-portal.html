@@ -1594,7 +1594,8 @@ function sbRestoreSession() {
 
 // DB: select all (with optional extra params string)
 async function dbSelect(table, extra = '') {
-  const qs = extra ? extra + '&order=created_at.desc' : 'order=created_at.desc';
+  const noSort = TABLES_NO_CREATED_AT?.includes(table);
+  const qs = extra ? extra + (noSort ? '' : '&order=created_at.desc') : (noSort ? 'select=*' : 'order=created_at.desc');
   const r = await fetch(`${BASE}/rest/v1/${table}?${qs}`, {
     headers: authHeaders()
   });
@@ -1604,9 +1605,11 @@ async function dbSelect(table, extra = '') {
 }
 
 // DB: select where col = val
+const TABLES_NO_CREATED_AT = ['provider_availability', 'vendor_documents'];
 async function dbWhere(table, col, val, extra = '') {
   const filter = `${col}=eq.${val}`;
-  const qs = extra ? filter + '&' + extra + '&order=created_at.desc' : filter + '&order=created_at.desc';
+  const noSort = TABLES_NO_CREATED_AT.includes(table);
+  const qs = extra ? filter + '&' + extra + (noSort ? '' : '&order=created_at.desc') : filter + (noSort ? '' : '&order=created_at.desc');
   const r = await fetch(`${BASE}/rest/v1/${table}?${qs}`, {
     headers: authHeaders()
   });
