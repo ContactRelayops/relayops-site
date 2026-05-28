@@ -3028,7 +3028,10 @@ function editAdminVendor(id) {
 
     <div class="modal-section">
       <div id="admin-vendor-avail-section" style="margin-bottom:20px;padding:14px 16px;background:#1a1a1a;border-radius:8px;border:1px solid rgba(255,255,255,.08)">
-        <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">📅 Vendor Availability</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div style="font-size:12px;font-weight:600;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.08em">📅 Vendor Availability</div>
+          <button onclick="loadVendorAvailabilityAdmin(window._currentAdminVendorId)" style="background:none;border:none;color:rgba(255,255,255,.3);font-size:11px;cursor:pointer">↻ Refresh</button>
+        </div>
         <div id="admin-vendor-availability" style="font-size:13px;color:rgba(255,255,255,.4)">Loading...</div>
       </div>
       <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,.8);margin-bottom:14px">🔍 Verification Checklist</div>
@@ -3077,6 +3080,7 @@ function editAdminVendor(id) {
         ? types.map(t => `<span style="background:rgba(200,16,46,.2);border:1px solid rgba(200,16,46,.3);color:#ff8898;padding:3px 10px;border-radius:20px;font-size:12px">${t}</span>`).join('')
         : '<span style="font-size:12px;color:rgba(255,255,255,.3)">None selected</span>';
     }
+    window._currentAdminVendorId = v.id;
     loadVendorAvailabilityAdmin(v.id);
   }, 250);
 }
@@ -5388,9 +5392,14 @@ async function saveAvailability() {
     })
   });
   
-  if (res.ok || res.status === 409) {
+  if (res.ok || res.status === 200 || res.status === 201 || res.status === 409) {
     showNotif('Saved!', 'Your availability has been updated.', 'success');
-    setTimeout(() => { loadAvailability(); toggleAvailSection(); }, 300);
+    // Close editor and refresh summary
+    const editor = document.getElementById('avail-editor');
+    const btn = document.getElementById('avail-section-toggle');
+    if (editor) editor.style.display = 'none';
+    if (btn) btn.textContent = 'Edit';
+    setTimeout(() => loadAvailability(), 300);
   } else {
     const err = await res.text().catch(()=>'');
     console.error('Availability save error:', res.status, err);
