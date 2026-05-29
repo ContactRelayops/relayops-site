@@ -827,13 +827,13 @@ a{text-decoration:none;color:inherit}
         <div class="page-header">
           <div>
             <div class="page-title">Request a Job</div>
-            <div class="page-sub">Fill in the details and we'll match a vendor within 2 hours</div>
+            <div class="page-sub">Fill in the details and we'll work to match a vendor as fast as possible — usually within a couple of hours</div>
           </div>
         </div>
         <div style="max-width:640px">
           <div class="success-box" id="req-success">
             <div class="success-box-title">✅ Job submitted!</div>
-            <div class="success-box-msg">We'll review and send you a quote within 2 hours. Check the My Jobs tab for updates.</div>
+            <div class="success-box-msg">We'll review and aim to send your quote within a couple of hours during business hours. Check the My Jobs tab for updates.</div>
           </div>
           <div class="card" id="req-form-card">
             <div class="form-grid-2">
@@ -2177,7 +2177,7 @@ Customer: ${currentUser?.email || 'unknown'}`
       `Property: ${address}`,
       `Urgency: ${urgency}`,
       ``,
-      `Our team is reviewing it now. You will receive a quote within 2 hours for standard jobs, faster for urgent ones.`,
+      `Our team is reviewing it now. We aim to get standard quotes back within a couple of hours, faster for urgent ones.`,
       ``,
       `Track your job status: ${PORTAL_URL}`,
       ``,
@@ -2186,7 +2186,7 @@ Customer: ${currentUser?.email || 'unknown'}`
       `— RelayOps Team`
     ].join('\n');
     emailjs.send('service_slduczl', 'template_sacm0kn', {
-      subject: 'Job received - we will be in touch within 2 hours',
+      subject: 'Job received - we\'ll be in touch shortly',
       from_name: 'RelayOps',
       from_email: custEmail,
       phone: '—',
@@ -3758,7 +3758,7 @@ Your reputation builds with every job you complete.`;
     return `Here is how RelayOps works:
 
 1. **Submit** — Fill out the job request form in 60 seconds
-2. **Quote** — We review and send you a price within 2 hours
+2. **Quote** — We review and aim to send your price within a couple of hours
 3. **Approve** — You confirm and get a Stripe payment link
 4. **Track** — Watch your job status update in real time
 5. **Done** — You get completion confirmation and photos`;
@@ -3825,7 +3825,7 @@ You pay the **quoted price** for your job — nothing extra is added on top. Rel
 
 - **Per-Job** (available now): no monthly fee, pay only when you book a job
 - **Priority Plan** (coming soon): faster response + dedicated contact, billed annually
-- **Pro Plan** (coming soon): multi-property + same-day guarantee, billed annually
+- **Pro Plan** (coming soon): multi-property + same-day priority, billed annually
 
 The annual plans are launching soon — reach out if you'd like on the waitlist. You always see the full price before approving any job.`;
   }
@@ -3947,7 +3947,7 @@ Please cancel as early as possible — cancellations after a vendor is dispatche
 - 📅 **Standard (next day)**: Quote within 2–4 hours
 - 🗓️ **Flexible (within week)**: Same business day quote
 
-Faster guaranteed response times will be part of the **Priority Plan** (coming soon).`;
+Faster priority response times will be part of the **Priority Plan** (coming soon).`;
   }
 
   // ── Service area / location ──
@@ -4050,9 +4050,11 @@ Once active, they appear in the Assign Vendor dropdown when editing jobs.`;
 - 📸 **Completion photos** — Vendors upload before/after photos on every job
 - 💳 **Secure payments** — All payments through Stripe, never cash
 - 📍 **End-to-end tracking** — Every status update is logged
-- ⚡ **SLA-backed response times** — Committed response windows for urgent jobs
+- ⚡ **Fast response** — We prioritize quick turnaround and target under 2 hours for standard jobs during business hours
 
-We are not a directory. Every job is actively managed.`;
+We are not a directory. Every job is actively managed.
+
+(Note: vendor licensing and insurance vary by trade and vendor — ask us about a specific vendor's credentials and we'll confirm before assigning.)`;
   }
 
   // ── Refund / dispute ──
