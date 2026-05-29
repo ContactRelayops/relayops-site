@@ -2242,7 +2242,7 @@ async function loadVendorJobs() {
   } else if (banner) { banner.style.display = 'none'; }
 
   // Estimate earnings from completed jobs
-  const earned = jobs.filter(j=>j.status==='completed'&&j.quoted_price).reduce((s,j)=>s+(parseFloat(j.quoted_price)||0)*0.9,0);
+  const earned = jobs.filter(j=>j.status==='completed'&&j.quoted_price).reduce((s,j)=>s+(parseFloat(j.quoted_price)||0)*0.85,0);
   const earnEl = document.getElementById('vs-earnings');
   if (earnEl) earnEl.textContent = '$'+Math.round(earned).toLocaleString();
 
@@ -3553,7 +3553,7 @@ function cpHideTyping() { document.getElementById('cp-typing')?.remove(); }
 
 function getChatSystemPrompt() {
   const name = currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || 'User';
-  const base = `You are the RelayOps AI Assistant — helpful, concise, built into the RelayOps property maintenance portal. RelayOps connects property managers with vetted local vendors (handymen, cleaners, locksmiths, plumbers, junk removal, painters) to fill overflow maintenance jobs fast. Key facts: avg match time under 2 hours, end-to-end job tracking, Stripe payments, service areas Pittsburgh and Philadelphia PA. Pricing: RelayOps currently runs on a per-job model only — 15% of the job total, no subscription. Annual Priority and Pro plans are coming soon but are NOT yet available to purchase; if someone wants one, tell them it's launching soon and they can join the waitlist by contacting RelayOps. Never tell a customer they can sign up for a plan today. Be friendly and direct. Keep responses short — this is a chat bubble, not a document. Use short paragraphs or bullet points. Never make up specific job data.`;
+  const base = `You are the RelayOps AI Assistant — helpful, concise, built into the RelayOps property maintenance portal. RelayOps connects property managers with vetted local vendors (handymen, cleaners, locksmiths, plumbers, junk removal, painters) to fill overflow maintenance jobs fast. Key facts: avg match time under 2 hours, end-to-end job tracking, Stripe payments, service areas Pittsburgh and Philadelphia PA. Pricing: RelayOps currently runs on a per-job model only — a 15% service fee, deducted from the VENDOR's payout (the customer pays the quoted price with nothing added on top, and the vendor receives that total minus 15%). Annual Priority and Pro plans are coming soon but are NOT yet available to purchase; if someone wants one, tell them it's launching soon and they can join the waitlist by contacting RelayOps. Never tell a customer they can sign up for a plan today. Be friendly and direct. Keep responses short — this is a chat bubble, not a document. Use short paragraphs or bullet points. Never make up specific job data.`;
   if (currentRole === 'customer') return `${base}\n\nSpeaking with ${name}, a property manager/customer. Help with job submission, status, pricing, and what to expect.`;
   if (currentRole === 'provider') return `${base}\n\nSpeaking with ${name}, a vendor/provider. Help with job workflow, status updates, payment (Stripe on completion), and building reputation on the platform.`;
   return `${base}\n\nSpeaking with the RelayOps admin (${name}). Help with pricing guidance, vendor management, customer communication, and operational questions. Can draft messages to customers or vendors.`;
@@ -3811,21 +3811,23 @@ Includes labor. Paint/supplies extra unless specified.`;
 - **Fixture installation**: $200–$400
 
 Emergency calls add a rush fee on top.`;
-    if (r === 'admin') return `RelayOps take rates:
+    if (r === 'admin') return `RelayOps take rates (deducted from the vendor's payout — customers are never charged extra):
 
 - **Standard jobs**: 15% of job total
 - **Priority Plan operators** (coming soon): 10% per job + annual fee
 - **Pro Plan operators** (coming soon): 8% per job + annual fee
 - **Emergency/rush jobs**: 20–25% take rate + flat rush fee
 
-Vendors receive the job total minus the RelayOps fee, paid via Stripe after completion.`;
-    return `RelayOps pricing:
+The customer pays the full quoted price; the vendor receives that total minus the RelayOps fee, paid via Stripe after completion.`;
+    return `How RelayOps pricing works:
 
-- **Per-Job Fill** (available now): 15% of job total — no monthly fee, pay when you use it
+You pay the **quoted price** for your job — nothing extra is added on top. RelayOps makes its money by taking a 15% service fee out of the vendor's payout, so there's no separate platform charge to you.
+
+- **Per-Job** (available now): no monthly fee, pay only when you book a job
 - **Priority Plan** (coming soon): faster response + dedicated contact, billed annually
 - **Pro Plan** (coming soon): multi-property + same-day guarantee, billed annually
 
-Right now everything runs on the per-job model — no subscription needed. The annual plans are launching soon; reach out if you'd like on the waitlist. You always see the full price before approving any job.`;
+The annual plans are launching soon — reach out if you'd like on the waitlist. You always see the full price before approving any job.`;
   }
 
   // ── Payment ──
