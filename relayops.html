@@ -891,7 +891,7 @@ footer{background:#080808;padding:40px 0 28px;border-top:1px solid rgba(255,255,
           <li>Monthly job summary reports</li>
           <li>Lower per-job rate than pay-as-you-go</li>
         </ul>
-        <a href="#request" class="btn btn-ink btn-lg" style="width:100%;justify-content:center">Join the Waitlist</a>
+        <button type="button" onclick="openWaitlist('Priority')" class="btn btn-ink btn-lg" style="width:100%;justify-content:center">Join the Waitlist</button>
       </div>
       <div class="price-card" style="opacity:.72;position:relative">
         <div style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,.12);color:rgba(255,255,255,.85);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:4px 10px;border-radius:20px">Coming Soon</div>
@@ -906,7 +906,7 @@ footer{background:#080808;padding:40px 0 28px;border-top:1px solid rgba(255,255,
           <li>Emergency rush priority queue</li>
           <li>Lowest per-job rate (8%)</li>
         </ul>
-        <a href="#request" class="btn btn-white btn-lg" style="width:100%;justify-content:center">Join the Waitlist</a>
+        <button type="button" onclick="openWaitlist('Pro')" class="btn btn-white btn-lg" style="width:100%;justify-content:center">Join the Waitlist</button>
       </div>
     </div>
     <div style="margin-top:20px;padding:20px 28px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:var(--r-md);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
@@ -1402,6 +1402,91 @@ async function submitVendor() {
     alert('Something went wrong. Please email contactrelayops@gmail.com directly.');
   }
 }
+
+// ── Waitlist ──
+function openWaitlist(plan) {
+  document.getElementById('wl-plan').value = plan;
+  document.getElementById('wl-modal-title').textContent = plan + ' Plan — Join the Waitlist';
+  document.getElementById('wl-form-fields').style.display = 'block';
+  document.getElementById('wl-success').style.display = 'none';
+  const btn = document.getElementById('wl-btn');
+  btn.textContent = 'Join the Waitlist →'; btn.disabled = false; btn.style.display = '';
+  document.getElementById('wl-overlay').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function closeWaitlist() {
+  document.getElementById('wl-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+}
+async function submitWaitlist() {
+  const name = document.getElementById('wl-name').value.trim();
+  const email = document.getElementById('wl-email').value.trim();
+  const phone = document.getElementById('wl-phone').value.trim();
+  const company = document.getElementById('wl-company').value.trim();
+  const plan = document.getElementById('wl-plan').value;
+  if (!name || !email) { alert('Please enter your name and email.'); return; }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { alert('Please enter a valid email address.'); return; }
+  const btn = document.getElementById('wl-btn');
+  btn.textContent = 'Joining...'; btn.disabled = true;
+
+  let stored = false;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/waitlist`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        full_name: name,
+        email: email,
+        phone: phone || null,
+        company: company || null,
+        plan_interest: plan
+      })
+    });
+    stored = res.ok;
+  } catch(e) { stored = false; }
+
+  // Always email the notification so a signup is never lost, even if the DB write fails
+  emailjs.send('service_slduczl', 'template_sacm0kn', {
+    subject: '⭐ New Waitlist Signup — ' + plan + ' Plan',
+    from_name: name,
+    from_email: email,
+    phone: phone || 'Not provided',
+    message: `Plan interest: ${plan}\nCompany: ${company || 'Not provided'}\nPhone: ${phone || 'Not provided'}\nStored in Supabase: ${stored ? 'yes' : 'NO — add manually'}`
+  }).catch(()=>{});
+
+  document.getElementById('wl-form-fields').style.display = 'none';
+  document.getElementById('wl-success').style.display = 'block';
+  btn.style.display = 'none';
+}
 </script>
+<!-- WAITLIST MODAL -->
+<div id="wl-overlay" style="display:none;position:fixed;inset:0;background:rgba(13,13,13,.72);z-index:9999;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)closeWaitlist()">
+  <div style="background:var(--cream,#faf8f3);border-radius:18px;max-width:440px;width:100%;padding:32px;position:relative;box-shadow:0 24px 60px rgba(0,0,0,.35)">
+    <button type="button" onclick="closeWaitlist()" aria-label="Close" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:24px;line-height:1;color:var(--muted,#888);cursor:pointer">&times;</button>
+    <div id="wl-form-fields">
+      <h3 id="wl-modal-title" style="font-family:var(--display,sans-serif);font-size:22px;font-weight:700;color:var(--ink,#0d0d0d);margin:0 0 6px">Join the Waitlist</h3>
+      <p style="font-size:14px;color:var(--muted,#6b6560);margin:0 0 22px;line-height:1.5">These plans are launching soon. Drop your details and we'll reach out with early-access pricing before anyone else.</p>
+      <input type="hidden" id="wl-plan" value="">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div><label style="display:block;font-size:12px;font-weight:600;color:var(--ink,#0d0d0d);margin-bottom:5px">Full Name *</label><input id="wl-name" type="text" placeholder="Your name" style="width:100%;padding:11px 13px;border:1px solid rgba(0,0,0,.14);border-radius:9px;font-size:14px;box-sizing:border-box"/></div>
+        <div><label style="display:block;font-size:12px;font-weight:600;color:var(--ink,#0d0d0d);margin-bottom:5px">Email *</label><input id="wl-email" type="email" placeholder="name@company.com" style="width:100%;padding:11px 13px;border:1px solid rgba(0,0,0,.14);border-radius:9px;font-size:14px;box-sizing:border-box"/></div>
+        <div><label style="display:block;font-size:12px;font-weight:600;color:var(--ink,#0d0d0d);margin-bottom:5px">Phone</label><input id="wl-phone" type="tel" placeholder="Optional" style="width:100%;padding:11px 13px;border:1px solid rgba(0,0,0,.14);border-radius:9px;font-size:14px;box-sizing:border-box"/></div>
+        <div><label style="display:block;font-size:12px;font-weight:600;color:var(--ink,#0d0d0d);margin-bottom:5px">Company / Properties</label><input id="wl-company" type="text" placeholder="Optional — e.g. how many units you manage" style="width:100%;padding:11px 13px;border:1px solid rgba(0,0,0,.14);border-radius:9px;font-size:14px;box-sizing:border-box"/></div>
+      </div>
+      <button type="button" id="wl-btn" onclick="submitWaitlist()" class="btn btn-ink btn-lg" style="width:100%;justify-content:center;margin-top:18px">Join the Waitlist →</button>
+    </div>
+    <div id="wl-success" style="display:none;text-align:center;padding:12px 0">
+      <div style="font-size:40px;margin-bottom:10px">⭐</div>
+      <h3 style="font-family:var(--display,sans-serif);font-size:20px;font-weight:700;color:var(--ink,#0d0d0d);margin:0 0 8px">You're on the list!</h3>
+      <p style="font-size:14px;color:var(--muted,#6b6560);margin:0 0 20px;line-height:1.5">Thanks for your interest. We'll reach out with early-access pricing before these plans go live.</p>
+      <button type="button" onclick="closeWaitlist()" class="btn btn-ink" style="justify-content:center">Done</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
