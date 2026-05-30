@@ -805,6 +805,14 @@ a{text-decoration:none;color:inherit}
           <div class="stat-card"><div class="stat-n" id="cs-completed">—</div><div class="stat-l">Completed</div></div>
           <div class="stat-card"><div class="stat-n" id="cs-pending-pay">—</div><div class="stat-l">Awaiting Payment</div></div>
         </div>
+        <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:18px 20px;margin-bottom:18px">
+          <div style="margin-bottom:14px"><div style="font-size:15px;font-weight:600;color:#fff">Payments</div><div style="font-size:12px;color:rgba(255,255,255,.4)">Track your job payments</div></div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+            <div><div style="font-size:24px;font-weight:700;color:#51cf66" id="cpay-paid">$0.00</div><div style="font-size:12px;color:rgba(255,255,255,.5)">Total Paid</div></div>
+            <div style="border-left:1px solid rgba(255,255,255,.08);padding-left:16px"><div style="font-size:24px;font-weight:700;color:#ffd43b" id="cpay-awaiting">$0.00</div><div style="font-size:12px;color:rgba(255,255,255,.5)">Awaiting Payment</div></div>
+            <div style="border-left:1px solid rgba(255,255,255,.08);padding-left:16px"><div style="font-size:24px;font-weight:700;color:#fff" id="cpay-completed">$0.00</div><div style="font-size:12px;color:rgba(255,255,255,.5)">Completed Value</div></div>
+          </div>
+        </div>
         <div class="filter-bar">
           <button class="filter-btn active" onclick="filterCustomerJobs('all',this)">All</button>
           <button class="filter-btn" onclick="filterCustomerJobs('submitted',this)">Submitted</button>
@@ -1000,6 +1008,14 @@ a{text-decoration:none;color:inherit}
           <div class="stat-card"><div class="stat-n" id="vs-inprog">—</div><div class="stat-l">In Progress</div></div>
           <div class="stat-card"><div class="stat-n" id="vs-done">—</div><div class="stat-l">Completed</div></div>
           <div class="stat-card"><div class="stat-n" id="vs-earnings" style="color:#4ade80">$—</div><div class="stat-l">Est. Earned</div></div>
+        </div>
+        <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:18px 20px;margin-bottom:18px">
+          <div style="margin-bottom:14px"><div style="font-size:15px;font-weight:600;color:#fff">Payments</div><div style="font-size:12px;color:rgba(255,255,255,.4)">Your earnings after the 15% RelayOps fee</div></div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+            <div><div style="font-size:24px;font-weight:700;color:#51cf66" id="vpay-received">$0.00</div><div style="font-size:12px;color:rgba(255,255,255,.5)">Received</div></div>
+            <div style="border-left:1px solid rgba(255,255,255,.08);padding-left:16px"><div style="font-size:24px;font-weight:700;color:#ffd43b" id="vpay-pending">$0.00</div><div style="font-size:12px;color:rgba(255,255,255,.5)">Pending Payout</div></div>
+            <div style="border-left:1px solid rgba(255,255,255,.08);padding-left:16px"><div style="font-size:24px;font-weight:700;color:#fff" id="vpay-collected">$0.00</div><div style="font-size:12px;color:rgba(255,255,255,.5)">Collected (gross)</div></div>
+          </div>
         </div>
         <div class="table-wrap">
           <div class="table-head" style="grid-template-columns:2fr 1fr 1fr 100px">
@@ -2032,6 +2048,41 @@ function statusPill(s) {
 }
 function closeModal() { document.getElementById('job-modal').classList.remove('open'); window._currentAdminVendorId = null; }
 
+// Job progress timeline — visual stepper showing where a job is in its lifecycle
+function jobTimeline(j) {
+  if (j.status === 'cancelled') {
+    return `<div class="modal-section"><div class="detail-label">Job Progress</div><div style="margin-top:8px;color:#ff6b6b;font-size:14px">✕ This job was cancelled.</div></div>`;
+  }
+  const order = ['submitted','priced','assigned','in_progress','completed'];
+  const steps = [
+    { key:'submitted',   title:'Job submitted',   desc:"We've received your request." },
+    { key:'priced',      title:'Quote sent',      desc:'Review your price and approve.' },
+    { key:'assigned',    title:'Vendor matched',  desc:'A qualified vendor is assigned.' },
+    { key:'in_progress', title:'In progress',     desc:'The vendor has started the job.' },
+    { key:'completed',   title:'Work completed',  desc:'Completion photos uploaded.' }
+  ];
+  // 'paid' jobs are completed; treat completed index as current cap
+  let curIdx = order.indexOf(j.status);
+  if (curIdx < 0) curIdx = 0;
+  const rows = steps.map((s, i) => {
+    const stepIdx = order.indexOf(s.key);
+    const done = stepIdx < curIdx;
+    const current = stepIdx === curIdx;
+    const color = done ? '#51cf66' : (current ? '#c8102e' : 'rgba(255,255,255,.18)');
+    const icon = done ? '✓' : (current ? '●' : (i+1));
+    const connector = i < steps.length-1 ? `<div style="position:absolute;left:17px;top:36px;width:2px;height:calc(100% - 12px);background:${stepIdx < curIdx ? '#51cf66' : 'rgba(255,255,255,.12)'}"></div>` : '';
+    return `<div style="position:relative;display:flex;gap:14px;padding-bottom:${i<steps.length-1?'22px':'0'}">
+      ${connector}
+      <div style="flex-shrink:0;width:36px;height:36px;border-radius:50%;background:${done||current?color:'transparent'};border:2px solid ${color};display:flex;align-items:center;justify-content:center;color:${done||current?'#fff':'rgba(255,255,255,.4)'};font-weight:700;font-size:15px;z-index:1">${icon}</div>
+      <div style="padding-top:6px">
+        <div style="font-weight:600;font-size:15px;color:${done||current?'#fff':'rgba(255,255,255,.4)'}">${s.title}</div>
+        <div style="font-size:13px;color:rgba(255,255,255,.45);margin-top:2px">${s.desc}</div>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="modal-section"><div class="detail-label" style="margin-bottom:14px">Job Progress</div>${rows}</div>`;
+}
+
 // ═══════════════════════════════════════════════════════
 // CUSTOMER: JOBS
 // ═══════════════════════════════════════════════════════
@@ -2046,6 +2097,14 @@ async function loadCustomerJobs() {
   document.getElementById('cs-active').textContent    = active;
   document.getElementById('cs-completed').textContent = completed;
   document.getElementById('cs-pending-pay').textContent = pendingPay;
+  // Payment summary (dollar amounts)
+  const money = v => '$' + (parseFloat(v)||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const paidTotal = jobs.filter(j=>j.payment_status==='paid').reduce((s,j)=>s+(parseFloat(j.quoted_price)||0),0);
+  const awaitingTotal = jobs.filter(j=>j.payment_status!=='paid' && j.quoted_price && ['priced','assigned','in_progress','completed'].includes(j.status)).reduce((s,j)=>s+(parseFloat(j.quoted_price)||0),0);
+  const completedVal = jobs.filter(j=>j.status==='completed').reduce((s,j)=>s+(parseFloat(j.quoted_price)||0),0);
+  const elPaid=document.getElementById('cpay-paid'); if(elPaid) elPaid.textContent=money(paidTotal);
+  const elAwait=document.getElementById('cpay-awaiting'); if(elAwait) elAwait.textContent=money(awaitingTotal);
+  const elDone=document.getElementById('cpay-completed'); if(elDone) elDone.textContent=money(completedVal);
   const badge = document.getElementById('badge-new-jobs');
   pendingPay > 0 ? (badge.textContent = pendingPay, badge.classList.add('visible')) : badge.classList.remove('visible');
   renderCustomerJobs(jobs);
@@ -2092,6 +2151,7 @@ async function viewCustomerJob(id) {
     ${vendorName ? `<div style="grid-column:1/-1"><div class="detail-label">Assigned Vendor</div><div class="detail-val" style="color:#51cf66">✓ ${esc(vendorName)}</div></div>` : (j.status === 'submitted' ? `<div style="grid-column:1/-1"><div class="detail-label">Assigned Vendor</div><div class="detail-val" style="color:rgba(255,255,255,.3)">Pending assignment</div></div>` : '')}
   </div></div>
   <div class="modal-section"><div class="detail-label">Description</div><div class="detail-desc">${esc(j.description||'No description.')}</div></div>`;
+  html += jobTimeline(j);
   if (j.quoted_price) html += `<div class="modal-section"><div class="detail-label">Quote</div><div class="detail-val" style="font-size:22px;font-weight:700;color:#51cf66">$${j.quoted_price}</div>${j.admin_notes ? `<div style="margin-top:8px;font-size:13px;color:rgba(255,255,255,.5)">${esc(j.admin_notes)}</div>` : ''}</div>`;
   if (j.payment_link) html += `<div class="modal-section"><div class="detail-label">Payment</div><a href="${j.payment_link}" target="_blank" class="btn btn-red" style="margin-top:4px">💳 Pay Now →</a></div>`;
   if (j.status === 'completed') {
@@ -2245,6 +2305,14 @@ async function loadVendorJobs() {
   const earned = jobs.filter(j=>j.status==='completed'&&j.quoted_price).reduce((s,j)=>s+(parseFloat(j.quoted_price)||0)*0.85,0);
   const earnEl = document.getElementById('vs-earnings');
   if (earnEl) earnEl.textContent = '$'+Math.round(earned).toLocaleString();
+  // Payment summary (vendor keeps 85% after the 15% fee)
+  const vmoney = v => '$' + (parseFloat(v)||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const received = jobs.filter(j=>j.status==='completed'&&j.payment_status==='paid').reduce((s,j)=>s+(parseFloat(j.quoted_price)||0)*0.85,0);
+  const pendingPayout = jobs.filter(j=>j.quoted_price && j.payment_status!=='paid' && ['assigned','in_progress','completed'].includes(j.status)).reduce((s,j)=>s+(parseFloat(j.quoted_price)||0)*0.85,0);
+  const collectedGross = jobs.filter(j=>j.status==='completed'&&j.quoted_price).reduce((s,j)=>s+(parseFloat(j.quoted_price)||0),0);
+  const vR=document.getElementById('vpay-received'); if(vR) vR.textContent=vmoney(received);
+  const vP=document.getElementById('vpay-pending'); if(vP) vP.textContent=vmoney(pendingPayout);
+  const vC=document.getElementById('vpay-collected'); if(vC) vC.textContent=vmoney(collectedGross);
 
   el.innerHTML = jobs.map(j => `
     <div class="table-row" style="grid-template-columns:2fr 1fr 1fr 190px" onclick="viewVendorJobDetail('${j.id}')">
@@ -2352,6 +2420,11 @@ async function editAdminJob(id) {
         <div class="field">
           <label>Status</label>
           <select id="edit-status">${['submitted','priced','assigned','in_progress','completed','cancelled'].map(s=>`<option value="${s}" ${j.status===s?'selected':''}>${s.replace('_',' ')}</option>`).join('')}</select>
+        </div>
+        <div class="field">
+          <label>Payment Status</label>
+          <select id="edit-paystatus">${['unpaid','paid'].map(s=>`<option value="${s}" ${(j.payment_status||'unpaid')===s?'selected':''}>${s==='paid'?'✓ Paid':'Unpaid'}</option>`).join('')}</select>
+          <div style="font-size:12px;color:rgba(255,255,255,.35);margin-top:4px">Mark "Paid" once Stripe confirms the payment.</div>
         </div>
         <div class="field">
           <label>Quoted Price ($)</label>
@@ -2725,6 +2798,7 @@ async function saveAdminJob(id) {
   const price   = document.getElementById('edit-price')?.value || '';
   const notes   = document.getElementById('edit-notes')?.value || '';
   const paylink = document.getElementById('edit-paylink')?.value || '';
+  const paystatus = document.getElementById('edit-paystatus')?.value || 'unpaid';
   const vendor  = document.getElementById('edit-vendor')?.value || '';
   const payamt  = document.getElementById('edit-payamt')?.value || '';
   // Auto-advance status when vendor is assigned
@@ -2736,6 +2810,8 @@ async function saveAdminJob(id) {
   if (price)   updates.quoted_price = parseFloat(price);
   if (notes)   updates.admin_notes  = notes;
   if (paylink && paylink.startsWith('http')) updates.payment_link = paylink;
+  updates.payment_status = paystatus;
+  if (paystatus === 'paid') updates.paid_at = new Date().toISOString();
   if (payamt && parseFloat(payamt) > 0) updates.payment_amount = parseFloat(payamt);
   // Handle provider_id separately to avoid FK constraint issues
   if (vendor) updates.provider_id = vendor;
