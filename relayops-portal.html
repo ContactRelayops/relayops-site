@@ -2890,10 +2890,12 @@ async function saveAdminJob(id) {
 async function loadAdminVendors() {
   loadAdminVendorInvites();
   if (currentRole !== 'admin') return;
-  const [vendors, ratedJobs] = await Promise.all([
+  const [allVendors, ratedJobs] = await Promise.all([
     dbSelect('providers'),
     dbSelect('jobs', 'select=provider_id,vendor_rating,status&vendor_rating=not.is.null')
   ]);
+  // Exclude soft-deleted (removed) vendors from the admin list
+  const vendors = (allVendors || []).filter(v => v.status !== 'removed');
   allAdminVendors = vendors;
   // Build rating map: provider_id -> { total, count, completed }
   window._vendorRatingMap = {};
