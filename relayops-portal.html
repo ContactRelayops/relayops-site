@@ -1072,6 +1072,21 @@ a{text-decoration:none;color:inherit}
               <input id="vendor-coverage-input" type="text" placeholder="e.g. Pittsburgh, PA — 25 miles" style="width:100%;padding:8px 12px;background:#1a1a1a;border:1px solid rgba(200,16,46,.4);border-radius:8px;color:#fff;font-size:14px;font-family:var(--sans);outline:none;margin-bottom:8px"/>
               <div style="display:flex;gap:8px"><button onclick="saveVendorCoverage()" class="btn btn-red btn-sm">Save</button><button onclick="toggleVendorCoverageEdit()" class="btn btn-ghost btn-sm">Cancel</button></div>
             </div>
+            <div class="detail-row"><div class="detail-label">Home Base &amp; Radius</div>
+              <div style="display:flex;align-items:center;gap:8px;flex:1">
+                <div class="detail-val" id="vprof-location" style="flex:1">—</div>
+                <button onclick="toggleVendorLocationEdit()" id="vendor-location-edit-btn" style="background:none;border:1px solid rgba(255,255,255,.15);color:rgba(255,255,255,.5);font-size:11px;padding:3px 10px;border-radius:6px;cursor:pointer">Edit</button>
+              </div>
+            </div>
+            <div id="vendor-location-edit-row" style="display:none;margin-bottom:10px">
+              <div style="display:flex;gap:8px;margin-bottom:8px">
+                <input id="vendor-zip-input" type="text" inputmode="numeric" maxlength="5" placeholder="Home ZIP (e.g. 15201)" style="flex:1;padding:8px 12px;background:#1a1a1a;border:1px solid rgba(200,16,46,.4);border-radius:8px;color:#fff;font-size:14px;font-family:var(--sans);outline:none"/>
+                <select id="vendor-radius-input" style="width:130px;padding:8px 12px;background:#1a1a1a;border:1px solid rgba(200,16,46,.4);border-radius:8px;color:#fff;font-size:14px;font-family:var(--sans);outline:none">
+                  <option value="10">10 miles</option><option value="15">15 miles</option><option value="25" selected>25 miles</option><option value="40">40 miles</option><option value="60">60 miles</option>
+                </select>
+              </div>
+              <div style="display:flex;gap:8px"><button onclick="saveVendorLocation()" class="btn btn-red btn-sm">Save</button><button onclick="toggleVendorLocationEdit()" class="btn btn-ghost btn-sm">Cancel</button></div>
+            </div>
             <div class="detail-row" style="flex-direction:column;align-items:flex-start;gap:10px">
               <div style="display:flex;justify-content:space-between;width:100%;align-items:center">
                 <div class="detail-label">Service Types</div>
@@ -1996,6 +2011,8 @@ async function enterVendorMode(user) {
   document.getElementById('vprof-phone').textContent    = currentProviderRecord?.phone || '—';
   document.getElementById('vprof-service').textContent  = currentProviderRecord?.service_types?.join(', ') || '—';
   document.getElementById('vprof-coverage').textContent = currentProviderRecord?.coverage_zips || '—';
+  const locEl = document.getElementById('vprof-location');
+  if (locEl) locEl.textContent = currentProviderRecord?.home_zip ? (currentProviderRecord.home_zip + ' · ' + (currentProviderRecord.radius_miles||25) + ' mile radius') : '—';
   const savedPageV = sessionStorage.getItem('relayops_page');
   const vendorPages = ['p-vendor-jobs','p-vendor-profile','p-vendor-referral','p-messages'];
   showPage(savedPageV && vendorPages.includes(savedPageV) ? savedPageV : 'p-vendor-jobs');
@@ -2188,6 +2205,7 @@ async function submitJobRequest() {
   const btn = document.getElementById('rj-btn'); btn.disabled = true; btn.textContent = 'Submitting...';
   const { data, ok } = await dbInsert('jobs', {
     property_address: address,
+    job_zip: extractZip(address),
     job_type: type,
     urgency,
     description: desc,
@@ -2399,8 +2417,48 @@ async function editAdminJob(id) {
   const j = allAdminJobs.find(x => x.id === id); if (!j) return;
   if (!allAdminVendors.length) { const v = await dbSelect('providers', 'status=eq.active'); allAdminVendors = v; }
   const activeVendors = allAdminVendors.filter(v => v.status === 'active');
-  const vendorOptions = activeVendors.map(v => `<option value="${v.id}" ${j.provider_id===v.id?'selected':''}>${esc(v.full_name)} — ${esc(v.service_types?.join(', ')||'')}</option>`).join('');
+  const jobZip = j.job_zip || extractZip(j.property_address);
+  // Annotate each vendor with distance from the job (if both zips known)
+  const withDist = activeVendors.map(v => {
+    const d = (jobZip && v.home_zip) ? zipDistance(jobZip, v.home_zip) : null;
+    const radius = v.radius_miles || 25;
+    const inRange = d !== null && d <= radius;
+    return { v, d, radius, inRange };
+  });
+  // Sort: in-range nearest first, then unknown-distance, then out-of-range
+  withDist.sort((a,b) => {
+    if (a.d === null && b.d === null) return 0;
+    if (a.d === null) return 1;
+    if (b.d === null) return -1;
+    return a.d - b.d;
+  });
+  const vendorOptions = withDist.map(({v,d,inRange}) => {
+    const dl = d === null ? 'distance unknown' : (d + ' mi' + (inRange ? '' : ' · OUT OF RANGE'));
+    return `<option value="${v.id}" ${j.provider_id===v.id?'selected':''}>${esc(v.full_name)} (${dl}) — ${esc(v.service_types?.join(', ')||'')}</option>`;
+  }).join('');
   const noVendors = !activeVendors.length ? '<div style="font-size:12px;color:rgba(255,255,255,.35);margin-top:6px">No active vendors yet — approve vendors in the Vendors tab first.</div>' : '';
+  // Suggested-nearby panel (only vendors in range, nearest first, matching service type if possible)
+  const nearby = withDist.filter(x => x.inRange);
+  const typeMatched = nearby.filter(x => (x.v.service_types||[]).includes(j.job_type));
+  const suggestList = (typeMatched.length ? typeMatched : nearby).slice(0,4);
+  let suggestPanel = '';
+  if (!jobZip) {
+    suggestPanel = `<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:rgba(255,255,255,.45)">📍 No ZIP found in this job's address — add a 5-digit ZIP to enable nearby-vendor suggestions.</div>`;
+  } else if (suggestList.length) {
+    const rows = suggestList.map(({v,d}) => {
+      const match = (v.service_types||[]).includes(j.job_type);
+      return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06)">
+        <div><div style="font-size:14px;color:#fff;font-weight:600">${esc(v.full_name)} ${match?'<span style=\"color:#51cf66;font-size:11px\">✓ trade match</span>':''}</div>
+        <div style="font-size:12px;color:rgba(255,255,255,.45)">${esc((v.service_types||[]).join(', ')||'—')}</div></div>
+        <div style="text-align:right;flex-shrink:0"><div style="font-size:15px;font-weight:700;color:#51cf66">${d} mi</div>
+        <button type="button" onclick="document.getElementById('edit-vendor').value='${v.id}';showNotif('Selected','${esc(v.full_name)} chosen — Save to assign.','success')" style="font-size:11px;color:#ff8898;background:none;border:1px solid rgba(200,16,46,.35);border-radius:6px;padding:2px 8px;cursor:pointer;margin-top:2px">Pick</button></div>
+      </div>`;
+    }).join('');
+    suggestPanel = `<div style="background:rgba(81,207,102,.06);border:1px solid rgba(81,207,102,.2);border-radius:10px;padding:12px 14px;margin-bottom:14px">
+      <div style="font-size:13px;font-weight:600;color:#51cf66;margin-bottom:6px">📍 Suggested vendors near ${jobZip}</div>${rows}</div>`;
+  } else {
+    suggestPanel = `<div style="background:rgba(255,212,59,.06);border:1px solid rgba(255,212,59,.2);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:#ffd43b">⚠ No active vendors currently cover ZIP ${jobZip}. You can still assign anyone below, or recruit a vendor in this area.</div>`;
+  }
   document.getElementById('modal-job-title').textContent = 'Edit Job: ' + (j.property_address || id);
   document.getElementById('modal-job-content').innerHTML = `
     <div class="modal-section">
@@ -2436,6 +2494,7 @@ async function editAdminJob(id) {
         </div>
         <div class="field" style="grid-column:1/-1">
           <label>Assign Vendor</label>
+          ${suggestPanel}
           <select id="edit-vendor"><option value="">— No vendor —</option>${vendorOptions}</select>
           ${noVendors}
         </div>
@@ -5066,6 +5125,24 @@ async function submitRating(jobId, stars) {
 // ═══════════════════════════════════════════════════════
 // AUTO-PRICE SUGGESTION ENGINE
 // ═══════════════════════════════════════════════════════
+// ── Location matching (zip-radius) ──
+const ZIP_COORDS = {"15201":[40.4757,-79.9586],"15203":[40.4258,-79.9836],"15204":[40.4565,-80.0598],"15205":[40.4337,-80.0871],"15206":[40.4682,-79.9226],"15207":[40.3954,-79.9384],"15208":[40.4554,-79.8975],"15210":[40.4087,-79.9889],"15211":[40.4317,-80.0151],"15212":[40.4663,-80.0089],"15213":[40.4442,-79.9533],"15214":[40.4806,-80.0036],"15216":[40.4012,-80.0316],"15217":[40.4309,-79.9226],"15218":[40.4254,-79.8895],"15219":[40.4419,-79.9817],"15220":[40.4244,-80.0494],"15221":[40.4364,-79.8642],"15222":[40.4506,-79.9921],"15226":[40.3964,-80.0103],"15227":[40.3795,-79.9636],"15232":[40.4538,-79.9329],"15234":[40.3705,-80.0252],"15235":[40.4555,-79.8237],"15236":[40.3458,-79.9694],"15237":[40.5318,-80.0457],"15238":[40.5095,-79.8443],"15241":[40.3329,-80.0863],"15243":[40.3766,-80.0707],"15090":[40.6276,-80.0561],"15102":[40.3367,-80.0089],"15108":[40.5159,-80.1936],"15116":[40.5687,-79.9594],"15120":[40.3942,-79.9088],"15146":[40.4326,-79.7813],"15601":[40.3015,-79.5389],"19102":[39.9523,-75.1657],"19103":[39.9522,-75.1709],"19104":[39.9594,-75.1979],"19106":[39.9496,-75.1437],"19107":[39.9489,-75.1583],"19111":[40.0606,-75.0827],"19114":[40.0664,-75.0019],"19115":[40.0931,-75.0407],"19116":[40.1145,-75.0146],"19118":[40.0728,-75.2071],"19119":[40.0535,-75.1893],"19120":[40.0345,-75.1199],"19121":[39.9818,-75.1773],"19122":[39.9772,-75.1426],"19123":[39.9633,-75.1428],"19124":[40.0166,-75.0935],"19125":[39.9776,-75.1273],"19127":[40.0277,-75.2255],"19128":[40.0432,-75.2255],"19130":[39.9676,-75.1739],"19131":[39.9817,-75.2236],"19134":[39.9908,-75.1095],"19143":[39.9436,-75.2273],"19144":[40.0337,-75.1722],"19145":[39.9213,-75.1855],"19146":[39.9389,-75.1786],"19147":[39.9357,-75.1531],"19148":[39.9211,-75.1583],"19149":[40.0376,-75.0656],"19150":[40.0717,-75.1722],"19004":[40.0098,-75.2329],"19010":[40.0237,-75.3346],"19087":[40.0432,-75.3879],"19096":[40.0046,-75.2762],"19401":[40.1234,-75.3399],"19406":[40.0903,-75.3779],"19426":[40.1903,-75.4499],"19046":[40.1003,-75.1349],"19083":[39.9776,-75.3221],"19064":[39.9237,-75.3499],"19018":[39.9176,-75.2954],"08002":[39.9293,-75.0299],"08034":[39.9026,-75.0299]};
+function zipDistance(z1, z2) {
+  const a = ZIP_COORDS[z1], b = ZIP_COORDS[z2];
+  if (!a || !b) return null;
+  const toRad = d => d * Math.PI / 180;
+  const R = 3959; // miles
+  const dLat = toRad(b[0]-a[0]), dLon = toRad(b[1]-a[1]);
+  const lat1 = toRad(a[0]), lat2 = toRad(b[0]);
+  const h = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
+  return Math.round(2 * R * Math.asin(Math.sqrt(h)));
+}
+function extractZip(addr) {
+  if (!addr) return null;
+  const m = String(addr).match(/\b(\d{5})\b/);
+  return m ? m[1] : null;
+}
+
 const PRICE_MATRIX = {
   'Handyman':       { base: 120, Emergency: 2.0, Urgent: 1.5, Scheduled: 1.0, Flexible: 0.9 },
   'Cleaning':       { base: 150, Emergency: 2.0, Urgent: 1.5, Scheduled: 1.0, Flexible: 0.9 },
@@ -5993,6 +6070,33 @@ async function saveVendorCoverage() {
   currentProviderRecord.coverage_zips = val;
   toggleVendorCoverageEdit();
   showNotif('Saved!', 'Coverage area updated.', 'success');
+}
+
+function toggleVendorLocationEdit() {
+  const row = document.getElementById('vendor-location-edit-row');
+  const btn = document.getElementById('vendor-location-edit-btn');
+  const isOpen = row.style.display !== 'none';
+  row.style.display = isOpen ? 'none' : 'block';
+  btn.textContent = isOpen ? 'Edit' : 'Cancel';
+  if (!isOpen) {
+    document.getElementById('vendor-zip-input').value = currentProviderRecord?.home_zip || '';
+    document.getElementById('vendor-radius-input').value = String(currentProviderRecord?.radius_miles || 25);
+  }
+}
+
+async function saveVendorLocation() {
+  const zip = document.getElementById('vendor-zip-input').value.trim();
+  const radius = parseInt(document.getElementById('vendor-radius-input').value, 10) || 25;
+  if (!/^\d{5}$/.test(zip)) { showNotif('Invalid ZIP', 'Please enter a 5-digit ZIP code.', 'warning'); return; }
+  if (!ZIP_COORDS[zip]) {
+    if (!confirm("We don't have that ZIP in our Pittsburgh/Philadelphia coverage data yet. Save it anyway? (Distance matching won't work for it until it's added.)")) return;
+  }
+  await sbFetch('PATCH', '/rest/v1/providers?id=eq.' + currentProviderRecord.id, { home_zip: zip, radius_miles: radius });
+  currentProviderRecord.home_zip = zip;
+  currentProviderRecord.radius_miles = radius;
+  document.getElementById('vprof-location').textContent = zip + ' · ' + radius + ' mile radius';
+  toggleVendorLocationEdit();
+  showNotif('Saved!', 'Home base and radius updated.', 'success');
 }
 
 function toggleVendorServicesEdit() {
