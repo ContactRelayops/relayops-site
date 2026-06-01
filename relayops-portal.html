@@ -1915,6 +1915,16 @@ async function doSignUp() {
           return;
         }
       }
+    } else {
+      // Customer signup: create a customers-table record so they show up in
+      // the admin Customers list. Link to an existing row if one already exists.
+      const existingCust = await dbWhere('customers', 'email', email);
+      if (existingCust && existingCust.length) {
+        await dbUpdate('customers', existingCust[0].id, { user_id: user?.id || null });
+      } else {
+        const cins = await dbInsert('customers', { full_name: name, email, phone: '', user_id: user?.id || null });
+        if (!cins.ok) console.warn('Customer record insert failed:', cins.error);
+      }
     }
     if (_accessToken) {
       // Trigger onboarding email sequence
