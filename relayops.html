@@ -1060,6 +1060,15 @@ footer{background:#080808;padding:40px 0 28px;border-top:1px solid rgba(255,255,
             <div style="font-size:11px;color:var(--muted-2);margin-top:4px">We currently operate in Pittsburgh and Philadelphia only.</div>
           </div>
           <div class="field"><label>Zip Code *</label><input id="v-zip" type="text" placeholder="e.g. 15201 or 19103" maxlength="5"/></div>
+          <div class="field"><label>How far will you travel?</label>
+            <select id="v-radius">
+              <option value="10">Up to 10 miles</option>
+              <option value="15">Up to 15 miles</option>
+              <option value="25" selected>Up to 25 miles</option>
+              <option value="40">Up to 40 miles</option>
+              <option value="60">Up to 60 miles</option>
+            </select>
+          </div>
 
           <!-- Trade Info -->
           <div class="field">
@@ -1355,6 +1364,8 @@ async function submitVendor() {
       phone: phone,
       service_types: [service],
       coverage_zips: coverageInfo,
+      home_zip: zip || null,
+      radius_miles: parseInt(radius, 10) || 25,
       status: 'pending'
     })
   });

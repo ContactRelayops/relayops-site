@@ -1890,7 +1890,20 @@ async function doSignUp() {
       return;
     }
     if (selectedRole === 'provider') {
-      await dbInsert('providers', { full_name: name, email, phone: '', service_types: [], coverage_zips: '', status: 'pending', user_id: user?.id || null });
+      // A vendor may have already submitted an application (creating a 'pending'
+      // providers row). If so, link it to this new login instead of duplicating.
+      const existing = await dbWhere('providers', 'email', email);
+      if (existing && existing.length) {
+        const upd = await dbUpdate('providers', existing[0].id, { user_id: user?.id || null });
+        if (!upd) console.warn('Could not link existing provider application to new login.');
+      } else {
+        const ins = await dbInsert('providers', { full_name: name, email, phone: '', service_types: [], coverage_zips: '', home_zip: '', radius_miles: 25, status: 'pending', user_id: user?.id || null });
+        if (!ins.ok) {
+          console.error('Provider record insert failed:', ins.error);
+          authErr('Your login was created, but we could not finish your vendor profile. Please sign in and try again, or contact support.');
+          return;
+        }
+      }
     }
     if (_accessToken) {
       // Trigger onboarding email sequence
