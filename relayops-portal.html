@@ -1881,6 +1881,17 @@ async function doSignUp() {
   btn.disabled = true; btn.textContent = 'Creating account...';
   document.getElementById('auth-error').style.display = 'none';
 
+  // Vendors must apply through the application form first. Block bare signups
+  // that have no matching application on file.
+  if (selectedRole === 'provider') {
+    const application = await dbWhere('providers', 'email', email);
+    if (!application || !application.length) {
+      btn.disabled = false; btn.textContent = 'Create Account →';
+      authErr('No vendor application found for this email. Please apply through the "Join as Vendor" form on getrelayhq.com first — then come back here to set your password.');
+      return;
+    }
+  }
+
   try {
     const { user, error } = await sbSignUp(email, pass, { full_name: name, role: selectedRole });
     btn.disabled = false; btn.textContent = 'Create Account →';
@@ -3177,14 +3188,8 @@ function editAdminVendor(id) {
             </label>
           </div>
         </div>
-        <div class="field" style="grid-column:1/-1"><label>Coverage Area (description)</label>
+        <div class="field" style="grid-column:1/-1"><label>Coverage Area</label>
           <input id="vedit-coverage" type="text" value="${esc(v.coverage_zips||'')}"/>
-        </div>
-        <div class="field"><label>Home ZIP (for matching)</label>
-          <input id="vedit-zip" type="text" inputmode="numeric" maxlength="5" value="${esc(v.home_zip||'')}" placeholder="e.g. 15201 or 19147"/>
-        </div>
-        <div class="field"><label>Service Radius</label>
-          <select id="vedit-radius">${[10,15,25,40,60].map(r=>`<option value="${r}" ${(v.radius_miles||25)==r?'selected':''}>${r} miles</option>`).join('')}</select>
         </div>
       </div>
     </div>
@@ -3260,13 +3265,6 @@ async function saveAdminVendor(id) {
   const checked = Array.from(document.querySelectorAll('.svc-checkbox:checked')).map(c => c.value);
   if (checked.length) updates.service_types = checked;
   if (coverage) updates.coverage_zips  = coverage;
-  const zip    = document.getElementById('vedit-zip')?.value.trim();
-  const radius = document.getElementById('vedit-radius')?.value;
-  if (zip) {
-    if (!/^\d{5}$/.test(zip)) { showNotif('Invalid ZIP', 'Home ZIP must be 5 digits.', 'warning'); return; }
-    updates.home_zip = zip;
-  }
-  if (radius) updates.radius_miles = parseInt(radius, 10);
 
   const ok = await dbUpdate('providers', id, updates);
   if (!ok) { showNotif('Error', 'Could not update vendor.', 'warning'); return; }
