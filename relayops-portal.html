@@ -842,6 +842,11 @@ a{text-decoration:none;color:inherit}
           <div class="success-box" id="req-success">
             <div class="success-box-title">✅ Job submitted!</div>
             <div class="success-box-msg">We'll review and aim to send your quote within a couple of hours during business hours. Check the My Jobs tab for updates.</div>
+            <div id="req-signup-prompt" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,.12)">
+              <div style="font-size:15px;font-weight:600;color:#fff;margin-bottom:6px">Want to track this job?</div>
+              <div style="font-size:13px;color:rgba(255,255,255,.55);margin-bottom:12px">Create a free account to follow your job's progress, message your vendor, and see your payment history.</div>
+              <button onclick="goToSignupFromSubmit('customer')" class="btn btn-red btn-sm">Create an account →</button>
+            </div>
           </div>
           <div class="card" id="req-form-card">
             <div class="form-grid-2">
@@ -1737,6 +1742,16 @@ function selectRole(r) {
   document.getElementById('role-customer').classList.toggle('selected', r === 'customer');
   document.getElementById('role-provider').classList.toggle('selected', r === 'provider');
 }
+function goToSignupFromSubmit(role) {
+  // Show the auth screen, switch to sign-up, preselect the role
+  const auth = document.getElementById('auth-screen');
+  const app = document.getElementById('app');
+  if (app) app.style.display = 'none';
+  if (auth) auth.style.display = 'flex';
+  selectRole(role === 'provider' ? 'provider' : 'customer');
+  switchAuthTab('signup');
+  window.scrollTo(0, 0);
+}
 function switchAuthTab(t) {
   document.getElementById('tab-signin').classList.toggle('active', t === 'signin');
   document.getElementById('tab-signup').classList.toggle('active', t === 'signup');
@@ -2274,6 +2289,9 @@ Customer: ${currentUser?.email || 'unknown'}`
 
   document.getElementById('req-form-card').style.display = 'none';
   document.getElementById('req-success').style.display  = 'block';
+  // Prompt guests (not logged in) to create an account to track their job
+  const guestPrompt = document.getElementById('req-signup-prompt');
+  if (guestPrompt) guestPrompt.style.display = currentUser ? 'none' : 'block';
   btn.disabled = false;
   showNotif('Job Submitted!', 'Confirmation email sent to you.', 'success');
 }
