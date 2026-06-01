@@ -68,8 +68,13 @@ nav{
 }
 .nav-brand svg{flex-shrink:0}
 .nav-links{display:flex;align-items:center;gap:32px;font-size:14px;color:var(--muted)}
-.nav-links a{transition:color .2s}
+.nav-links a{transition:color .2s;position:relative;cursor:pointer}
 .nav-links a:hover{color:var(--ink)}
+.nav-links a.nav-active{color:var(--red);font-weight:600}
+.nav-links a.nav-active::after{content:"";position:absolute;left:0;right:0;bottom:-6px;height:2px;background:var(--red);border-radius:2px}
+html{scroll-behavior:smooth}
+:target{scroll-margin-top:84px}
+section[id]{scroll-margin-top:84px}
 .nav-cta{
   display:flex;gap:8px;
 }
@@ -570,10 +575,10 @@ footer{background:#080808;padding:40px 0 28px;border-top:1px solid rgba(255,255,
     RelayOps
   </div>
   <div class="nav-links">
-    <a href="#how">How it works</a>
-    <a href="#sides">For Managers</a>
-    <a href="#sides">For Vendors</a>
-    <a href="#pricing">Pricing</a>
+    <a href="#how" data-spy="how">How it works</a>
+    <a href="#services" data-spy="services">Services</a>
+    <a href="#sides" data-spy="sides">For Managers &amp; Vendors</a>
+    <a href="#pricing" data-spy="pricing">Pricing</a>
     <a href="javascript:void(0)" onclick="openFormModal('request')">Request a Job</a>
   </div>
   <div class="nav-cta">
@@ -739,7 +744,7 @@ footer{background:#080808;padding:40px 0 28px;border-top:1px solid rgba(255,255,
 </section>
 
 <!-- SERVICES -->
-<section class="services">
+<section id="services" class="services">
   <div class="wrap">
     <div class="section-eyebrow">Job categories</div>
     <h2 class="section-title">Every maintenance category<br/>property operators need</h2>
@@ -1543,6 +1548,35 @@ document.addEventListener('click', function(e){
 document.addEventListener('keydown', function(e){
   if(e.key==='Escape'){ closeFormModal('request'); closeFormModal('vendor-signup'); closeFormModal('contact'); }
 });
+
+// ── Scroll-spy: highlight the nav link for the section in view ──
+(function(){
+  const spyLinks = Array.from(document.querySelectorAll('.nav-links a[data-spy]'));
+  if (!spyLinks.length || !('IntersectionObserver' in window)) return;
+  const map = {};
+  spyLinks.forEach(a => { const s = document.getElementById(a.getAttribute('data-spy')); if (s) map[s.id] = a; });
+  const sections = Object.keys(map).map(id => document.getElementById(id));
+  function setActive(id){
+    spyLinks.forEach(a => a.classList.toggle('nav-active', a.getAttribute('data-spy') === id));
+  }
+  const visible = new Set();
+  const obs = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if (e.isIntersecting) visible.add(e.target.id);
+      else visible.delete(e.target.id);
+    });
+    // pick the topmost currently-visible spied section
+    let top = null, topY = Infinity;
+    sections.forEach(s=>{
+      if (visible.has(s.id)){
+        const y = s.getBoundingClientRect().top;
+        if (y < topY){ topY = y; top = s.id; }
+      }
+    });
+    if (top) setActive(top);
+  }, { rootMargin: '-80px 0px -45% 0px', threshold: 0 });
+  sections.forEach(s => obs.observe(s));
+})();
 </script>
 <!-- WAITLIST MODAL -->
 <div id="wl-overlay" style="display:none;position:fixed;inset:0;background:rgba(13,13,13,.72);z-index:9999;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)closeWaitlist()">
