@@ -573,9 +573,9 @@ footer{background:#080808;padding:40px 0 28px;border-top:1px solid rgba(255,255,
     <a href="index.html" style="color:inherit;text-decoration:none">RelayOps</a>
   </div>
   <div class="nav-links">
-    <a href="index.html" class="nav-active">Home</a>
+    <a href="index.html">Home</a>
     <a href="how-it-works.html">How it works</a>
-    <a href="services.html">Services</a>
+    <a href="services.html" class="nav-active">Services</a>
     <a href="pricing.html">Pricing</a>
     <a href="for-vendors.html">For Vendors</a>
   </div>
@@ -585,109 +585,75 @@ footer{background:#080808;padding:40px 0 28px;border-top:1px solid rgba(255,255,
     <a href="javascript:void(0)" onclick="openFormModal('request')" class="btn btn-red">Request a Job</a>
   </div>
 </nav>
-<section class="hero">
-  <div class="hero-inner">
-    <div>
-      <div class="hero-kicker">
-        <span class="dot"></span>
-        Live in Pittsburgh &amp; Philadelphia · Expanding nationally
-      </div>
-      <h1>When your vendors are booked,<br/><em>we fill the gap.</em></h1>
-      <p class="hero-lead">When your regular vendors are booked, slow, or unreachable — RelayOps fills the gap. Submit a job, get a matched vendor, track the work end-to-end.</p>
-      <div class="hero-actions">
-        <a href="javascript:void(0)" onclick="openFormModal('request')" class="btn btn-red btn-xl">Request a Job →</a>
-        <a href="#how" class="btn btn-ghost btn-lg">See how it works</a>
-      </div>
-      <div class="hero-stat-row">
-        <div class="hero-stat">
-          <div class="hero-stat-n">&lt;2 hr</div>
-          <div class="hero-stat-l">Match time target</div>
-        </div>
-        <div class="hero-stat">
-          <div class="hero-stat-n">24 types</div>
-          <div class="hero-stat-l">Maintenance categories</div>
-        </div>
-        <div class="hero-stat">
-          <div class="hero-stat-n">100%</div>
-          <div class="hero-stat-l">Jobs tracked end-to-end</div>
-        </div>
+<section id="services" class="services">
+  <div class="wrap">
+    <div class="section-eyebrow">Job categories</div>
+    <h2 class="section-title">Every maintenance category<br/>property operators need</h2>
+
+    <div class="svc-tabs" role="tablist">
+      <button class="svc-tab active" onclick="showSvcTab('general', this)">General Maintenance</button>
+      <button class="svc-tab" onclick="showSvcTab('cleaning', this)">Cleaning &amp; Turnover</button>
+      <button class="svc-tab" onclick="showSvcTab('trades', this)">Skilled Trades</button>
+      <button class="svc-tab" onclick="showSvcTab('outdoor', this)">Outdoor &amp; Seasonal</button>
+      <button class="svc-tab" onclick="showSvcTab('priority', this)">Priority Services</button>
+    </div>
+
+    <!-- GENERAL MAINTENANCE -->
+    <div class="svc-group svc-panel active" id="svc-general">
+      <div class="svc-group-label">General Maintenance</div>
+      <div class="services-grid">
+        <div class="svc"><div class="svc-icon">🔨</div><div class="svc-title">Handyman Work</div><div class="svc-desc">Repairs, punch-list items, and general maintenance tasks.</div></div>
+        <div class="svc"><div class="svc-icon">🔧</div><div class="svc-title">Appliance Repair</div><div class="svc-desc">Washers, dryers, refrigerators, dishwashers, and more.</div></div>
+        <div class="svc"><div class="svc-icon">🐛</div><div class="svc-title">Pest Control</div><div class="svc-desc">Inspection, treatment, and prevention for all pests.</div></div>
+        <div class="svc"><div class="svc-icon">🔐</div><div class="svc-title">Lock Changes</div><div class="svc-desc">Rekeying, smart lock installation, and emergency locksmith.</div></div>
+        <div class="svc"><div class="svc-icon">🎨</div><div class="svc-title">Painting</div><div class="svc-desc">Interior and exterior repaints, touch-ups, and full unit refreshes.</div></div>
       </div>
     </div>
 
-    <div class="hero-panel">
-      <div class="panel-label">Live Job Board · Now</div>
-      <div class="panel-title">4 jobs in queue</div>
-      <div class="job-card">
-        <div class="jc-dot urgent"></div>
-        <div class="jc-body">
-          <div class="jc-title">Lock change + rekey</div>
-          <div class="jc-meta">Shadyside · Same-day</div>
-        </div>
-        <div class="jc-badge">URGENT</div>
-      </div>
-      <div class="job-card">
-        <div class="jc-dot active"></div>
-        <div class="jc-body">
-          <div class="jc-title">Turnover cleaning</div>
-          <div class="jc-meta">Lawrenceville · Tomorrow 9am</div>
-        </div>
-        <div class="jc-badge">ASSIGNED</div>
-      </div>
-      <div class="job-card">
-        <div class="jc-dot queued"></div>
-        <div class="jc-body">
-          <div class="jc-title">Junk removal · 2BR</div>
-          <div class="jc-meta">Strip District · Flexible</div>
-        </div>
-        <div class="jc-badge">PRICING</div>
-      </div>
-      <div class="job-card">
-        <div class="jc-dot active"></div>
-        <div class="jc-body">
-          <div class="jc-title">Handyman punch-list</div>
-          <div class="jc-meta">East Liberty · Fri 2pm</div>
-        </div>
-        <div class="jc-badge">IN PROGRESS</div>
-      </div>
-      <div class="panel-footer">
-        <div class="panel-footer-stat"><div class="pf-n">2 PA</div><div class="pf-l">Cities Live</div></div>
-        <div class="panel-footer-stat"><div class="pf-n">24</div><div class="pf-l">Service Types</div></div>
-        <div class="panel-footer-stat"><div class="pf-n">&lt;2hr</div><div class="pf-l">Response Target</div></div>
+    <!-- CLEANING & TURNOVER -->
+    <div class="svc-group svc-panel" id="svc-cleaning">
+      <div class="svc-group-label">Cleaning &amp; Turnover</div>
+      <div class="services-grid">
+        <div class="svc"><div class="svc-icon">🧹</div><div class="svc-title">Cleaning</div><div class="svc-desc">Move-out cleans, deep cleans, and recurring maintenance cleaning.</div></div>
+        <div class="svc"><div class="svc-icon">🔄</div><div class="svc-title">Turnover Cleaning</div><div class="svc-desc">Full-service same-day coordination for fast unit flips.</div></div>
+        <div class="svc"><div class="svc-icon">🧺</div><div class="svc-title">Carpet Cleaning</div><div class="svc-desc">Deep steam cleaning and stain removal for all carpet types.</div></div>
+        <div class="svc"><div class="svc-icon">🪟</div><div class="svc-title">Window Cleaning</div><div class="svc-desc">Interior and exterior window cleaning for any property size.</div></div>
+        <div class="svc"><div class="svc-icon">🗑️</div><div class="svc-title">Junk Removal</div><div class="svc-desc">Move-out hauls, appliance removal, and full unit cleanouts.</div></div>
       </div>
     </div>
-  </div>
-</section><section id="how" class="how">
-  <div class="wrap">
-    <div class="section-eyebrow">How it works</div>
-    <h2 class="section-title">Four steps from request<br/>to completion</h2>
-    <p class="section-sub">Submit the job and RelayOps handles vendor matching, dispatch, coordination, and confirmation. You stay in the loop at every step.</p>
-    <div class="steps">
-      <div class="step">
-        <div class="step-n">01</div>
-        <div class="step-icon">📋</div>
-        <h3>Submit the job</h3>
-        <p>Describe the work, add photos, set urgency and address. Takes 60 seconds.</p>
-        <div class="step-connector"></div>
+
+    <!-- SKILLED TRADES -->
+    <div class="svc-group svc-panel" id="svc-trades">
+      <div class="svc-group-label">Skilled Trades</div>
+      <div class="services-grid">
+        <div class="svc"><div class="svc-icon">🪠</div><div class="svc-title">Plumbing</div><div class="svc-desc">Leaks, clogs, fixture replacements, and urgent calls.</div></div>
+        <div class="svc"><div class="svc-icon">⚡</div><div class="svc-title">Electrician</div><div class="svc-desc">Wiring, panel upgrades, outlets, and lighting installs.</div></div>
+        <div class="svc"><div class="svc-icon">🌡️</div><div class="svc-title">HVAC</div><div class="svc-desc">Heating, cooling, and ventilation repair and maintenance.</div></div>
+        <div class="svc"><div class="svc-icon">🏠</div><div class="svc-title">Roofing</div><div class="svc-desc">Repairs, inspections, and full roof replacements.</div></div>
+        <div class="svc"><div class="svc-icon">🍂</div><div class="svc-title">Gutters</div><div class="svc-desc">Cleaning, repair, and installation for gutters and downspouts.</div></div>
+        <div class="svc"><div class="svc-icon">🏗️</div><div class="svc-title">General Contractor</div><div class="svc-desc">Structural work, additions, and full property builds.</div></div>
+        <div class="svc"><div class="svc-icon">🪵</div><div class="svc-title">Flooring</div><div class="svc-desc">Hardwood, vinyl, tile, and laminate install and repair.</div></div>
+        <div class="svc"><div class="svc-icon">🧱</div><div class="svc-title">Drywall</div><div class="svc-desc">Patching, hole repair, texture matching, and full sheets.</div></div>
+        <div class="svc"><div class="svc-icon">🏗️</div><div class="svc-title">Remodeling</div><div class="svc-desc">Kitchen, bathroom, and full property renovations.</div></div>
       </div>
-      <div class="step">
-        <div class="step-n">02</div>
-        <div class="step-icon">⚡</div>
-        <h3>We quote and match</h3>
-        <p>Our team reviews, prices the job, and routes it to a qualified local vendor with open capacity.</p>
-        <div class="step-connector"></div>
+    </div>
+
+    <!-- EXTERIOR & GROUNDS -->
+    <div class="svc-group svc-panel" id="svc-outdoor">
+      <div class="svc-group-label">Outdoor &amp; Seasonal</div>
+      <div class="services-grid">
+        <div class="svc"><div class="svc-icon">🌿</div><div class="svc-title">Landscaping</div><div class="svc-desc">Lawn care, trimming, and seasonal yard maintenance.</div></div>
+        <div class="svc"><div class="svc-icon">❄️</div><div class="svc-title">Snow Removal</div><div class="svc-desc">Seasonal snow and ice removal for properties.</div></div>
+        <div class="svc"><div class="svc-icon">💦</div><div class="svc-title">Pressure Washing</div><div class="svc-desc">Siding, driveways, decks, and exterior surface cleaning.</div></div>
       </div>
-      <div class="step">
-        <div class="step-n">03</div>
-        <div class="step-icon">✅</div>
-        <h3>You get confirmation</h3>
-        <p>You receive the vendor, timing, and a payment link. The vendor gets dispatched with full job details.</p>
-        <div class="step-connector"></div>
-      </div>
-      <div class="step">
-        <div class="step-n">04</div>
-        <div class="step-icon">🏁</div>
-        <h3>Job completed</h3>
-        <p>The vendor updates status in real time. You receive completion confirmation and photos.</p>
+    </div>
+
+    <!-- PRIORITY SERVICES -->
+    <div class="svc-group svc-panel" id="svc-priority">
+      <div class="svc-group-label">Priority Services</div>
+      <div class="services-grid">
+        <div class="svc"><div class="svc-icon">🚨</div><div class="svc-title">Emergency Backup</div><div class="svc-desc">Urgent vendor dispatch when speed matters most.</div></div>
+        <div class="svc"><div class="svc-icon">🌊</div><div class="svc-title">Water Restoration</div><div class="svc-desc">Water extraction, drying, and damage mitigation, fast.</div></div>
       </div>
     </div>
   </div>
