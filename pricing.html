@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-8Q4VMHT5LJ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-8Q4VMHT5LJ');
+</script>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>RelayOps — Property Maintenance Overflow OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>emailjs.init('fjlY4_qDvbN5NHIbn');</script>
+<style>
+:root{
+  --ink:#0d0d0d;
+  --ink-2:#1a1a1a;
+  --paper:#f7f6f3;
+  --paper-2:#f0ede8;
+  --red:#c8102e;
+  --red-deep:#9b0e24;
+  --red-soft:#fdf1f3;
+  --red-mid:#f5d0d7;
+  --cream:#fffdf9;
+  --line:#e2ddd7;
+  --line-2:#ccc7c0;
+  --muted:#6b6560;
+  --muted-2:#9b948d;
+  --white:#ffffff;
+  --mono:'DM Mono',monospace;
+  --sans:'DM Sans',sans-serif;
+  --display:'Barlow Condensed',sans-serif;
+  --r-sm:10px;
+  --r-md:18px;
+  --r-lg:28px;
+  --r-xl:40px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;font-size:16px}
+body{font-family:var(--sans);background:var(--paper);color:var(--ink);line-height:1.55;overflow-x:hidden}
+a{text-decoration:none;color:inherit}
+img{max-width:100%;display:block}
+
+/* ── NOISE TEXTURE ── */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  opacity:.025;background-size:200px 200px;
+}
+
+/* ── NAV ── */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  padding:0 40px;height:64px;
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(247,246,243,.88);backdrop-filter:blur(18px);
+  border-bottom:1px solid var(--line);
+}
+.nav-brand{
+  display:flex;align-items:center;gap:10px;
+  font-family:var(--display);font-weight:800;font-size:20px;letter-spacing:-.02em;
+}
+.nav-brand svg{flex-shrink:0}
+.nav-links{display:flex;align-items:center;gap:32px;font-size:14px;color:var(--muted)}
+.nav-links a{transition:color .2s;position:relative;cursor:pointer}
+.nav-links a:hover{color:var(--ink)}
+.nav-links a.nav-active{color:var(--red);font-weight:600}
+.nav-links a.nav-active::after{content:"";position:absolute;left:0;right:0;bottom:-6px;height:2px;background:var(--red);border-radius:2px}
+html{scroll-behavior:smooth}
+:target{scroll-margin-top:84px}
+section[id]{scroll-margin-top:84px}
+.nav-cta{
+  display:flex;gap:8px;
+}
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:10px 20px;border-radius:999px;font-family:var(--sans);
+  font-size:14px;font-weight:500;transition:all .2s;cursor:pointer;border:none;
+}
+.btn-ghost{background:transparent;border:1px solid var(--line-2);color:var(--ink)}
+.btn-ghost:hover{background:var(--ink);color:var(--white);border-color:var(--ink)}
+.btn-red{background:var(--red);color:var(--white)}
+.btn-red:hover{background:var(--red-deep)}
+.btn-ink{background:var(--ink);color:var(--white)}
+.btn-ink:hover{background:var(--ink-2);transform:translateY(-1px)}
+.btn-lg{padding:15px 28px;font-size:15px}
+.btn-xl{padding:18px 36px;font-size:16px;font-weight:600}
+
+/* ── LAYOUT ── */
+.wrap{max-width:1280px;margin:0 auto;padding:0 40px}
+section{position:relative;z-index:1}
+
+/* ── HERO ── */
+.hero{
+  padding:148px 0 80px;
+  background:var(--cream);
+  border-bottom:1px solid var(--line);
+  overflow:hidden;
+}
+.hero-inner{
+  max-width:1280px;margin:0 auto;padding:0 40px;
+  display:grid;grid-template-columns:1fr 480px;gap:60px;align-items:start;
+}
+.hero-kicker{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 14px 6px 8px;border-radius:999px;
+  background:var(--red-soft);border:1px solid var(--red-mid);
+  font-size:12px;font-weight:500;color:var(--red);font-family:var(--mono);
+  margin-bottom:28px;
+}
+.hero-kicker span.dot{
+  width:6px;height:6px;border-radius:50%;background:var(--red);display:block;
+  animation:pulse 2s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.4)}}
+.hero h1{
+  font-family:var(--display);font-size:clamp(52px,6vw,82px);
+  font-weight:800;line-height:1.15;letter-spacing:-.02em;
+  color:var(--ink);margin-bottom:26px;
+}
+.hero h1 em{font-style:normal;color:var(--red)}
+.hero-lead{
+  font-size:clamp(16px,1.6vw,20px);color:var(--muted);line-height:1.6;
+  max-width:560px;margin-bottom:36px;font-weight:300;
+}
+.hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:48px}
+.hero-stat-row{
+  display:flex;gap:0;border:1px solid var(--line);border-radius:var(--r-md);
+  background:var(--white);overflow:hidden;
+}
+.hero-stat{
+  padding:16px 24px;flex:1;border-right:1px solid var(--line);
+}
+.hero-stat:last-child{border-right:none}
+.hero-stat-n{
+  font-family:var(--display);font-size:28px;font-weight:800;color:var(--ink);
+  letter-spacing:-.03em;
+}
+.hero-stat-l{font-size:12px;color:var(--muted);margin-top:2px}
+
+/* Hero panel */
+.hero-panel{
+  background:var(--ink);border-radius:var(--r-xl);padding:36px;color:var(--white);
+  position:relative;overflow:hidden;
+}
+.hero-panel::before{
+  content:'';position:absolute;top:-60px;right:-60px;width:200px;height:200px;
+  border-radius:50%;background:var(--red);opacity:.15;filter:blur(40px);
+}
+.panel-label{
+  font-size:11px;font-family:var(--mono);letter-spacing:.1em;
+  text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:18px;
+}
+.panel-title{
+  font-family:var(--sans);font-size:22px;font-weight:700;
+  line-height:1.4;margin-bottom:24px;
+}
+.job-card{
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  border-radius:var(--r-md);padding:14px 16px;margin-bottom:10px;
+  display:flex;align-items:center;gap:12px;
+  animation:slideIn .4s ease forwards;opacity:0;
+}
+.job-card:nth-child(1){animation-delay:.1s}
+.job-card:nth-child(2){animation-delay:.25s}
+.job-card:nth-child(3){animation-delay:.4s}
+.job-card:nth-child(4){animation-delay:.55s}
+@keyframes slideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.jc-dot{
+  width:8px;height:8px;border-radius:50%;flex-shrink:0;
+}
+.jc-dot.urgent{background:#ff6b6b}
+.jc-dot.active{background:#51cf66}
+.jc-dot.queued{background:#ffd43b}
+.jc-body{flex:1}
+.jc-title{font-size:13px;font-weight:500;color:rgba(255,255,255,.9)}
+.jc-meta{font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;font-family:var(--mono)}
+.jc-badge{
+  font-size:10px;padding:3px 8px;border-radius:999px;font-family:var(--mono);
+  background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);
+}
+.panel-footer{
+  margin-top:18px;padding-top:18px;border-top:1px solid rgba(255,255,255,.08);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.panel-footer-stat{text-align:center}
+.pf-n{font-family:var(--display);font-size:22px;font-weight:800}
+.pf-l{font-size:10px;font-family:var(--mono);color:rgba(255,255,255,.4);letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
+
+/* ── SECTION SHARED ── */
+.section-eyebrow{
+  font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--red);margin-bottom:14px;
+}
+.section-title{
+  font-family:var(--display);font-size:clamp(36px,4vw,56px);
+  font-weight:800;letter-spacing:-.02em;line-height:1.18;
+}
+.section-sub{
+  font-size:17px;color:var(--muted);line-height:1.65;font-weight:300;
+  max-width:560px;margin-top:14px;
+}
+
+/* ── PROBLEM ── */
+.problem{padding:100px 0;background:var(--paper)}
+.problem-grid{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center}
+.problem-cards{display:grid;gap:12px}
+.prob-card{
+  background:var(--white);border:1px solid var(--line);border-radius:var(--r-md);
+  padding:20px 22px;display:flex;gap:14px;align-items:flex-start;
+}
+.prob-icon{
+  width:36px;height:36px;border-radius:var(--r-sm);display:flex;align-items:center;
+  justify-content:center;flex-shrink:0;font-size:16px;
+}
+.prob-icon.red{background:var(--red-soft)}
+.prob-card-title{font-weight:600;font-size:14px;color:var(--ink)}
+.prob-card-text{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.5}
+
+/* ── HOW IT WORKS ── */
+.how{padding:100px 0;background:var(--ink);color:var(--white)}
+.how .section-eyebrow{color:rgba(255,255,255,.4)}
+.how .section-title{color:var(--white)}
+.how .section-sub{color:rgba(255,255,255,.5)}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;margin-top:60px;background:rgba(255,255,255,.06);border-radius:var(--r-lg);overflow:hidden;border:1px solid rgba(255,255,255,.08)}
+.step{
+  padding:36px 28px;background:var(--ink-2);position:relative;
+  transition:background .2s;
+}
+.step:hover{background:#222}
+.step-n{
+  font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.25);
+  letter-spacing:.08em;margin-bottom:20px;
+}
+.step-icon{
+  width:44px;height:44px;border-radius:var(--r-sm);background:var(--red);
+  display:flex;align-items:center;justify-content:center;margin-bottom:18px;
+  font-size:20px;
+}
+.step h3{font-family:var(--display);font-size:18px;font-weight:700;color:var(--white);margin-bottom:10px;line-height:1.3;letter-spacing:-.01em}
+.step p{font-size:13px;color:rgba(255,255,255,.5);line-height:1.6}
+.step-connector{
+  position:absolute;right:-1px;top:50%;transform:translateY(-50%);
+  width:2px;height:40px;background:var(--red);opacity:.4;
+}
+.step:last-child .step-connector{display:none}
+
+/* ── SERVICES ── */
+.services{padding:100px 0;background:var(--paper-2)}
+.svc-group{margin-top:48px}
+.svc-group + .svc-group{margin-top:40px}
+.svc-group-label{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--red);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.svc-tabs{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:28px 0 36px}
+.svc-tab{padding:9px 18px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--muted);font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
+.svc-tab:hover{border-color:var(--red);color:var(--ink)}
+.svc-tab.active{background:var(--red);border-color:var(--red);color:#fff}
+.svc-panel{display:none}
+.svc-panel.active{display:block;animation:svcFade .25s ease}
+@keyframes svcFade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+/* Form sections as on-demand modals */
+#request, #vendor-signup, #contact { display:none; }
+#request.form-modal-open, #vendor-signup.form-modal-open, #contact.form-modal-open {
+  display:block; position:fixed; inset:0; z-index:9998;
+  background:rgba(13,13,13,.75); overflow-y:auto; padding:40px 16px;
+  animation:svcFade .2s ease;
+}
+#request.form-modal-open .wrap, #vendor-signup.form-modal-open .wrap, #contact.form-modal-open .wrap {
+  max-width:760px; margin:0 auto; background:var(--cream,#fffdf9);
+  border-radius:18px; padding:36px 32px; position:relative;
+  box-shadow:0 24px 70px rgba(0,0,0,.4);
+}
+/* In the vendor modal, stack benefits ABOVE the form (single column) */
+#vendor-signup.form-modal-open .vsignup-grid { display:flex; flex-direction:column-reverse; gap:28px; }
+#request.form-modal-open .intake-grid { display:block; }
+.form-modal-close {
+  position:absolute; top:16px; right:18px; background:none; border:none;
+  font-size:30px; line-height:1; color:var(--muted,#888); cursor:pointer; z-index:2;
+}
+.form-modal-close:hover { color:var(--ink,#0d0d0d); }
+.svc-group-label::after{content:'';flex:1;height:1px;background:var(--line)}
+.services-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:12px;
+}
+.svc{
+  background:var(--white);border:1px solid var(--line);border-radius:var(--r-md);
+  padding:20px;cursor:default;transition:all .2s;position:relative;overflow:hidden;
+}
+.svc::before{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
+  background:var(--red);transform:scaleX(0);transform-origin:left;
+  transition:transform .2s;
+}
+.svc:hover{border-color:var(--red-mid);transform:translateY(-2px);box-shadow:0 12px 30px rgba(0,0,0,.08)}
+.svc:hover::before{transform:scaleX(1)}
+.svc-icon{font-size:22px;margin-bottom:10px}
+.svc-title{font-family:var(--display);font-size:14px;font-weight:700;color:var(--ink)}
+.svc-desc{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}
+
+/* ── TWO SIDES ── */
+.sides{padding:100px 0;background:var(--cream)}
+.sides-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:48px}
+.side-panel{border-radius:var(--r-xl);padding:48px;overflow:hidden;position:relative}
+.side-panel.demand{background:var(--ink);color:var(--white)}
+.side-panel.supply{background:var(--red);color:var(--white)}
+.side-panel::after{
+  content:'';position:absolute;bottom:-80px;right:-80px;
+  width:240px;height:240px;border-radius:50%;
+  background:rgba(255,255,255,.06);
+}
+.side-label{
+  font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:rgba(255,255,255,.5);margin-bottom:20px;
+}
+.side-panel h2{
+  font-family:var(--display);font-size:34px;font-weight:800;letter-spacing:-.01em;
+  line-height:1.18;margin-bottom:18px;color:var(--white);
+}
+.side-panel p{font-size:15px;color:rgba(255,255,255,.65);line-height:1.6;margin-bottom:28px;font-weight:300}
+.side-list{list-style:none;display:grid;gap:10px;margin-bottom:32px}
+.side-list li{
+  font-size:14px;color:rgba(255,255,255,.8);display:flex;align-items:center;gap:10px;
+}
+.side-list li::before{
+  content:'';width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.5);flex-shrink:0;
+}
+.btn-white{background:var(--white);color:var(--ink)}
+.btn-white:hover{background:rgba(255,255,255,.9)}
+
+/* ── TRUST ── */
+.trust{padding:100px 0;background:var(--paper)}
+.trust-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:48px}
+.trust-card{
+  background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:32px;
+}
+.trust-card-icon{
+  width:48px;height:48px;border-radius:var(--r-md);background:var(--red-soft);
+  border:1px solid var(--red-mid);display:flex;align-items:center;justify-content:center;
+  font-size:22px;margin-bottom:20px;
+}
+.trust-card h3{font-family:var(--display);font-size:19px;font-weight:700;color:var(--ink);margin-bottom:10px;line-height:1.3;letter-spacing:-.01em}
+.trust-card p{font-size:14px;color:var(--muted);line-height:1.6}
+
+/* ── PRICING ── */
+.pricing{padding:100px 0;background:var(--ink);color:var(--white)}
+.pricing .section-eyebrow{color:rgba(255,255,255,.35)}
+.pricing .section-title{color:var(--white)}
+.pricing .section-sub{color:rgba(255,255,255,.45)}
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:52px}
+.price-card{
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+  border-radius:var(--r-lg);padding:36px;position:relative;transition:border-color .2s;
+}
+.price-card:hover{border-color:rgba(255,255,255,.18)}
+.price-card.featured{
+  background:var(--red);border-color:var(--red);
+}
+.price-badge{
+  font-size:11px;font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;
+  color:rgba(255,255,255,.5);margin-bottom:16px;display:block;
+}
+.price-card.featured .price-badge{color:rgba(255,255,255,.7)}
+.price-amount{
+  font-family:var(--display);font-size:52px;font-weight:800;
+  color:var(--white);letter-spacing:-.04em;line-height:1;margin-bottom:4px;
+}
+.price-period{font-size:14px;color:rgba(255,255,255,.4)}
+.price-card.featured .price-period{color:rgba(255,255,255,.6)}
+.price-desc{font-size:14px;color:rgba(255,255,255,.45);line-height:1.6;margin:18px 0}
+.price-card.featured .price-desc{color:rgba(255,255,255,.75)}
+.price-features{list-style:none;display:grid;gap:9px;margin-bottom:28px}
+.price-features li{font-size:13px;color:rgba(255,255,255,.6);display:flex;gap:8px;align-items:flex-start}
+.price-card.featured .price-features li{color:rgba(255,255,255,.85)}
+.price-features li::before{content:'✓';color:var(--red);font-weight:700;flex-shrink:0}
+.price-card.featured .price-features li::before{color:rgba(255,255,255,.7)}
+
+/* ── FORMS ── */
+.intake{padding:100px 0;background:var(--paper-2)}
+.intake-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start}
+.form-card{
+  background:var(--white);border:1px solid var(--line);border-radius:var(--r-xl);
+  padding:40px;
+}
+.form-title{font-family:var(--display);font-size:24px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px}
+.form-sub{font-size:14px;color:var(--muted);margin-bottom:28px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.form-full{grid-column:1/-1}
+.field{display:flex;flex-direction:column;gap:6px}
+label{font-size:13px;font-weight:500;color:var(--ink)}
+input,select,textarea{
+  font-family:var(--sans);font-size:14px;padding:12px 14px;
+  border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper);
+  color:var(--ink);transition:border-color .2s;outline:none;
+}
+input:focus,select:focus,textarea:focus{border-color:var(--red);background:var(--white)}
+textarea{min-height:110px;resize:vertical}
+.form-submit{margin-top:20px}
+
+/* ── INFO PANEL ── */
+.info-panel{display:flex;flex-direction:column;gap:16px}
+.info-block{
+  background:var(--white);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:28px;
+}
+.info-block h3{font-family:var(--display);font-size:19px;font-weight:700;margin-bottom:8px}
+.info-block p{font-size:14px;color:var(--muted);line-height:1.6}
+.contact-item{margin-top:14px;display:flex;flex-direction:column;gap:3px}
+.contact-item-label{font-size:11px;font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted-2)}
+.contact-item-val{font-size:15px;font-weight:500;color:var(--ink)}
+
+/* ── VENDOR SIGNUP ── */
+.vsignup{padding:100px 0;background:var(--cream)}
+.vsignup-grid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start}
+.why-vendor{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.why-item{
+  background:var(--white);border:1px solid var(--line);border-radius:var(--r-md);padding:20px;
+}
+.why-item-title{font-weight:600;font-size:14px;color:var(--ink);margin-bottom:6px}
+.why-item-text{font-size:13px;color:var(--muted);line-height:1.5}
+
+/* ── DASHBOARD PREVIEW ── */
+.preview{padding:100px 0;background:var(--paper)}
+.preview-container{
+  margin-top:52px;background:var(--ink-2);border-radius:var(--r-xl);
+  overflow:hidden;border:1px solid rgba(255,255,255,.06);
+}
+.dash-bar{
+  padding:14px 20px;background:rgba(0,0,0,.3);border-bottom:1px solid rgba(255,255,255,.06);
+  display:flex;align-items:center;gap:8px;
+}
+.dash-dot{width:10px;height:10px;border-radius:50%}
+.dash-dot.r{background:#ff5f57}.dash-dot.y{background:#febc2e}.dash-dot.g{background:#28c840}
+.dash-url{margin-left:12px;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.25);background:rgba(255,255,255,.06);padding:4px 12px;border-radius:999px}
+.dash-inner{display:grid;grid-template-columns:220px 1fr;min-height:520px}
+.dash-sidebar{
+  background:rgba(0,0,0,.2);border-right:1px solid rgba(255,255,255,.05);
+  padding:24px 16px;
+}
+.dash-logo{
+  font-family:var(--display);font-weight:800;font-size:16px;color:var(--white);
+  margin-bottom:28px;display:flex;align-items:center;gap:8px;padding:0 8px;
+}
+.dash-nav-item{
+  padding:9px 12px;border-radius:var(--r-sm);font-size:13px;color:rgba(255,255,255,.45);
+  margin-bottom:2px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:9px;
+}
+.dash-nav-item:hover,.dash-nav-item.active{background:rgba(255,255,255,.08);color:rgba(255,255,255,.9)}
+.dash-nav-item.active{background:rgba(200,16,46,.2);color:rgba(255,255,255,.9)}
+.dash-nav-icon{font-size:15px;opacity:.7}
+.dash-main{padding:28px;overflow:hidden}
+.dash-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+.dash-greeting{font-family:var(--display);font-size:20px;font-weight:700;color:var(--white)}
+.dash-date{font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.3)}
+.dash-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.ds{
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);
+  border-radius:var(--r-md);padding:16px;
+}
+.ds-n{font-family:var(--display);font-size:26px;font-weight:800;color:var(--white)}
+.ds-l{font-size:11px;font-family:var(--mono);color:rgba(255,255,255,.35);letter-spacing:.04em;margin-top:4px}
+.ds-delta{font-size:11px;color:#51cf66;margin-top:6px;font-family:var(--mono)}
+.job-table{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:var(--r-md);overflow:hidden}
+.job-table-head{
+  display:grid;grid-template-columns:2fr 1fr 1fr 1fr 80px;
+  padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.05);
+}
+.jth{font-size:10px;font-family:var(--mono);letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.25)}
+.job-row{
+  display:grid;grid-template-columns:2fr 1fr 1fr 1fr 80px;
+  padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.04);align-items:center;
+}
+.job-row:last-child{border-bottom:none}
+.jr-title{font-size:13px;color:rgba(255,255,255,.8);font-weight:500}
+.jr-addr{font-size:11px;color:rgba(255,255,255,.3);font-family:var(--mono);margin-top:2px}
+.jr-cell{font-size:12px;color:rgba(255,255,255,.5)}
+.status-pill{
+  display:inline-block;font-size:10px;padding:3px 9px;border-radius:999px;
+  font-family:var(--mono);font-weight:500;
+}
+.sp-sub{background:rgba(200,16,46,.2);color:#ff8898}
+.sp-asgn{background:rgba(81,207,102,.12);color:#51cf66}
+.sp-prog{background:rgba(255,212,59,.12);color:#ffd43b}
+.sp-done{background:rgba(255,255,255,.08);color:rgba(255,255,255,.4)}
+.act-btn{
+  font-size:10px;font-family:var(--mono);padding:4px 10px;border-radius:999px;
+  background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);cursor:pointer;
+  border:1px solid rgba(255,255,255,.1);transition:all .15s;
+}
+.act-btn:hover{background:rgba(255,255,255,.15)}
+
+/* ── ROADMAP ── */
+.roadmap{padding:100px 0;background:var(--paper-2)}
+.roadmap-track{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:48px}
+.phase{
+  border:1px solid var(--line);border-radius:var(--r-lg);padding:30px;background:var(--white);
+  position:relative;
+}
+.phase-label{
+  font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted-2);margin-bottom:14px;display:flex;align-items:center;gap:8px;
+}
+.phase-dot{width:6px;height:6px;border-radius:50%}
+.ph1 .phase-dot{background:#51cf66}
+.ph2 .phase-dot{background:#ffd43b}
+.ph3 .phase-dot{background:var(--red)}
+.phase h3{font-family:var(--display);font-size:20px;font-weight:700;color:var(--ink);margin-bottom:12px}
+.phase-items{list-style:none;display:grid;gap:7px}
+.phase-items li{font-size:13px;color:var(--muted);display:flex;gap:8px}
+.phase-items li::before{content:'→';color:var(--line-2);flex-shrink:0}
+
+/* ── FINAL CTA ── */
+.final{padding:80px 0;background:var(--ink)}
+.final-inner{
+  max-width:900px;margin:0 auto;text-align:center;padding:0 40px;
+}
+.final h2{
+  font-family:var(--display);font-size:clamp(44px,6vw,72px);font-weight:800;
+  color:var(--white);letter-spacing:-.02em;line-height:1.18;margin-bottom:22px;
+}
+.final h2 em{font-style:normal;color:var(--red)}
+.final p{font-size:18px;color:rgba(255,255,255,.45);margin-bottom:36px;font-weight:300}
+.final-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+
+/* ── FOOTER ── */
+footer{background:#080808;padding:40px 0 28px;border-top:1px solid rgba(255,255,255,.04)}
+.footer-inner{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px}
+.footer-brand{font-family:var(--display);font-weight:800;font-size:18px;color:var(--white)}
+.footer-links{display:flex;gap:24px;font-size:13px;color:rgba(255,255,255,.3)}
+.footer-links a:hover{color:rgba(255,255,255,.7)}
+.footer-copy{font-size:12px;color:rgba(255,255,255,.2);font-family:var(--mono);width:100%;text-align:center;margin-top:8px;padding-top:20px;border-top:1px solid rgba(255,255,255,.04)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:1024px){
+  .hero-inner,.problem-grid,.sides-grid,.intake-grid,.vsignup-grid,.pricing-grid{grid-template-columns:1fr}
+  .steps{grid-template-columns:repeat(2,1fr)}
+  .services-grid{grid-template-columns:repeat(2,1fr)}
+  .svc-group-label{font-size:10px}
+  .trust-grid{grid-template-columns:1fr}
+  .roadmap-track{grid-template-columns:1fr}
+  .dash-inner{grid-template-columns:1fr}
+  .dash-sidebar{display:none}
+}
+@media(max-width:640px){
+  nav{padding:0 20px}
+  .wrap{padding:0 20px}
+  .hero-inner,.hero-panel,section{padding-left:20px;padding-right:20px}
+  .hero{padding:120px 0 60px}
+  .nav-links{display:none}
+  .services-grid{grid-template-columns:1fr 1fr}
+  .form-grid{grid-template-columns:1fr}
+  .hero-stat-row{grid-template-columns:1fr}
+  .dash-stats{grid-template-columns:repeat(2,1fr)}
+  .job-table-head,.job-row{grid-template-columns:2fr 1fr 1fr}
+  .jth:nth-child(4),.jth:nth-child(5),.jr-cell:nth-child(4),.act-btn{display:none}
+  .pricing-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-brand">
+    <svg width="32" height="32" viewBox="0 0 260 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="260" height="260" rx="52" fill="#111111"/>
+      <path d="M74 78C74 67.5 82.5 59 93 59H178C188.5 59 197 67.5 197 78V93C197 103.5 188.5 112 178 112H127V154H167C177.5 154 186 162.5 186 173V188C186 198.5 177.5 207 167 207H93C82.5 207 74 198.5 74 188V78Z" fill="#C8102E"/>
+      <path d="M134 112H202C212.5 112 221 120.5 221 131V145C221 155.5 212.5 164 202 164H134V112Z" fill="#F7F6F3"/>
+    </svg>
+    <a href="index.html" style="color:inherit;text-decoration:none">RelayOps</a>
+  </div>
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="how-it-works.html">How it works</a>
+    <a href="services.html">Services</a>
+    <a href="pricing.html" class="nav-active">Pricing</a>
+    <a href="for-vendors.html">For Vendors</a>
+  </div>
+  <div class="nav-cta">
+    <a href="https://contactrelayops.github.io/relayops-site/relayops-portal.html" class="btn btn-ghost">Login</a>
+    <a href="javascript:void(0)" onclick="openFormModal('vendor-signup')" class="btn btn-ghost">Join as Vendor</a>
+    <a href="javascript:void(0)" onclick="openFormModal('request')" class="btn btn-red">Request a Job</a>
+  </div>
+</nav>
+<section id="pricing" class="pricing">
+  <div class="wrap">
+    <div class="section-eyebrow">Pricing</div>
+    <h2 class="section-title">Simple. Transparent.<br/>Only pay when it works.</h2>
+    <p class="section-sub">Start per-job with zero commitment — that's all you need to get going. Annual plans for high-volume operators are coming soon.</p>
+    <div class="pricing-grid">
+      <div class="price-card">
+        <span class="price-badge">Pay As You Go</span>
+        <div class="price-amount">$0</div>
+        <div class="price-period">platform fee · no subscription</div>
+        <div class="price-desc">No contract, no monthly fee, no markup. You pay only the quoted price for each job — RelayOps takes its 15% service fee from the vendor, never from you. This is how RelayOps works today, and it's all you need to get started.</div>
+        <ul class="price-features">
+          <li>Unlimited job submissions</li>
+          <li>No platform fee or markup to you</li>
+          <li>Standard match time (2–4 hrs)</li>
+          <li>Job tracking dashboard</li>
+          <li>Stripe payment link per job</li>
+        </ul>
+        <a href="javascript:void(0)" onclick="openFormModal('request')" class="btn btn-white btn-lg" style="width:100%;justify-content:center">Get Started</a>
+      </div>
+      <div class="price-card featured" style="opacity:.72;position:relative">
+        <div style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,.12);color:rgba(255,255,255,.85);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:4px 10px;border-radius:20px">Coming Soon</div>
+        <span class="price-badge">Priority Plan</span>
+        <div class="price-amount">$200</div>
+        <div class="price-period">/year · no per-job fee to you</div>
+        <div class="price-desc">For property managers who want faster response and a dedicated account contact. Launching soon — join the waitlist to lock in early-access pricing.</div>
+        <ul class="price-features">
+          <li>Priority vendor matching (under 2 hrs)</li>
+          <li>Dedicated account contact</li>
+          <li>Vendor preference flagging</li>
+          <li>Monthly job summary reports</li>
+          <li>Still $0 per job — you never pay a percentage</li>
+        </ul>
+        <button type="button" onclick="openWaitlist('Priority')" class="btn btn-ink btn-lg" style="width:100%;justify-content:center">Join the Waitlist</button>
+      </div>
+      <div class="price-card" style="opacity:.72;position:relative">
+        <div style="position:absolute;top:14px;right:14px;background:rgba(255,255,255,.12);color:rgba(255,255,255,.85);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:4px 10px;border-radius:20px">Coming Soon</div>
+        <span class="price-badge">Pro Plan</span>
+        <div class="price-amount">$499</div>
+        <div class="price-period">/year · no per-job fee to you</div>
+        <div class="price-desc">For active operators managing multiple properties with high job volume — same-day priority handling and multi-property coordination, with no per-job fee to you. Launching soon.</div>
+        <ul class="price-features">
+          <li>Everything in Priority</li>
+          <li>Multi-property coordination</li>
+          <li>Same-day priority for standard jobs</li>
+          <li>Emergency rush priority queue</li>
+          <li>$0 per job — no markup, no percentage</li>
+        </ul>
+        <button type="button" onclick="openWaitlist('Pro')" class="btn btn-white btn-lg" style="width:100%;justify-content:center">Join the Waitlist</button>
+      </div>
+    </div>
+    <div style="margin-top:20px;padding:20px 28px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:var(--r-md);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
+      <div>
+        <div style="font-size:14px;color:rgba(255,255,255,.7);font-weight:500">Emergency &amp; same-day rush jobs</div>
+        <div style="font-size:13px;color:rgba(255,255,255,.35);margin-top:3px">Flat rush fee + 20–25% take rate applies when speed is the priority over price.</div>
+      </div>
+      <a href="javascript:void(0)" onclick="openFormModal('request')" class="btn btn-ghost" style="border-color:rgba(255,255,255,.15);color:rgba(255,255,255,.6)">Request an emergency job</a>
+    </div>
+  </div>
+</section>
+<section class="final">
+  <div class="final-inner">
+    <h2>Stop losing jobs to<br/><em>vendor availability.</em></h2>
+    <p>RelayOps gives property operators a reliable overflow layer — so the next time your regular vendor is booked, you have a fast, trusted backup ready.</p>
+    <div class="final-actions">
+      <a href="javascript:void(0)" onclick="openFormModal('request')" class="btn btn-red btn-xl">Request Your First Job →</a>
+      <a href="javascript:void(0)" onclick="openFormModal('vendor-signup')" class="btn btn-ghost btn-xl" style="color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.2)">Join as a Vendor</a>
+    </div>
+  </div>
+</section>
+<footer>
+  <div class="wrap">
+    <div class="footer-inner">
+      <div class="footer-brand">RelayOps</div>
+      <div class="footer-links">
+        <a href="#how">How it works</a>
+        <a href="#pricing">Pricing</a>
+        <a href="javascript:void(0)" onclick="openFormModal('request')">Request a Job</a>
+        <a href="javascript:void(0)" onclick="openFormModal('vendor-signup')">Vendor Signup</a>
+        <a href="https://contactrelayops.github.io/relayops-site/relayops-portal.html">Login</a>
+        <a href="javascript:void(0)" onclick="openFormModal('contact')">Contact</a>
+      </div>
+    </div>
+    <div class="footer-copy">Pittsburgh & Philadelphia · contactrelayops@gmail.com · © 2025 RelayOps. Built for the people who keep properties moving.</div>
+  </div>
+</footer>
+<section id="request" class="intake">
+  <div class="wrap">
+    <button type="button" class="form-modal-close" onclick="closeFormModal('request')" aria-label="Close">&times;</button>
+    <div class="section-eyebrow">Request a job</div>
+    <h2 class="section-title" style="margin-bottom:40px">Tell us what you need</h2>
+    <div class="intake-grid">
+      <div class="form-card">
+        <div class="form-title">Job Request Form</div>
+        <div class="form-sub">Submit your job details and we'll review, price, and match a vendor — typically within 2 hours.</div>
+        <div id="job-success" style="display:none;padding:20px;background:#eaf3de;border:1px solid #b7d9a0;border-radius:12px;color:#3b6d11;font-size:14px;margin-bottom:16px">
+          <div style="font-weight:600;font-size:15px;margin-bottom:8px">✅ Job submitted successfully!</div>
+          <div style="margin-bottom:16px;color:#3b6d11">We'll review your request and aim to send your quote within a couple of hours during business hours. Check your email for updates.</div>
+          <div style="background:#fff;border:1px solid #b7d9a0;border-radius:10px;padding:16px;margin-top:8px">
+            <div style="font-weight:600;color:#0d0d0d;margin-bottom:6px">📋 Track your job in real time</div>
+            <div style="font-size:13px;color:#6b6560;margin-bottom:14px">Create a free account to see your job status, receive your quote, and pay securely — all in one place.</div>
+            <a id="job-signup-btn" href="https://contactrelayops.github.io/relayops-site/relayops-portal.html" class="btn btn-red" style="display:inline-block;font-size:13px">Create Your Account →</a>
+          </div>
+        </div>
+        <div class="form-grid" id="job-form-fields">
+          <div class="field"><label>Full Name</label><input id="job-name" type="text" placeholder="Your name"/></div>
+          <div class="field"><label>Company / Portfolio Name</label><input id="job-company" type="text" placeholder="Company or DBA"/></div>
+          <div class="field"><label>Email Address</label><input id="job-email" type="email" placeholder="name@company.com"/></div>
+          <div class="field"><label>Phone Number</label><input id="job-phone" type="tel" placeholder="Your phone number"/></div>
+          <div class="field form-full"><label>Property Address</label><input id="job-address" type="text" placeholder="123 Main St, Pittsburgh, PA 15201"/></div>
+          <div class="field">
+            <label>Service Type</label>
+            <select id="job-type">
+              <option value="">Select a category</option>
+              <option value="Handyman">Handyman / Repairs</option>
+              <option value="Cleaning">Cleaning</option>
+              <option value="Turnover">Turnover Cleaning</option>
+              <option value="Lock Change">Lock Change / Rekey</option>
+              <option value="Junk Removal">Junk Removal</option>
+              <option value="Painting">Painting</option>
+              <option value="Plumbing">Plumbing</option>
+              <option value="Remodeling">Remodeling</option>
+              <option value="Landscaping">Landscaping</option>
+              <option value="Electrician">Electrician</option>
+              <option value="HVAC">HVAC</option>
+              <option value="Gutters">Gutters</option>
+              <option value="Roofing">Roofing</option>
+              <option value="Snow Removal">Snow Removal</option>
+              <option value="General Contractor">General Contractor / Construction</option>
+              <option value="Flooring">Flooring</option>
+              <option value="Drywall">Drywall</option>
+              <option value="Pressure Washing">Pressure Washing</option>
+              <option value="Water Restoration">Water Restoration</option>
+              <option value="Pest Control">Pest Control</option>
+              <option value="Appliance Repair">Appliance Repair</option>
+              <option value="Carpet Cleaning">Carpet Cleaning</option>
+              <option value="Window Cleaning">Window Cleaning</option>
+              <option value="Emergency">Emergency</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Urgency Level</label>
+            <select id="job-urgency">
+              <option value="">Select urgency</option>
+              <option value="Emergency">🚨 Emergency — Same Hour</option>
+              <option value="Urgent">⚡ Urgent — Same Day</option>
+              <option value="Scheduled">📅 Next Day</option>
+              <option value="Flexible">🗓️ Flexible — Within 1 Week</option>
+            </select>
+          </div>
+          <div class="field form-full"><label>Job Description</label><textarea id="job-description" placeholder="Describe the issue, access details, estimated scope, and any scheduling constraints."></textarea></div>
+        </div>
+        <div class="form-submit">
+          <button id="job-submit-btn" class="btn btn-red btn-xl" type="button" onclick="submitJob()" style="width:100%;justify-content:center">Submit Job Request →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT MODAL -->
+<section id="contact" class="intake">
+  <div class="wrap" style="max-width:520px">
+    <button type="button" class="form-modal-close" onclick="closeFormModal('contact')" aria-label="Close">&times;</button>
+    <div class="section-eyebrow">Contact</div>
+    <h2 class="section-title" style="margin-bottom:8px">Contact us directly</h2>
+    <p class="section-sub" style="margin-bottom:24px">Have a question? Send us a message and we'll get back to you fast.</p>
+    <div class="form-card">
+      <div id="contact-success" style="display:none;margin-top:0;margin-bottom:16px;padding:12px 14px;background:#eaf3de;border:1px solid #b7d9a0;border-radius:10px;color:#3b6d11;font-size:13px">✅ Message sent! We'll reply shortly.</div>
+      <div id="contact-form-fields" style="display:grid;gap:12px">
+        <div class="field"><label>Your Name</label><input id="c-name" type="text" placeholder="Your name"/></div>
+        <div class="field"><label>Email Address</label><input id="c-email" type="email" placeholder="name@company.com"/></div>
+        <div class="field"><label>Message</label><textarea id="c-message" placeholder="What can we help you with?" style="min-height:80px;resize:vertical;width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r-sm);font:inherit;background:var(--paper);color:var(--ink);outline:none;"></textarea></div>
+        <button class="btn btn-red" type="button" onclick="submitContact()" id="c-btn">Send Message →</button>
+      </div>
+      <div class="contact-item" style="margin-top:18px"><div class="contact-item-label">Phone</div><div class="contact-item-val"><a href="tel:+12672257379" style="color:var(--ink);text-decoration:none">(267) 225-7379</a></div></div>
+      <div class="contact-item"><div class="contact-item-label">Email</div><div class="contact-item-val"><a href="mailto:contactrelayops@gmail.com" style="color:var(--red);text-decoration:none">contactrelayops@gmail.com</a></div></div>
+      <div class="contact-item"><div class="contact-item-label">Service area</div><div class="contact-item-val">Pittsburgh &amp; Philadelphia, PA</div></div>
+    </div>
+  </div>
+</section>
+
+<section id="vendor-signup" class="vsignup">
+  <div class="wrap">
+    <button type="button" class="form-modal-close" onclick="closeFormModal('vendor-signup')" aria-label="Close">&times;</button>
+    <div class="section-eyebrow">Join the network</div>
+    <h2 class="section-title" style="margin-bottom:8px">Vendors: fill your open capacity</h2>
+    <p class="section-sub" style="margin-bottom:40px">Apply to join the RelayOps vendor network. We'll review your application and activate your account when there's matching work in your area.</p>
+    <div class="vsignup-grid">
+      <div class="form-card">
+        <div class="form-title">Vendor Application</div>
+        <div class="form-sub">Takes about 2 minutes. We review every application manually before activation.</div>
+        <div id="vendor-success" style="display:none;padding:20px;background:#eaf3de;border:1px solid #b7d9a0;border-radius:12px;color:#3b6d11;font-size:14px;margin-bottom:16px">
+          <div style="font-weight:600;font-size:15px;margin-bottom:8px">✅ Application received!</div>
+          <div style="margin-bottom:16px;color:#3b6d11">We review every application manually. You'll hear from us within 24 hours.</div>
+          <div style="background:#fff;border:1px solid #b7d9a0;border-radius:10px;padding:16px;margin-top:8px">
+            <div style="font-weight:600;color:#0d0d0d;margin-bottom:6px">🔧 Set up your vendor account</div>
+            <div style="font-size:13px;color:#6b6560;margin-bottom:14px">Create your portal account now so you're ready to see and accept jobs the moment we approve you.</div>
+            <a id="vendor-signup-btn" href="https://contactrelayops.github.io/relayops-site/relayops-portal.html" class="btn btn-red" style="display:inline-block;font-size:13px">Create Your Vendor Account →</a>
+          </div>
+        </div>
+        <div class="form-grid" id="vendor-form-fields">
+
+          <!-- Basic Info -->
+          <div class="field"><label>Full Name *</label><input id="v-name" type="text" placeholder="Your full legal name"/></div>
+          <div class="field"><label>Business Name *</label><input id="v-business" type="text" placeholder="Your company or DBA name"/></div>
+          <div class="field"><label>Email Address *</label><input id="v-email" type="email" placeholder="name@company.com"/></div>
+          <div class="field"><label>Phone Number *</label><input id="v-phone" type="tel" placeholder="Your phone number"/></div>
+
+          <!-- Service Area Verification -->
+          <div class="field">
+            <label>Primary Service City *</label>
+            <select id="v-city">
+              <option value="">Select your city</option>
+              <option value="Pittsburgh, PA">Pittsburgh, PA</option>
+              <option value="Philadelphia, PA">Philadelphia, PA</option>
+              <option value="Both Pittsburgh and Philadelphia, PA">Both — Pittsburgh & Philadelphia</option>
+            </select>
+            <div style="font-size:11px;color:var(--muted-2);margin-top:4px">We currently operate in Pittsburgh and Philadelphia only.</div>
+          </div>
+          <div class="field"><label>Zip Code *</label><input id="v-zip" type="text" placeholder="e.g. 15201 or 19103" maxlength="5"/></div>
+          <div class="field"><label>How far will you travel?</label>
+            <select id="v-radius">
+              <option value="10">Up to 10 miles</option>
+              <option value="15">Up to 15 miles</option>
+              <option value="25" selected>Up to 25 miles</option>
+              <option value="40">Up to 40 miles</option>
+              <option value="60">Up to 60 miles</option>
+            </select>
+          </div>
+
+          <!-- Trade Info -->
+          <div class="field">
+            <label>Primary Service Type *</label>
+            <select id="v-service">
+              <option value="">Select your main trade</option>
+              <option value="Handyman">Handyman / Repairs</option>
+              <option value="Cleaning">Cleaning</option>
+              <option value="Turnover">Turnover Cleaning</option>
+              <option value="Lock Change">Lock Change / Rekey</option>
+              <option value="Junk Removal">Junk Removal</option>
+              <option value="Painting">Painting</option>
+              <option value="Plumbing">Plumbing</option>
+              <option value="Remodeling">Remodeling</option>
+              <option value="Landscaping">Landscaping</option>
+              <option value="Electrician">Electrician</option>
+              <option value="HVAC">HVAC</option>
+              <option value="Gutters">Gutters</option>
+              <option value="Roofing">Roofing</option>
+              <option value="Snow Removal">Snow Removal</option>
+              <option value="General Contractor">General Contractor / Construction</option>
+              <option value="Flooring">Flooring</option>
+              <option value="Drywall">Drywall</option>
+              <option value="Pressure Washing">Pressure Washing</option>
+              <option value="Water Restoration">Water Restoration</option>
+              <option value="Pest Control">Pest Control</option>
+              <option value="Appliance Repair">Appliance Repair</option>
+              <option value="Carpet Cleaning">Carpet Cleaning</option>
+              <option value="Window Cleaning">Window Cleaning</option>
+              <option value="Emergency">Emergency Services</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="field"><label>Years in Business *</label><input id="v-years" type="text" placeholder="e.g. 5 years"/></div>
+
+          <!-- Verification Questions -->
+          <div class="field">
+            <label>Do you have General Liability Insurance? *</label>
+            <select id="v-insurance">
+              <option value="">Select one</option>
+              <option value="Yes — active policy">Yes — I have an active policy</option>
+              <option value="In progress">Getting coverage — in progress</option>
+              <option value="No">No</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>License Number (if applicable)</label>
+            <input id="v-license" type="text" placeholder="PA license # (plumbers, locksmiths, electricians)"/>
+          </div>
+          <div class="field">
+            <label>Emergency / Same-Day Availability</label>
+            <select id="v-emergency">
+              <option value="Yes">Yes — available for same-day calls</option>
+              <option value="Limited">Limited — case by case</option>
+              <option value="No">No — scheduled jobs only</option>
+            </select>
+          </div>
+          <div class="field"><label>Typical Response Time</label><input id="v-response" type="text" placeholder="e.g. Within 1 hour"/></div>
+          <div class="field"><label>Team Size</label><input id="v-team" type="text" placeholder="e.g. Solo, 2-person crew, 5+ people"/></div>
+          <div class="field form-full"><label>Google Business, Yelp, or Social Page Link <span style="color:var(--red)">*</span></label><input id="v-bizlink" type="url" placeholder="https://maps.google.com/... or https://yelp.com/biz/..." required/><div style="font-size:11px;color:var(--muted);margin-top:4px">Helps us verify your business. Most real vendors have at least one online listing.</div></div>
+          <div class="field form-full"><label>Do you currently have active clients in Pittsburgh or Philadelphia? <span style="color:var(--red)">*</span></label><select id="v-active-clients" required><option value="">Select one</option><option value="Yes - Pittsburgh">Yes — Pittsburgh</option><option value="Yes - Philadelphia">Yes — Philadelphia</option><option value="Yes - Both">Yes — Both cities</option><option value="No - expanding">No — looking to expand into these markets</option></select></div>
+
+          <!-- Background check consent -->
+          <div class="field form-full" style="background:var(--paper-2);border:1px solid var(--line);border-radius:12px;padding:16px;">
+            <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:8px">🔒 Verification Consent</div>
+            <div style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:12px">RelayOps manually reviews all vendor applications. By submitting, you agree to:</div>
+            <div style="display:grid;gap:8px">
+              <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:var(--muted)">
+                <input id="v-consent-call" type="checkbox" style="margin-top:2px;accent-color:var(--red)"/> 
+                A verification phone call from our team within 24 hours
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:var(--muted)">
+                <input id="v-consent-insurance" type="checkbox" style="margin-top:2px;accent-color:var(--red)"/> 
+                Providing proof of insurance if requested
+              </label>
+              <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:var(--muted)">
+                <input id="v-consent-bg" type="checkbox" style="margin-top:2px;accent-color:var(--red)"/> 
+                A background check may be required before activation
+              </label>
+            </div>
+          </div>
+
+          <div class="field form-full"><label>Anything else we should know?</label><textarea id="v-notes" placeholder="Additional certifications, specialty services, availability windows, or anything that helps us match you to the right jobs."></textarea></div>
+        </div>
+        <div class="form-submit">
+          <button id="vendor-submit-btn" class="btn btn-red btn-xl" type="button" onclick="submitVendor()" style="width:100%;justify-content:center">Apply to Join Network →</button>
+        </div>
+      </div>
+      <div>
+        <div style="margin-bottom:20px">
+          <h3 style="font-family:var(--display);font-size:22px;font-weight:700;color:var(--ink);margin-bottom:14px">Why vendors join RelayOps</h3>
+          <p style="font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:20px">We're not a lead-gen platform. RelayOps routes qualified, scoped jobs directly to vendors with matching capacity. You focus on the work — we handle the coordination.</p>
+        </div>
+        <div class="why-vendor">
+          <div class="why-item">
+            <div class="why-item-title">Fill slow days</div>
+            <div class="why-item-text">Pick up jobs when cancellations leave gaps in your schedule.</div>
+          </div>
+          <div class="why-item">
+            <div class="why-item-title">Qualified jobs only</div>
+            <div class="why-item-text">Every job is reviewed and scoped before it reaches you.</div>
+          </div>
+          <div class="why-item">
+            <div class="why-item-title">Build repeat relationships</div>
+            <div class="why-item-text">Strong performance leads to steady work from the same operators.</div>
+          </div>
+          <div class="why-item">
+            <div class="why-item-title">Get paid fast</div>
+            <div class="why-item-text">Payment via Stripe on job completion. No chasing invoices.</div>
+          </div>
+          <div class="why-item">
+            <div class="why-item-title">No lead-chasing</div>
+            <div class="why-item-text">We bring the work to you. Stay focused on fulfillment.</div>
+          </div>
+          <div class="why-item">
+            <div class="why-item-title">No lead fees, ever</div>
+            <div class="why-item-text">Free to join. We take a flat 15% only on jobs you actually win and get paid for — no upfront costs, no paying for dead leads.</div>
+          </div>
+          <div class="why-item">
+            <div class="why-item-title">Build your reputation</div>
+            <div class="why-item-text">Every completed job builds your vendor score in the system.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<script>
+const SUPABASE_URL = 'https://qnufazzxoiomgqxydvnf.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFudWZhenp4b2lvbWdxeHlkdm5mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0MjIyNjksImV4cCI6MjA5MDk5ODI2OX0.dEVE3cdJupCHhqZ4OvoSi3A2ZbNmANHoCWG4bISeDzc';
+
+async function submitJob() {
+  const btn = document.getElementById('job-submit-btn');
+  const address = document.getElementById('job-address').value.trim();
+  const jobType = document.getElementById('job-type').value;
+  const urgency = document.getElementById('job-urgency').value;
+  const description = document.getElementById('job-description').value.trim();
+  const name = document.getElementById('job-name').value.trim();
+  const email = document.getElementById('job-email').value.trim();
+  const phone = document.getElementById('job-phone').value.trim();
+  const company = document.getElementById('job-company').value.trim();
+
+  if (!address || !jobType || !urgency || !description) {
+    alert('Please fill in Property Address, Service Type, Urgency, and Job Description.');
+    return;
+  }
+
+  btn.textContent = 'Submitting...';
+  btn.disabled = true;
+
+  const notes = [name && `Name: ${name}`, email && `Email: ${email}`, phone && `Phone: ${phone}`, company && `Company: ${company}`].filter(Boolean).join(' | ');
+
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/jobs`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({
+      property_address: address,
+      job_type: jobType,
+      urgency: urgency,
+      description: description + (notes ? `\n\n[Contact: ${notes}]` : ''),
+      status: 'submitted'
+    })
+  });
+
+  if (res.ok) {
+    document.getElementById('job-form-fields').style.display = 'none';
+    document.getElementById('job-success').style.display = 'block';
+    btn.style.display = 'none';
+    // Pre-fill email in portal signup link
+    if(email) {
+      document.getElementById('job-signup-btn').href = `https://contactrelayops.github.io/relayops-site/relayops-portal.html?email=${encodeURIComponent(email)}&tab=signup`;
+    }
+    // Send email notification
+    emailjs.send('service_slduczl', 'template_sacm0kn', {
+      subject: '🚨 New Job Request — ' + jobType,
+      from_name: name || 'Unknown',
+      from_email: email || 'Not provided',
+      phone: phone || 'Not provided',
+      message: `Address: ${address}\nJob Type: ${jobType}\nUrgency: ${urgency}\nDescription: ${description}${company ? '\nCompany: ' + company : ''}`
+    }).catch(()=>{});
+  } else {
+    btn.textContent = 'Submit Job Request →';
+    btn.disabled = false;
+    alert('Something went wrong. Please try again or email contactrelayops@gmail.com');
+  }
+}
+
+async function submitVendor() {
+  const btn = document.getElementById('vendor-submit-btn');
+  const name = document.getElementById('v-name').value.trim();
+  const email = document.getElementById('v-email').value.trim();
+  const phone = document.getElementById('v-phone').value.trim();
+  const service = document.getElementById('v-service').value;
+  const city = document.getElementById('v-city').value.trim();
+  const radius = document.getElementById('v-radius').value.trim();
+  const emergency = document.getElementById('v-emergency').value;
+  const response = document.getElementById('v-response').value.trim();
+  const years = document.getElementById('v-years').value.trim();
+  const notes = document.getElementById('v-notes').value.trim();
+  const business = document.getElementById('v-business').value.trim();
+
+  const zip       = document.getElementById('v-zip').value.trim();
+  const insurance = document.getElementById('v-insurance').value;
+  const license   = document.getElementById('v-license').value.trim();
+  const references= document.getElementById('v-references').value;
+  const team      = document.getElementById('v-team').value.trim();
+  const consentCall = document.getElementById('v-consent-call').checked;
+  const consentIns  = document.getElementById('v-consent-insurance').checked;
+  const consentBg   = document.getElementById('v-consent-bg').checked;
+
+  if (!name || !email || !service || !city) {
+    alert('Please fill in your Full Name, Email, Service Type, and City.');
+    return;
+  }
+
+  // Validate service area — only Pittsburgh (15xxx) and Philadelphia (19xxx) zips
+  if (zip && !/^(15|19)\d{3}$/.test(zip)) {
+    alert('Sorry — RelayOps currently only operates in Pittsburgh (15xxx) and Philadelphia (19xxx). Your zip code does not appear to be in our service area.');
+    return;
+  }
+
+  // Require insurance consent
+  if (!consentCall) {
+    alert('Please confirm you agree to a verification phone call from our team.');
+    return;
+  }
+
+  btn.textContent = 'Submitting...';
+  btn.disabled = true;
+
+  const coverageInfo = [city, zip].filter(Boolean).join(' — ');
+  const extraNotes = [
+    business && `Business: ${business}`,
+    zip && `Zip: ${zip}`,
+    insurance && `Insurance: ${insurance}`,
+    license && `License #: ${license}`,
+    references && `References: ${references}`,
+    emergency && `Emergency availability: ${emergency}`,
+    response && `Response time: ${response}`,
+    team && `Team size: ${team}`,
+    years && `Years in business: ${years}`,
+    `Consents: Call=${consentCall}, Insurance=${consentIns}, Background=${consentBg}`,
+    notes
+  ].filter(Boolean).join('\n');
+
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/providers`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({
+      full_name: name,
+      email: email,
+      phone: phone,
+      service_types: [service],
+      coverage_zips: coverageInfo,
+      home_zip: zip || null,
+      radius_miles: parseInt(radius, 10) || 25,
+      status: 'pending'
+    })
+  });
+
+  if (res.ok) {
+    document.getElementById('vendor-form-fields').style.display = 'none';
+    document.getElementById('vendor-success').style.display = 'block';
+    btn.style.display = 'none';
+    // Pre-fill email in portal signup link
+    if(email) {
+      document.getElementById('vendor-signup-btn').href = `https://contactrelayops.github.io/relayops-site/relayops-portal.html?email=${encodeURIComponent(email)}&tab=signup&role=provider`;
+    }
+    // Send email notification
+    emailjs.send('service_slduczl', 'template_sacm0kn', {
+      subject: '🔧 New Vendor Application — ' + service + ' — ' + city,
+      from_name: name,
+      from_email: email,
+      phone: phone || 'Not provided',
+      message: `Service: ${service}\nCity: ${city || 'Not provided'}\nEmergency Availability: ${emergency}\nResponse Time: ${document.getElementById('v-response').value || 'Not provided'}\nYears in Business: ${document.getElementById('v-years').value || 'Not provided'}\nNotes: ${notes || 'None'}`
+    }).catch(()=>{});
+  } else {
+    btn.textContent = 'Apply to Join Network →';
+    btn.disabled = false;
+    alert('Something went wrong. Please try again or email contactrelayops@gmail.com');
+  }
+}async function submitContact() {
+  const name = document.getElementById('c-name').value.trim();
+  const email = document.getElementById('c-email').value.trim();
+  const message = document.getElementById('c-message').value.trim();
+  if(!name || !email || !message) { alert('Please fill in all fields.'); return; }
+  const btn = document.getElementById('c-btn');
+  btn.textContent = 'Sending...'; btn.disabled = true;
+  try {
+    await emailjs.send('service_slduczl', 'template_sacm0kn', {
+      subject: '💬 Contact from ' + name,
+      from_name: name,
+      from_email: email,
+      phone: 'N/A',
+      message: message
+    });
+    document.getElementById('contact-form-fields').style.display = 'none';
+    document.getElementById('contact-success').style.display = 'block';
+  } catch(e) {
+    btn.textContent = 'Send Message →'; btn.disabled = false;
+    alert('Something went wrong. Please email contactrelayops@gmail.com directly.');
+  }
+}
+
+// ── Waitlist ──
+function openWaitlist(plan) {
+  document.getElementById('wl-plan').value = plan;
+  document.getElementById('wl-modal-title').textContent = plan + ' Plan — Join the Waitlist';
+  document.getElementById('wl-form-fields').style.display = 'block';
+  document.getElementById('wl-success').style.display = 'none';
+  const btn = document.getElementById('wl-btn');
+  btn.textContent = 'Join the Waitlist →'; btn.disabled = false; btn.style.display = '';
+  document.getElementById('wl-overlay').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+function closeWaitlist() {
+  document.getElementById('wl-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+}
+async function submitWaitlist() {
+  const name = document.getElementById('wl-name').value.trim();
+  const email = document.getElementById('wl-email').value.trim();
+  const phone = document.getElementById('wl-phone').value.trim();
+  const company = document.getElementById('wl-company').value.trim();
+  const plan = document.getElementById('wl-plan').value;
+  if (!name || !email) { alert('Please enter your name and email.'); return; }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { alert('Please enter a valid email address.'); return; }
+  const btn = document.getElementById('wl-btn');
+  btn.textContent = 'Joining...'; btn.disabled = true;
+
+  let stored = false;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/waitlist`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        full_name: name,
+        email: email,
+        phone: phone || null,
+        company: company || null,
+        plan_interest: plan
+      })
+    });
+    stored = res.ok;
+  } catch(e) { stored = false; }
+
+  // Always email the notification so a signup is never lost, even if the DB write fails
+  emailjs.send('service_slduczl', 'template_sacm0kn', {
+    subject: '⭐ New Waitlist Signup — ' + plan + ' Plan',
+    from_name: name,
+    from_email: email,
+    phone: phone || 'Not provided',
+    message: `Plan interest: ${plan}\nCompany: ${company || 'Not provided'}\nPhone: ${phone || 'Not provided'}\nStored in Supabase: ${stored ? 'yes' : 'NO — add manually'}`
+  }).catch(()=>{});
+
+  document.getElementById('wl-form-fields').style.display = 'none';
+  document.getElementById('wl-success').style.display = 'block';
+  btn.style.display = 'none';
+}
+
+// ── Service category tabs ──
+function showSvcTab(key, btn) {
+  document.querySelectorAll('.svc-panel').forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById('svc-' + key);
+  if (panel) panel.classList.add('active');
+  document.querySelectorAll('.svc-tab').forEach(t => t.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+}
+
+// ── Form modals (Request a Job / Vendor application) ──
+function openFormModal(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('form-modal-open');
+  document.body.style.overflow = 'hidden';
+  el.scrollTop = 0;
+}
+function closeFormModal(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('form-modal-open');
+  document.body.style.overflow = '';
+}
+// Close modal when clicking the dark backdrop (outside the white card)
+document.addEventListener('click', function(e){
+  ['request','vendor-signup','contact'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el && el.classList.contains('form-modal-open') && e.target===el){
+      closeFormModal(id);
+    }
+  });
+});
+// Close on Escape
+document.addEventListener('keydown', function(e){
+  if(e.key==='Escape'){ closeFormModal('request'); closeFormModal('vendor-signup'); closeFormModal('contact'); }
+});
+
+// ── Scroll-spy: highlight the nav link for the section in view ──
+(function(){
+  const spyLinks = Array.from(document.querySelectorAll('.nav-links a[data-spy]'));
+  if (!spyLinks.length || !('IntersectionObserver' in window)) return;
+  const map = {};
+  spyLinks.forEach(a => { const s = document.getElementById(a.getAttribute('data-spy')); if (s) map[s.id] = a; });
+  const sections = Object.keys(map).map(id => document.getElementById(id));
+  function setActive(id){
+    spyLinks.forEach(a => a.classList.toggle('nav-active', a.getAttribute('data-spy') === id));
+  }
+  const visible = new Set();
+  const obs = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if (e.isIntersecting) visible.add(e.target.id);
+      else visible.delete(e.target.id);
+    });
+    // pick the topmost currently-visible spied section
+    let top = null, topY = Infinity;
+    sections.forEach(s=>{
+      if (visible.has(s.id)){
+        const y = s.getBoundingClientRect().top;
+        if (y < topY){ topY = y; top = s.id; }
+      }
+    });
+    if (top) setActive(top);
+  }, { rootMargin: '-80px 0px -45% 0px', threshold: 0 });
+  sections.forEach(s => obs.observe(s));
+})();
+</script>
+</body>
+</html>
