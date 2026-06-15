@@ -563,6 +563,20 @@ footer{background:#080808;padding:40px 0 28px;border-top:1px solid rgba(255,255,
   .jth:nth-child(4),.jth:nth-child(5),.jr-cell:nth-child(4),.act-btn{display:none}
   .pricing-grid{grid-template-columns:1fr}
 }
+
+.nav-burger{display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;padding:8px;margin-left:auto}
+.nav-burger span{display:block;width:24px;height:2px;background:var(--ink);border-radius:2px;transition:all .25s}
+.nav-burger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.nav-burger.open span:nth-child(2){opacity:0}
+.nav-burger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.mobile-menu{display:none;position:fixed;top:64px;left:0;right:0;z-index:99;background:var(--paper);border-bottom:1px solid var(--line);flex-direction:column;padding:8px 0;box-shadow:0 12px 30px rgba(0,0,0,.12)}
+.mobile-menu.open{display:flex}
+.mobile-menu a{padding:14px 24px;font-size:16px;color:var(--ink);font-weight:500}
+.mobile-menu a.mm-active{color:var(--red)}
+.mm-divider{height:1px;background:var(--line);margin:6px 24px}
+@media(max-width:640px){
+  .nav-burger{display:flex}
+}
 </style>
 </head>
 <body>
@@ -582,12 +596,25 @@ footer{background:#080808;padding:40px 0 28px;border-top:1px solid rgba(255,255,
     <a href="pricing.html">Pricing</a>
     <a href="for-vendors.html">For Vendors</a>
   </div>
+  <button class="nav-burger" aria-label="Menu" onclick="toggleMobileMenu()">
+    <span></span><span></span><span></span>
+  </button>
   <div class="nav-cta">
     <a href="https://contactrelayops.github.io/relayops-site/relayops-portal.html" class="btn btn-ghost">Login</a>
     <a href="javascript:void(0)" onclick="openFormModal('vendor-signup')" class="btn btn-ghost">Join as Vendor</a>
     <a href="javascript:void(0)" onclick="openFormModal('request')" class="btn btn-red">Request a Job</a>
   </div>
 </nav>
+<div class="mobile-menu" id="mobile-menu">
+    <a href="index.html" class="mm-active">Home</a>
+    <a href="how-it-works.html">How it works</a>
+    <a href="services.html">Services</a>
+    <a href="pricing.html">Pricing</a>
+    <a href="for-vendors.html">For Vendors</a>
+    <div class="mm-divider"></div>
+    <a href="https://contactrelayops.github.io/relayops-site/relayops-portal.html">Login</a>
+    <a href="javascript:void(0)" onclick="closeMobileMenu();openFormModal('vendor-signup')">Join as Vendor</a>
+  </div>
 <section class="hero">
   <div class="hero-inner">
     <div>
@@ -1306,6 +1333,15 @@ document.addEventListener('keydown', function(e){
   }, { rootMargin: '-80px 0px -45% 0px', threshold: 0 });
   sections.forEach(s => obs.observe(s));
 })();
+
+function toggleMobileMenu(){
+  document.getElementById('mobile-menu').classList.toggle('open');
+  document.querySelector('.nav-burger').classList.toggle('open');
+}
+function closeMobileMenu(){
+  document.getElementById('mobile-menu').classList.remove('open');
+  document.querySelector('.nav-burger').classList.remove('open');
+}
 </script>
 </body>
 </html>
