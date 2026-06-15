@@ -1041,9 +1041,10 @@ async function submitJob() {
     emailjs.send('service_slduczl', 'template_sacm0kn', {
       subject: '🚨 New Job Request — ' + jobType,
       from_name: name || 'Unknown',
-      from_email: email || 'Not provided',
+      from_email: 'contactrelayops@gmail.com',
+      reply_to: email || '',
       phone: phone || 'Not provided',
-      message: `Address: ${address}\nJob Type: ${jobType}\nUrgency: ${urgency}\nDescription: ${description}${company ? '\nCompany: ' + company : ''}`
+      message: `Customer email: ${email||'n/a'}\nAddress: ${address}\nJob Type: ${jobType}\nUrgency: ${urgency}\nDescription: ${description}${company ? '\nCompany: ' + company : ''}`
     }).catch(()=>{});
   } else {
     btn.textContent = 'Submit Job Request →';
@@ -1142,7 +1143,8 @@ async function submitVendor() {
     emailjs.send('service_slduczl', 'template_sacm0kn', {
       subject: '🔧 New Vendor Application — ' + service + ' — ' + city,
       from_name: name,
-      from_email: email,
+      from_email: 'contactrelayops@gmail.com',
+      reply_to: email,
       phone: phone || 'Not provided',
       message: `Service: ${service}\nCity: ${city || 'Not provided'}\nEmergency Availability: ${emergency}\nResponse Time: ${document.getElementById('v-response').value || 'Not provided'}\nYears in Business: ${document.getElementById('v-years').value || 'Not provided'}\nNotes: ${notes || 'None'}`
     }).catch(()=>{});
@@ -1162,7 +1164,8 @@ async function submitVendor() {
     await emailjs.send('service_slduczl', 'template_sacm0kn', {
       subject: '💬 Contact from ' + name,
       from_name: name,
-      from_email: email,
+      from_email: 'contactrelayops@gmail.com',
+      reply_to: email,
       phone: 'N/A',
       message: message
     });
@@ -1225,7 +1228,8 @@ async function submitWaitlist() {
   emailjs.send('service_slduczl', 'template_sacm0kn', {
     subject: '⭐ New Waitlist Signup — ' + plan + ' Plan',
     from_name: name,
-    from_email: email,
+    from_email: 'contactrelayops@gmail.com',
+    reply_to: email,
     phone: phone || 'Not provided',
     message: `Plan interest: ${plan}\nCompany: ${company || 'Not provided'}\nPhone: ${phone || 'Not provided'}\nStored in Supabase: ${stored ? 'yes' : 'NO — add manually'}`
   }).catch(()=>{});
