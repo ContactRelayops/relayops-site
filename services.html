@@ -1315,5 +1315,28 @@ function closeMobileMenu(){
   document.querySelector('.nav-burger').classList.remove('open');
 }
 </script>
+<div id="wl-overlay" style="display:none;position:fixed;inset:0;background:rgba(13,13,13,.72);z-index:9999;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)closeWaitlist()">
+  <div style="background:var(--cream,#faf8f3);border-radius:18px;max-width:440px;width:100%;padding:32px;position:relative;box-shadow:0 24px 60px rgba(0,0,0,.35)">
+    <button type="button" onclick="closeWaitlist()" aria-label="Close" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:24px;line-height:1;color:var(--muted,#888);cursor:pointer">&times;</button>
+    <div id="wl-form-fields">
+      <h3 id="wl-modal-title" style="font-family:var(--display,sans-serif);font-size:22px;font-weight:700;color:var(--ink,#0d0d0d);margin:0 0 6px">Join the Waitlist</h3>
+      <p style="font-size:14px;color:var(--muted,#6b6560);margin:0 0 22px;line-height:1.5">These plans are launching soon. Drop your details and we'll reach out with early-access pricing before anyone else.</p>
+      <input type="hidden" id="wl-plan" value="">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div><label style="display:block;font-size:12px;font-weight:600;color:var(--ink,#0d0d0d);margin-bottom:5px">Full Name *</label><input id="wl-name" type="text" placeholder="Your name" style="width:100%;padding:11px 13px;border:1px solid rgba(0,0,0,.14);border-radius:9px;font-size:14px;box-sizing:border-box"/></div>
+        <div><label style="display:block;font-size:12px;font-weight:600;color:var(--ink,#0d0d0d);margin-bottom:5px">Email *</label><input id="wl-email" type="email" placeholder="name@company.com" style="width:100%;padding:11px 13px;border:1px solid rgba(0,0,0,.14);border-radius:9px;font-size:14px;box-sizing:border-box"/></div>
+        <div><label style="display:block;font-size:12px;font-weight:600;color:var(--ink,#0d0d0d);margin-bottom:5px">Phone</label><input id="wl-phone" type="tel" placeholder="Optional" style="width:100%;padding:11px 13px;border:1px solid rgba(0,0,0,.14);border-radius:9px;font-size:14px;box-sizing:border-box"/></div>
+        <div><label style="display:block;font-size:12px;font-weight:600;color:var(--ink,#0d0d0d);margin-bottom:5px">Company / Properties</label><input id="wl-company" type="text" placeholder="Optional — e.g. how many units you manage" style="width:100%;padding:11px 13px;border:1px solid rgba(0,0,0,.14);border-radius:9px;font-size:14px;box-sizing:border-box"/></div>
+      </div>
+      <button type="button" id="wl-btn" onclick="submitWaitlist()" class="btn btn-ink btn-lg" style="width:100%;justify-content:center;margin-top:18px">Join the Waitlist →</button>
+    </div>
+    <div id="wl-success" style="display:none;text-align:center;padding:12px 0">
+      <div style="font-size:40px;margin-bottom:10px">⭐</div>
+      <h3 style="font-family:var(--display,sans-serif);font-size:20px;font-weight:700;color:var(--ink,#0d0d0d);margin:0 0 8px">You're on the list!</h3>
+      <p style="font-size:14px;color:var(--muted,#6b6560);margin:0 0 20px;line-height:1.5">Thanks for your interest. We'll reach out with early-access pricing before these plans go live.</p>
+      <button type="button" onclick="closeWaitlist()" class="btn btn-ink" style="justify-content:center">Done</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
