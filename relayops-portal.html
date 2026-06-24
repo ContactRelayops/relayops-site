@@ -377,6 +377,9 @@ a{text-decoration:none;color:inherit}
   .form-grid-2{grid-template-columns:1fr}
   .vendor-grid{grid-template-columns:1fr}
   .job-detail-grid{grid-template-columns:1fr}
+  .messages-grid{grid-template-columns:1fr !important;height:auto !important;max-height:none !important}
+  .messages-grid > div:first-child{max-height:240px}
+  .messages-grid > div:last-child{min-height:420px}
 }
 .mobile-topbar{
   display:none;position:fixed;top:0;left:0;right:0;height:56px;z-index:998;
@@ -1469,7 +1472,7 @@ a{text-decoration:none;color:inherit}
           </div>
           <button class="btn btn-ghost btn-sm" onclick="loadMessages()">↻ Refresh</button>
         </div>
-        <div style="display:grid;grid-template-columns:280px 1fr;gap:16px;height:calc(100vh - 180px);max-height:600px">
+        <div class="messages-grid" style="display:grid;grid-template-columns:280px 1fr;gap:16px;height:calc(100vh - 180px);max-height:600px">
           <div style="background:#111;border-radius:var(--r-md);overflow-y:auto;border:1px solid rgba(255,255,255,.06)">
             <div style="padding:14px 16px;font-size:11px;font-family:var(--mono);color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid rgba(255,255,255,.06)">Conversations</div>
             <div id="msg-threads"></div>
