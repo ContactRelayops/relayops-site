@@ -765,6 +765,9 @@ a{text-decoration:none;color:inherit}
           <span class="nav-icon">⚙️</span> Settings
         </div>
         <div class="sidebar-section" style="margin-top:8px">Tools</div>
+        <div class="nav-item" onclick="showPage('p-admin-gallery')" data-page="p-admin-gallery">
+          <span class="nav-icon">📷</span> Photo Gallery
+        </div>
         <div class="nav-item" onclick="showPage('p-admin-chatlogs')" data-page="p-admin-chatlogs">
           <span class="nav-icon">💬</span> AI Chat Logs
         </div>
@@ -1314,6 +1317,27 @@ a{text-decoration:none;color:inherit}
       <!-- ══════════════════════════════════════════
            ADMIN: AI CHAT LOGS
       ══════════════════════════════════════════ -->
+      <div class="page" id="p-admin-gallery">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Photo Gallery</div>
+            <div class="page-sub">Browse all completion photos organized by job</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="loadPhotoGallery()">↻ Refresh</button>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+          <input id="gallery-search" type="text" placeholder="Search by address or job type..." oninput="renderPhotoGallery()" style="flex:1;min-width:200px;padding:10px 14px;background:#1a1a1a;border:1px solid rgba(255,255,255,.12);border-radius:10px;color:#fff;font-size:14px;font-family:var(--sans);outline:none"/>
+          <select id="gallery-filter" onchange="renderPhotoGallery()" style="padding:10px 14px;background:#1a1a1a;border:1px solid rgba(255,255,255,.12);border-radius:10px;color:#fff;font-size:14px;font-family:var(--sans);outline:none">
+            <option value="all">All jobs with photos</option>
+            <option value="completed">Completed only</option>
+            <option value="in_progress">In progress only</option>
+          </select>
+        </div>
+        <div id="gallery-container">
+          <div class="empty-state">Loading photos...</div>
+        </div>
+      </div>
+
       <div class="page" id="p-admin-chatlogs">
         <div class="page-header">
           <div>
@@ -2094,6 +2118,7 @@ function showPage(pageId) {
   if (pageId === 'p-admin-payments')   loadAdminPayments();
   if (pageId === 'p-admin-customers')  loadAdminCustomers();
   if (pageId === 'p-admin-analytics')  loadAdminAnalytics();
+  if (pageId === 'p-admin-gallery')    loadPhotoGallery();
   if (pageId === 'p-vendor-profile') { loadVendorPerf(); setTimeout(() => { loadAvailability(); loadVendorDocs(); }, 200); }
   if (pageId === 'p-customer-referral') loadCustomerReferral();
   if (pageId === 'p-invite-vendor')      loadInvitesSent();
@@ -3785,6 +3810,55 @@ async function cpSend() {
 }
 
 // ── ADMIN: CHAT LOGS ──
+// ── Photo Gallery (admin) ──
+let _galleryJobs = [];
+async function loadPhotoGallery() {
+  const container = document.getElementById('gallery-container');
+  if (!container) return;
+  container.innerHTML = '<div class="empty-state">Loading photos...</div>';
+  const jobs = await dbSelect('jobs');
+  // Keep only jobs that actually have completion photos
+  _galleryJobs = (jobs || []).filter(j => Array.isArray(j.completion_photos) && j.completion_photos.length > 0);
+  renderPhotoGallery();
+}
+function renderPhotoGallery() {
+  const container = document.getElementById('gallery-container');
+  if (!container) return;
+  const q = (document.getElementById('gallery-search')?.value || '').toLowerCase();
+  const filter = document.getElementById('gallery-filter')?.value || 'all';
+  let jobs = _galleryJobs.slice();
+  if (filter !== 'all') jobs = jobs.filter(j => j.status === filter);
+  if (q) jobs = jobs.filter(j =>
+    (j.property_address || '').toLowerCase().includes(q) ||
+    (j.job_type || '').toLowerCase().includes(q)
+  );
+  if (!jobs.length) {
+    container.innerHTML = '<div class="empty-state">No completion photos yet. Photos appear here once vendors upload them on completed jobs.</div>';
+    return;
+  }
+  // Sort newest first
+  jobs.sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0));
+  container.innerHTML = jobs.map(j => {
+    const photos = j.completion_photos || [];
+    const date = j.created_at ? new Date(j.created_at).toLocaleDateString() : '';
+    const statusColor = j.status === 'completed' ? '#51cf66' : '#ffd43b';
+    const thumbs = photos.map(p => `<a href="${esc(p)}" target="_blank" rel="noopener"><img src="${esc(p)}" loading="lazy" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;cursor:pointer;border:1px solid rgba(255,255,255,.1);transition:transform .15s" onmouseover="this.style.transform='scale(1.04)'" onmouseout="this.style.transform='scale(1)'"/></a>`).join('');
+    return `<div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:18px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px">
+        <div>
+          <div style="font-size:15px;font-weight:600;color:#fff">${esc(j.property_address || 'No address')}</div>
+          <div style="font-size:13px;color:rgba(255,255,255,.45);margin-top:2px">${esc(j.job_type || '—')} · ${date}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:600;background:${statusColor}22;color:${statusColor}">${esc((j.status||'').replace('_',' '))}</span>
+          <div style="font-size:12px;color:rgba(255,255,255,.4);margin-top:4px">${photos.length} photo${photos.length===1?'':'s'}</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px">${thumbs}</div>
+    </div>`;
+  }).join('');
+}
+
 function loadChatLogs() {
   const container = document.getElementById('chatlogs-container');
   if (!container) return;
